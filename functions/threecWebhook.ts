@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       const callMode = ch.call_mode || "";
 
       // Tentar resolver agente pelo ID
-      const agentMappings = await base44.entities.ThreecAgent.list();
+      const agentMappings = await base44.asServiceRole.entities.ThreecAgent.list();
       const mapping = agentMappings.find(
         (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
       );
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         mapped: !!mapping,
       });
 
-      await base44.entities.Event.create({
+      await base44.asServiceRole.entities.Event.create({
         entity_type: "lead",
         entity_id: mailingData.identifier || ch._id || "3c_unknown",
         event_type: eventType,
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       const phone = call.phone || "";
       const callMode = call.call_mode || "";
 
-      const agentMappings = await base44.entities.ThreecAgent.list();
+      const agentMappings = await base44.asServiceRole.entities.ThreecAgent.list();
       const mapping = agentMappings.find(
         (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
       );
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         mapped: !!mapping,
       });
 
-      await base44.entities.Event.create({
+      await base44.asServiceRole.entities.Event.create({
         entity_type: "lead",
         entity_id: call.id || "3c_unknown",
         event_type: "call.answered",
