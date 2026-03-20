@@ -30,6 +30,9 @@ Deno.serve(async (req) => {
     if (body["call-history-was-created"]) {
       const data = body["call-history-was-created"];
       const ch = data.callHistory || {};
+      // LOG COMPLETO para diagnóstico de campos do agente
+      console.log("[3C RAW callHistory]", JSON.stringify(ch, null, 2));
+      console.log("[3C RAW agent]", JSON.stringify(ch.agent || data.agent || {}, null, 2));
       const agent = ch.agent || {};
       const campaign = ch.campaign || {};
       const mailingData = ch.mailing_data || {};
