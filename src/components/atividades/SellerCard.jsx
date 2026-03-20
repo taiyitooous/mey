@@ -40,7 +40,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
   const sparkData = buildSparkline(events);
 
-  const initials = name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
   const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
