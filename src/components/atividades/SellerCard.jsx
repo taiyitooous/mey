@@ -7,6 +7,8 @@ import { differenceInMinutes, formatDistanceToNow, getHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { getCategory, isEffectiveContact } from "@/lib/eventUtils";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 
 function buildSparkline(events) {
   const hourly = {};
