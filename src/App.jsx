@@ -55,6 +55,7 @@ const AuthenticatedApp = () => {
         <Route path="/eventos" element={<Eventos />} />
         <Route path="/hoje" element={<Hoje />} />
         <Route path="/atividades" element={<Atividades />} />
+        <Route path="/integracoes" element={<Integracoes />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
