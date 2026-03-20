@@ -52,6 +52,11 @@ export default function Atividades() {
     queryFn: () => base44.entities.User.list(),
   });
 
+  const { data: sellerConfigs = [], refetch: refetchConfigs } = useQuery({
+    queryKey: ["seller_configs"],
+    queryFn: () => base44.entities.SellerConfig.list(),
+  });
+
   const userAvatarMap = useMemo(() => {
     const map = {};
     users.forEach((u) => {
@@ -62,6 +67,12 @@ export default function Atividades() {
     });
     return map;
   }, [users]);
+
+  const sellerConfigMap = useMemo(() => {
+    const map = {};
+    sellerConfigs.forEach((c) => { map[c.seller_key] = c; });
+    return map;
+  }, [sellerConfigs]);
 
   const range = TIME_RANGES.find((r) => r.key === timeRange) || TIME_RANGES[0];
   const startDate = range.getStart();
