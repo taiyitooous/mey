@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
-  const base44 = createClientFromRequest(req);
+  const base44 = createClient({ appId: Deno.env.get("BASE44_APP_ID"), serviceToken: Deno.env.get("BASE44_SERVICE_TOKEN") });
 
   const saved = [];
   const errors = [];
