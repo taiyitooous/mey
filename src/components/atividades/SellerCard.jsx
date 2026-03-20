@@ -48,19 +48,16 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   return (
     <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor}`} onClick={onClick}>
       {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={name} className="w-11 h-11 rounded-full object-cover shrink-0 border-2 border-border" />
-          ) : (
-            <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-              isActive ? "bg-success/15 text-success" : isIdle ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-            }`}>
-              {initials}
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="text-sm font-bold truncate">{name}</p>
+      <div className="flex items-start justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <SellerAvatarEditor
+            sellerKey={name}
+            displayName={sellerConfig?.display_name}
+            avatarUrl={sellerConfig?.avatar_url || avatarUrl}
+            onUpdated={onConfigUpdated}
+            size="md"
+          />
+          <div className="min-w-0 -ml-2">
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-success animate-pulse" : isIdle ? "bg-destructive" : "bg-muted-foreground/50"}`} />
               <p className="text-xs text-muted-foreground truncate">
