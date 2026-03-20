@@ -9,11 +9,13 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  CalendarCheck,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS = [
+  { label: "Hoje", icon: CalendarCheck, path: "/hoje" },
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Vendas", icon: Users, path: "/vendas" },
   { label: "Logística", icon: Truck, path: "/logistica" },
