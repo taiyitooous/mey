@@ -113,7 +113,8 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
       ? events
       : events.filter((e) => getCategory(e.event_type) === timelineFilter);
 
-  const initials = seller.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const displayName = sellerConfig?.display_name || seller.name;
+  const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
   const kpiCards = [
     { label: "Ações totais", value: events.length, icon: Zap },
