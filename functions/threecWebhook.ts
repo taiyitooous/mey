@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 // Status 3C: 1=waiting, 2=dialing, 3=connected, 4=acw, 5=no_answer/cancelled
 function mapStatus(status, speakingTime) {
