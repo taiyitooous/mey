@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClient } from 'npm:@base44/sdk@0.8.21';
 
 function mapEventType(threecEvent, result) {
   const ev = (threecEvent || "").toLowerCase();
