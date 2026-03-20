@@ -49,11 +49,15 @@ export default function SellerCard({ seller, onClick, avatarUrl }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-            isActive ? "bg-success/15 text-success" : isIdle ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-          }`}>
-            {initials}
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={name} className="w-11 h-11 rounded-full object-cover shrink-0 border-2 border-border" />
+          ) : (
+            <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+              isActive ? "bg-success/15 text-success" : isIdle ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+            }`}>
+              {initials}
+            </div>
+          )}
           <div className="min-w-0">
             <p className="text-sm font-bold truncate">{name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
