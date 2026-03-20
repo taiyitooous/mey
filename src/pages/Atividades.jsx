@@ -188,6 +188,7 @@ export default function Atividades() {
               <SellerCard
                 key={seller.name}
                 seller={seller}
+                avatarUrl={userAvatarMap[seller.name]}
                 onClick={() => setSelectedSeller(seller)}
               />
             ))}
