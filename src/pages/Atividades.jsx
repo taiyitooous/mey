@@ -44,7 +44,7 @@ export default function Atividades() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events_all"],
     queryFn: () => base44.entities.Event.list("-created_date", 1000),
-    refetchInterval: 60000,
+    refetchInterval: 10000,
   });
 
   const { data: users = [] } = useQuery({
