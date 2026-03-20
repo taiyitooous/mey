@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
+  console.log("[3C RAW PAYLOAD]", JSON.stringify(body));
   const base44 = createClient({ appId: Deno.env.get("BASE44_APP_ID") });
 
   // Carregar mapeamento de agentes (3C agent_id → usuário MEY)
