@@ -40,28 +40,23 @@ export default function Atividades() {
   const [channelFilter, setChannelFilter] = useState("all");
   const [onlyWithResult, setOnlyWithResult] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState(null);
-  const [events, setEvents] = useState([]);
+  const queryClient = useQueryClient();
 
-  // Real-time subscription para eventos
-  React.useEffect(() => {
-    const unsubscribe = base44.entities.Event.subscribe((event) => {
-      setEvents(prev => {
-        if (event.type === 'create') {
-          return [event.data, ...prev];
-        } else if (event.type === 'update') {
-          return prev.map(e => e.id === event.id ? event.data : e);
-        } else if (event.type === 'delete') {
-          return prev.filter(e => e.id !== event.id);
-        }
-        return prev;
-      });
+  const { data: events = [] } = useQuery({
+    queryKey: ["events_all"],
+    queryFn: () => base44.entities.Event.list("-created_date", 1000),
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
+
+  // Real-time subscription para refetch imediato
+  useEffect(() => {
+    const unsubscribe = base44.entities.Event.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["events_all"] });
     });
 
-    // Carregar histórico inicial
-    base44.entities.Event.list("-created_date", 1000).then(setEvents);
-
     return unsubscribe;
-  }, []);
+  }, [queryClient]);
 
   const { data: users = [] } = useQuery({
     queryKey: ["users_all"],
