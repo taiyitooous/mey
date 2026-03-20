@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
+  Activity,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { label: "Vendas", icon: Users, path: "/vendas" },
   { label: "Logística", icon: Truck, path: "/logistica" },
   { label: "Cobrança", icon: Phone, path: "/cobranca" },
+  { label: "Atividades", icon: Activity, path: "/atividades" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
 ];
 
