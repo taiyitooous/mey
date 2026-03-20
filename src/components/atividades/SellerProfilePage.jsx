@@ -52,7 +52,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function SellerProfilePage({ seller, onClose }) {
+export default function SellerProfilePage({ seller, onClose, avatarUrl }) {
   const navigate = useNavigate();
   const [timelineFilter, setTimelineFilter] = useState("all");
 
