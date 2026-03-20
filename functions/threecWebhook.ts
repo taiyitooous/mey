@@ -1,6 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
-// Mapa de tipos de evento da 3C → event_type interno
 function mapEventType(threecEvent, result) {
   const ev = (threecEvent || "").toLowerCase();
   if (ev.includes("call_started") || ev.includes("discagem") || ev.includes("dial")) return "call.attempt";
@@ -26,34 +25,55 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
   const url = new URL(req.url);
   const queryToken = url.searchParams.get("token");
-
   const token = authHeader?.replace("Bearer ", "") || queryToken;
+
   if (secret && token !== secret) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
-
   const base44 = createClientFromRequest(req);
 
-  // Suporte a array ou objeto único
-  const events = Array.isArray(body) ? body : [body];
+  // Carregar mapeamento de agentes (3C agent_id → usuário MEY)
+  const agentMappings = await base44.asServiceRole.entities.ThreecAgent.list();
+  const agentMap = {};
+  for (const m of agentMappings) {
+    if (m.active !== false) {
+      agentMap[String(m.agent_id).toLowerCase()] = m;
+    }
+  }
 
+  const events = Array.isArray(body) ? body : [body];
   const saved = [];
   const errors = [];
 
   for (const ev of events) {
     try {
-      // Campos comuns nos webhooks da 3C
-      const agentName = ev.agent_name || ev.agente || ev.user_name || ev.operator || "";
-      const agentEmail = ev.agent_email || ev.email || "";
-      const phone = ev.phone || ev.numero || ev.destination || ev.called_number || "";
-      const duration = ev.duration || ev.duracao || ev.call_duration || null;
+      // Identificar o agente nos possíveis campos do payload da 3C
+      const rawAgentId = String(
+        ev.agent_id || ev.agente_id || ev.extension || ev.ramal || ev.agent || ev.operator_id || ""
+      ).toLowerCase();
+
+      const rawAgentName = ev.agent_name || ev.agente || ev.user_name || ev.operator || ev.nome_agente || "";
+
+      // Tentar resolver pelo ID, depois pelo nome
+      const mapping =
+        agentMap[rawAgentId] ||
+        Object.values(agentMap).find(
+          (m) => m.agent_name_3c?.toLowerCase() === rawAgentName.toLowerCase()
+        );
+
+      const userName = mapping?.user_name || rawAgentName || "3C Desconhecido";
+      const userEmail = mapping?.user_email || ev.agent_email || ev.email || "";
+
       const result = ev.result || ev.resultado || ev.disposition || ev.status || "";
-      const campaignId = ev.campaign_id || ev.lista || ev.campanha || "";
-      const leadIdExternal = ev.lead_id || ev.contact_id || ev.registro_id || null;
       const eventTypeRaw = ev.event || ev.evento || ev.type || ev.event_type || "call.attempt";
       const eventType = mapEventType(eventTypeRaw, result);
+
+      const phone = ev.phone || ev.numero || ev.destination || ev.called_number || "";
+      const duration = ev.duration || ev.duracao || ev.call_duration || null;
+      const campaignId = ev.campaign_id || ev.lista || ev.campanha || "";
+      const leadIdExternal = ev.lead_id || ev.contact_id || ev.registro_id || null;
 
       const payload = JSON.stringify({
         result,
@@ -61,6 +81,8 @@ Deno.serve(async (req) => {
         phone,
         campaign_id: campaignId,
         raw_event: eventTypeRaw,
+        raw_agent_id: rawAgentId,
+        mapped: !!mapping,
         ...(ev.notes ? { notes: ev.notes } : {}),
       });
 
@@ -69,12 +91,12 @@ Deno.serve(async (req) => {
         entity_id: leadIdExternal || "3c_unknown",
         event_type: eventType,
         payload,
-        user_name: agentName,
-        user_email: agentEmail,
+        user_name: userName,
+        user_email: userEmail,
         source: "3c",
       });
 
-      saved.push({ event_type: eventType, agent: agentName });
+      saved.push({ event_type: eventType, agent: userName, mapped: !!mapping });
     } catch (err) {
       errors.push({ error: err.message, raw: ev });
     }
