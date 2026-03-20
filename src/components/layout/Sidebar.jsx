@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { label: "Cobrança", icon: Phone, path: "/cobranca" },
   { label: "Atividades", icon: Activity, path: "/atividades" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
+  { label: "Integrações", icon: Settings, path: "/integracoes" },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
