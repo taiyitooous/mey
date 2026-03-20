@@ -15,6 +15,7 @@ import Eventos from '@/pages/Eventos';
 import LeadDetail from '@/pages/LeadDetail';
 import Hoje from '@/pages/Hoje';
 import Atividades from '@/pages/Atividades';
+import Integracoes from '@/pages/Integracoes';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
