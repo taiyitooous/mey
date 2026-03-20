@@ -47,6 +47,22 @@ export default function Atividades() {
     refetchInterval: 60000,
   });
 
+  const { data: users = [] } = useQuery({
+    queryKey: ["users_all"],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const userAvatarMap = useMemo(() => {
+    const map = {};
+    users.forEach((u) => {
+      if (u.avatar_url) {
+        if (u.full_name) map[u.full_name] = u.avatar_url;
+        if (u.email) map[u.email] = u.avatar_url;
+      }
+    });
+    return map;
+  }, [users]);
+
   const range = TIME_RANGES.find((r) => r.key === timeRange) || TIME_RANGES[0];
   const startDate = range.getStart();
   const endDate = range.getEnd ? range.getEnd() : new Date();
