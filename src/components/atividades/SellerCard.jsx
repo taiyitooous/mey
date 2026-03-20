@@ -20,7 +20,7 @@ function buildSparkline(events) {
   return Object.values(hourly);
 }
 
-export default function SellerCard({ seller, onClick }) {
+export default function SellerCard({ seller, onClick, avatarUrl }) {
   const { name, events } = seller;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const lastEvent = sorted[0];
