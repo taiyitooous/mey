@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
-  const base44 = createClientFromRequest(req);
+  const base44 = createClient({ appId: Deno.env.get("BASE44_APP_ID") });
 
   // Carregar mapeamento de agentes (3C agent_id → usuário MEY)
   const agentMappings = await base44.asServiceRole.entities.ThreecAgent.list();
