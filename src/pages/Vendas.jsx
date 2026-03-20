@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import LeadCard from "@/components/vendas/LeadCard";
-import LeadDetailDialog from "@/components/vendas/LeadDetailDialog";
 import NewLeadDialog from "@/components/vendas/NewLeadDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 
 const STAGES = [
   { value: 1, label: "Etapa 1" },
@@ -19,7 +19,7 @@ const STAGES = [
 ];
 
 export default function Vendas() {
-  const [selectedLead, setSelectedLead] = useState(null);
+  const navigate = useNavigate();
   const [showNewLead, setShowNewLead] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -88,7 +88,7 @@ export default function Vendas() {
                 <ScrollArea className="flex-1 max-h-[calc(100vh-240px)]">
                   <div className="space-y-2.5 pr-1">
                     {stageLeads.map((lead) => (
-                      <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} />
+                      <LeadCard key={lead.id} lead={lead} onClick={(l) => navigate(`/lead/${l.id}`)} />
                     ))}
                     {stageLeads.length === 0 && (
                       <div className="text-center py-8 text-xs text-muted-foreground">
@@ -103,12 +103,6 @@ export default function Vendas() {
         </div>
       )}
 
-      {/* Dialogs */}
-      <LeadDetailDialog
-        lead={selectedLead}
-        open={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
-      />
       <NewLeadDialog open={showNewLead} onClose={() => setShowNewLead(false)} />
     </div>
   );
