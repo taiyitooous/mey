@@ -201,6 +201,8 @@ export default function Atividades() {
                 key={seller.name}
                 seller={seller}
                 avatarUrl={userAvatarMap[seller.name]}
+                sellerConfig={sellerConfigMap[seller.name]}
+                onConfigUpdated={refetchConfigs}
                 onClick={() => setSelectedSeller(seller)}
               />
             ))}
