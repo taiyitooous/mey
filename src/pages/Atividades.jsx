@@ -202,11 +202,7 @@ export default function Atividades() {
       {/* Row 3: Seller cards */}
       <div>
         <h2 className="text-base font-semibold mb-3">Time</h2>
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-52 w-full rounded-xl" />)}
-          </div>
-        ) : sellers.length === 0 ? (
+        {sellers.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg">Nenhuma atividade no período</p>
             <p className="text-sm mt-1">Tente ampliar o intervalo de tempo</p>
