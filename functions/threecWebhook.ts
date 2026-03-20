@@ -15,9 +15,9 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "") || queryToken;
 
-  if (secret && token !== secret) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // if (secret && token !== secret) {
+  //   return Response.json({ error: "Unauthorized" }, { status: 401 });
+  // }
 
   const body = await req.json();
   const base44 = createClient({ appId: Deno.env.get("BASE44_APP_ID") });
