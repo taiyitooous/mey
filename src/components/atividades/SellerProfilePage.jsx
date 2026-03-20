@@ -134,7 +134,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-4">
             {avatarUrl ? (
-              <img src={avatarUrl} alt={seller.name} className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-border" />
+              <img src={avatarUrl} alt={displayName} className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-border" />
             ) : (
               <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 ${
                 isActive ? "bg-success/15 text-success" : isIdle ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
@@ -143,7 +143,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
               </div>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{seller.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 {isActive && <Badge className="bg-success/10 text-success border-success/30">🟢 Ativo agora</Badge>}
                 {isIdle && <Badge className="bg-destructive/10 text-destructive border-destructive/30">🔴 Sem ação há {minsAgo}min</Badge>}
