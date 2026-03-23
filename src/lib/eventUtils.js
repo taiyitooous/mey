@@ -34,6 +34,8 @@ export const EVENT_LABELS = {
   "lead.whatsapp_sent": "WhatsApp enviado",
   "whatsapp_sent": "WhatsApp enviado",
   "whatsapp_replied": "WhatsApp respondido ✓",
+  "whatsapp_call_received": "WhatsApp Wavoip ✓",
+  "whatsapp_call_ended": "WhatsApp Wavoip encerrado",
   "lead.stage_changed": "Etapa alterada",
   "stage_changed": "Etapa alterada",
   "lead.won": "Lead ganho 🏆",
