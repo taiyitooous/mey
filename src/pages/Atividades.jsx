@@ -9,18 +9,17 @@ import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
 
-// Retorna início do dia em horário de SP (UTC-3)
+// Retorna início do dia em SP como objeto Date (em UTC)
 function startOfDaySP(date = new Date()) {
-  const sp = new Date(date.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-  sp.setHours(0, 0, 0, 0);
-  // Converte de volta para UTC
-  const diff = date.getTime() - new Date(date.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getTime();
-  return new Date(sp.getTime() + diff);
+  // Pega a data no fuso SP: ex. "2026-03-23"
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // "YYYY-MM-DD"
+  // Meia-noite em SP = 03:00 UTC (SP é UTC-3)
+  return new Date(`${spStr}T00:00:00-03:00`);
 }
 
 function endOfDaySP(date = new Date()) {
-  const start = startOfDaySP(date);
-  return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return new Date(`${spStr}T23:59:59.999-03:00`);
 }
 
 const TIME_RANGES = [
