@@ -11,15 +11,20 @@ import { getCategory } from "@/lib/eventUtils";
 
 // Retorna início do dia em SP como objeto Date (em UTC)
 function startOfDaySP(date = new Date()) {
-  // Pega a data no fuso SP: ex. "2026-03-23"
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // "YYYY-MM-DD"
-  // Meia-noite em SP = 03:00 UTC (SP é UTC-3)
-  return new Date(`${spStr}T00:00:00-03:00`);
+  // Obtém o offset de SP dinamicamente para cobrir horário de verão
+  const spMidnight = new Date(`${spStr}T00:00:00`);
+  const utcStr = spMidnight.toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false });
+  const offsetMs = spMidnight - new Date(utcStr.replace(",", ""));
+  return new Date(spMidnight.getTime() - offsetMs);
 }
 
 function endOfDaySP(date = new Date()) {
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return new Date(`${spStr}T23:59:59.999-03:00`);
+  const spEnd = new Date(`${spStr}T23:59:59.999`);
+  const utcStr = spEnd.toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false });
+  const offsetMs = spEnd - new Date(utcStr.replace(",", ""));
+  return new Date(spEnd.getTime() - offsetMs);
 }
 
 const TIME_RANGES = [
