@@ -6,11 +6,22 @@ import TeamScoreboard from "@/components/atividades/TeamScoreboard";
 import TeamActivityChart from "@/components/atividades/TeamActivityChart";
 import SellerCard from "@/components/atividades/SellerCard";
 import SellerProfilePage from "@/components/atividades/SellerProfilePage";
-import {
-  startOfDay, startOfYesterday, endOfYesterday,
-  startOfWeek, subDays,
-} from "date-fns";
+import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
+
+// Retorna início do dia em horário de SP (UTC-3)
+function startOfDaySP(date = new Date()) {
+  const sp = new Date(date.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  sp.setHours(0, 0, 0, 0);
+  // Converte de volta para UTC
+  const diff = date.getTime() - new Date(date.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getTime();
+  return new Date(sp.getTime() + diff);
+}
+
+function endOfDaySP(date = new Date()) {
+  const start = startOfDaySP(date);
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+}
 
 const TIME_RANGES = [
   { key: "hoje", label: "Hoje", getStart: () => startOfDay(new Date()) },
