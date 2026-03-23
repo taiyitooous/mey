@@ -9,22 +9,30 @@ import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
 
-// Retorna início do dia em SP como objeto Date (em UTC)
+// Converte uma data "YYYY-MM-DD HH:MM:SS" em SP para UTC Date
+function spDateToUTC(spDateStr) {
+  // Cria um Date que representa o horário em SP usando Intl
+  const [datePart, timePart] = spDateStr.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min, s] = (timePart || "00:00:00").split(":").map(Number);
+  // Tenta cada offset até achar o que bate com SP
+  for (const offsetH of [3, 2]) {
+    const candidate = new Date(Date.UTC(y, m - 1, d, h + offsetH, min, s));
+    const check = candidate.toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false });
+    const [cd, ct] = check.split(", ");
+    if (cd === datePart && ct?.startsWith(`${String(h).padStart(2,"0")}:`)) return candidate;
+  }
+  return new Date(Date.UTC(y, m - 1, d, h + 3, min, s));
+}
+
 function startOfDaySP(date = new Date()) {
-  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // "YYYY-MM-DD"
-  // Obtém o offset de SP dinamicamente para cobrir horário de verão
-  const spMidnight = new Date(`${spStr}T00:00:00`);
-  const utcStr = spMidnight.toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false });
-  const offsetMs = spMidnight - new Date(utcStr.replace(",", ""));
-  return new Date(spMidnight.getTime() - offsetMs);
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return spDateToUTC(`${spStr} 00:00:00`);
 }
 
 function endOfDaySP(date = new Date()) {
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  const spEnd = new Date(`${spStr}T23:59:59.999`);
-  const utcStr = spEnd.toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false });
-  const offsetMs = spEnd - new Date(utcStr.replace(",", ""));
-  return new Date(spEnd.getTime() - offsetMs);
+  return spDateToUTC(`${spStr} 23:59:59`);
 }
 
 const TIME_RANGES = [
