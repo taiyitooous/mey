@@ -20,8 +20,18 @@ function buildSparkline(events) {
   return Object.values(hourly);
 }
 
+const AGENT_CALL_TARGETS = {
+  "Luiz Gustavo Pereira dos santos": 62,
+  "Juliana Peixoto Da Silva": 32,
+  "Ana Carolina da Silva Ponciano": 88,
+  "Raissa Nascimento Dos Santos": 24,
+  "Julia Da Paz Orestes": 34,
+  "Jessica Cavalcante": 41,
+};
+
 export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated }) {
   const { name, events } = seller;
+  const targetCalls = AGENT_CALL_TARGETS[name] || 0;
   const displayName = sellerConfig?.display_name || name;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const lastEvent = sorted[0];
