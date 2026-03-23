@@ -12,15 +12,23 @@ export function getCategory(eventType) {
 
 export function isEffectiveContact(event) {
   const cat = getCategory(event.event_type);
+  // Para 3C: conta ligações atendidas
   if (cat === "call") {
     try {
       const p = event.payload ? JSON.parse(event.payload) : {};
       return p.result === "answered";
     } catch { return false; }
   }
+  // Para WhatsApp: conta interações de resposta
   if (event.event_type === "whatsapp_replied" || event.event_type === "lead.whatsapp_replied") return true;
   if (event.event_type === "whatsapp_call_received") return true;
   return false;
+}
+
+export function isCallAttempt(event) {
+  // Conta QUALQUER tentativa de ligação (incluindo sem resposta)
+  const cat = getCategory(event.event_type);
+  return cat === "call";
 }
 
 export const EVENT_LABELS = {
