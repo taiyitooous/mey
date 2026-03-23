@@ -80,38 +80,6 @@ Deno.serve(async (req) => {
       saved.push({ event_type: eventType, agent: userName });
     }
 
-    else if (body["call-was-connected"]) {
-      const data = body["call-was-connected"];
-      const agent = data.agent || {};
-      const call = data.call || {};
-
-      const agentId = String(agent.id || agent.extension_number || "");
-      const agentName = agent.name || "";
-
-      console.log(`[3C] call-was-connected: agent=${agentId}/${agentName}`);
-
-      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
-
-      const payload = JSON.stringify({
-        result: "connected",
-        phone: call.phone || "",
-        call_mode: call.call_mode || "",
-        agent_id: agentId,
-      });
-
-      await db.Event.create({
-        entity_type: "lead",
-        entity_id: call.id || "3c_unknown",
-        event_type: "call.answered",
-        payload,
-        user_name: userName,
-        user_email: userEmail,
-        source: "3c",
-      });
-
-      saved.push({ event_type: "call.answered", agent: userName });
-    }
-
     else {
       console.log("[3C] unknown event:", Object.keys(body)[0]);
     }
