@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight } from "lucide-react";
-import { differenceInMinutes, formatDistanceToNow, getHours } from "date-fns";
+import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { getCategory, isEffectiveContact, isCallAttempt, deduplicateCallEvents } from "@/lib/eventUtils";
