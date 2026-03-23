@@ -6,8 +6,7 @@ import TeamScoreboard from "@/components/atividades/TeamScoreboard";
 import TeamActivityChart from "@/components/atividades/TeamActivityChart";
 import SellerCard from "@/components/atividades/SellerCard";
 import SellerProfilePage from "@/components/atividades/SellerProfilePage";
-import { subDays, startOfDay, endOfDay } from "date-fns";
-import { utcToZonedTime, zonedTimeToUtc } from "date-fns-tz";
+import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
 
 // Retorna início/fim do dia em SP
