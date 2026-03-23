@@ -13,6 +13,17 @@ import {
 } from "@/components/ui/select";
 import { Search, ScrollText } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+function formatSP(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TYPE_COLORS = {
