@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
   }
 
   console.log("[3C] Webhook received, event keys:", Object.keys(body).join(", "));
+  console.log("[3C] Raw body (first 800):", JSON.stringify(body).slice(0, 800));
 
   const saved = [];
   const errors = [];
