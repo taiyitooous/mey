@@ -134,8 +134,8 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
         {/* Top bar */}
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-4">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={displayName} className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-border" />
+            {resolvedAvatarUrl ? (
+              <img src={resolvedAvatarUrl} alt={displayName} className="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-border" />
             ) : (
               <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 ${
                 isActive ? "bg-success/15 text-success" : isIdle ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
