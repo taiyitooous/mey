@@ -17,6 +17,7 @@ import Hoje from '@/pages/Hoje';
 import Atividades from '@/pages/Atividades';
 import Integracoes from '@/pages/Integracoes';
 import Coordenadores from '@/pages/Coordenadores';
+import ImportarCSV from '@/pages/ImportarCSV';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
         <Route path="/atividades" element={<Atividades />} />
         <Route path="/coordenadores" element={<Coordenadores />} />
         <Route path="/integracoes" element={<Integracoes />} />
+        <Route path="/importar-csv" element={<ImportarCSV />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
