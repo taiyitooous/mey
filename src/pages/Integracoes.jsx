@@ -401,8 +401,8 @@ export default function Integracoes() {
               <p className="text-xs text-muted-foreground">Vincula Agent ID da 3C ao usuário MEY correspondente</p>
             </div>
           </div>
-          <Badge className={activeCount > 0 ? "bg-success/10 text-success border-0" : "bg-muted text-muted-foreground border-0"}>
-            {activeCount} ativo{activeCount !== 1 ? "s" : ""}
+          <Badge className={activeCount3C > 0 ? "bg-success/10 text-success border-0" : "bg-muted text-muted-foreground border-0"}>
+            {activeCount3C} ativo{activeCount3C !== 1 ? "s" : ""}
           </Badge>
         </div>
 
@@ -416,21 +416,67 @@ export default function Integracoes() {
 
         {/* Agent list */}
         <div className="space-y-2">
-          {isLoading && <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>}
-          {!isLoading && agents.length === 0 && !showNew && (
+          {loadingAgents && <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>}
+          {!loadingAgents && agents.length === 0 && !showNew3C && (
             <p className="text-sm text-muted-foreground text-center py-6">Nenhum agente mapeado ainda</p>
           )}
           {agents.map((agent) => (
-            <AgentRow key={agent.id} agent={agent} users={users} onSave={handleSave} onDelete={handleDelete} />
+            <AgentRow key={agent.id} agent={agent} users={users} onSave={handleSave3C} onDelete={handleDelete3C} />
           ))}
-          {showNew && <NewAgentRow users={users} onAdd={handleAdd} />}
+          {showNew3C && <NewAgentRow users={users} onAdd={handleAdd3C} />}
         </div>
 
         <div className="flex justify-between items-center pt-1">
           <p className="text-xs text-muted-foreground">{agents.length} mapeamento{agents.length !== 1 ? "s" : ""} cadastrado{agents.length !== 1 ? "s" : ""}</p>
-          <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
+          <Button variant="outline" size="sm" onClick={() => setShowNew3C((v) => !v)}>
             <Plus className="w-3.5 h-3.5 mr-1" />
-            {showNew ? "Cancelar" : "Adicionar agente"}
+            {showNew3C ? "Cancelar" : "Adicionar agente"}
+          </Button>
+        </div>
+      </Card>
+
+      {/* Wavoip Card */}
+      <Card className="p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+              <Smartphone className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Wavoip — Dispositivos WhatsApp</h2>
+              <p className="text-xs text-muted-foreground">Conecta dispositivos Wavoip para capturar chamadas WhatsApp</p>
+            </div>
+          </div>
+          <Badge className={activeCountWavoip > 0 ? "bg-success/10 text-success border-0" : "bg-muted text-muted-foreground border-0"}>
+            {activeCountWavoip} ativo{activeCountWavoip !== 1 ? "s" : ""}
+          </Badge>
+        </div>
+
+        {/* Info box */}
+        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-semibold text-foreground">🔑 Como obter o token:</p>
+          <p>1. Acesse a plataforma Wavoip</p>
+          <p>2. Vá em Dispositivos e copie o token do dispositivo</p>
+          <p>3. Cole o token aqui e associe ao usuário MEY responsável</p>
+        </div>
+
+        {/* Device list */}
+        <div className="space-y-2">
+          {loadingWavoip && <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>}
+          {!loadingWavoip && wavoipDevices.length === 0 && !showNewWavoip && (
+            <p className="text-sm text-muted-foreground text-center py-6">Nenhum dispositivo conectado ainda</p>
+          )}
+          {wavoipDevices.map((device) => (
+            <WavoipDeviceRow key={device.id} device={device} users={users} onSave={handleSaveWavoip} onDelete={handleDeleteWavoip} />
+          ))}
+          {showNewWavoip && <NewWavoipDeviceRow users={users} onAdd={handleAddWavoip} />}
+        </div>
+
+        <div className="flex justify-between items-center pt-1">
+          <p className="text-xs text-muted-foreground">{wavoipDevices.length} dispositivo{wavoipDevices.length !== 1 ? "s" : ""} cadastrado{wavoipDevices.length !== 1 ? "s" : ""}</p>
+          <Button variant="outline" size="sm" onClick={() => setShowNewWavoip((v) => !v)}>
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            {showNewWavoip ? "Cancelar" : "Adicionar dispositivo"}
           </Button>
         </div>
       </Card>
