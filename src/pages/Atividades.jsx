@@ -45,11 +45,19 @@ const RESULT_EVENTS = [
 
 export default function Atividades() {
   const [selectedSeller, setSelectedSeller] = useState(null);
+  const [timeRange, setTimeRange] = useState("hoje");
   const queryClient = useQueryClient();
 
-  // Hoje apenas
-  const startDate = startOfDaySP(new Date());
-  const endDate = new Date();
+  // Filtro de período
+  const getDateRange = () => {
+    const range = TIME_RANGES.find(r => r.key === timeRange);
+    return {
+      startDate: range.getStart(),
+      endDate: range.getEnd ? range.getEnd() : new Date(),
+    };
+  };
+
+  const { startDate, endDate } = getDateRange();
 
   const { data: events = [] } = useQuery({
     queryKey: ["events_hoje"],
@@ -128,9 +136,28 @@ export default function Atividades() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard em Tempo Real</h1>
-        <p className="text-sm text-muted-foreground mt-1">Performance do time agora</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard em Tempo Real</h1>
+          <p className="text-sm text-muted-foreground mt-1">Performance do time agora</p>
+        </div>
+        
+        {/* Filtros de período */}
+        <div className="flex gap-2 flex-wrap justify-end">
+          {TIME_RANGES.map((range) => (
+            <button
+              key={range.key}
+              onClick={() => setTimeRange(range.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                timeRange === range.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Row 1: Scoreboard */}
