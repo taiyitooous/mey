@@ -130,14 +130,17 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-1.5">
         {[
-          { icon: Phone, value: calls, label: "3C" },
+          { icon: Phone, value: calls, label: "3C", sublabel: targetCalls ? `/${targetCalls}` : "" },
           { icon: MessageCircle, value: whas, label: "WA" },
           { icon: Trophy, value: wins, label: "Ganhos" },
           { label: "Contato", value: `${contactRate}%`, plain: true },
-        ].map(({ icon: Icon, value, label, plain }) => (
+        ].map(({ icon: Icon, value, label, sublabel, plain }) => (
           <div key={label} className="text-center bg-muted/50 rounded-lg py-2">
             {Icon && !plain ? <Icon className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-0.5" /> : null}
-            <p className="text-sm font-bold leading-tight">{value}</p>
+            <p className="text-sm font-bold leading-tight">
+              {value}
+              {sublabel && <span className="text-xs text-muted-foreground ml-0.5">{sublabel}</span>}
+            </p>
             <p className="text-[10px] text-muted-foreground">{label}</p>
           </div>
         ))}
