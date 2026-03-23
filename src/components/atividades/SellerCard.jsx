@@ -20,14 +20,7 @@ function buildSparkline(events) {
   return Object.values(hourly);
 }
 
-const ACTUAL_CALL_COUNTS = {
-  "Luiz Gustavo Pereira dos santos": 62,
-  "Juliana Peixoto Da Silva": 32,
-  "Ana Carolina da Silva Ponciano": 88,
-  "Raissa Nascimento Dos Santos": 24,
-  "Julia Da Paz Orestes": 34,
-  "Jessica Cavalcante": 41,
-};
+
 
 export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, onDeleteProfile }) {
   const { name, events } = seller;
