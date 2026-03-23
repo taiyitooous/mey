@@ -263,13 +263,79 @@ function NewAgentRow({ users, onAdd }) {
   );
 }
 
+function NewWavoipDeviceRow({ users, onAdd }) {
+  const [form, setForm] = useState({ device_name: "", device_token: "", user_name: "", user_email: "", active: true });
+
+  const handleAdd = async () => {
+    if (!form.device_token || !form.user_name) return;
+    await onAdd(form);
+    setForm({ device_name: "", device_token: "", user_name: "", user_email: "", active: true });
+  };
+
+  return (
+    <div className="p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 space-y-3">
+      <p className="text-xs font-semibold text-primary">Novo dispositivo</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Nome do dispositivo</label>
+          <Input
+            value={form.device_name}
+            onChange={(e) => setForm({ ...form, device_name: e.target.value })}
+            placeholder="ex: WhatsApp 1"
+            className="h-8 text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Token *</label>
+          <Input
+            value={form.device_token}
+            onChange={(e) => setForm({ ...form, device_token: e.target.value })}
+            placeholder="Cole o token aqui"
+            className="h-8 text-sm font-mono"
+            type="password"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Nome usuário MEY *</label>
+          <Input
+            value={form.user_name}
+            onChange={(e) => setForm({ ...form, user_name: e.target.value })}
+            placeholder="Nome completo"
+            className="h-8 text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Email usuário MEY</label>
+          <Input
+            value={form.user_email}
+            onChange={(e) => setForm({ ...form, user_email: e.target.value })}
+            placeholder="email@empresa.com"
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Button size="sm" onClick={handleAdd} disabled={!form.device_token || !form.user_name}>
+          <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function Integracoes() {
   const queryClient = useQueryClient();
-  const [showNew, setShowNew] = useState(false);
+  const [showNew3C, setShowNew3C] = useState(false);
+  const [showNewWavoip, setShowNewWavoip] = useState(false);
 
-  const { data: agents = [], isLoading } = useQuery({
+  const { data: agents = [], isLoading: loadingAgents } = useQuery({
     queryKey: ["threec_agents"],
     queryFn: () => base44.entities.ThreecAgent.list(),
+  });
+
+  const { data: wavoipDevices = [], isLoading: loadingWavoip } = useQuery({
+    queryKey: ["wavoip_config"],
+    queryFn: () => base44.entities.WavoipConfig.list(),
   });
 
   const { data: users = [] } = useQuery({
