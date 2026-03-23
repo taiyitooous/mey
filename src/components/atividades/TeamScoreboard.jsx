@@ -71,10 +71,10 @@ export default function TeamScoreboard({ events }) {
       icon: Phone,
     },
     {
-      value: wavoip,
+      value: wavoipEffective,
       label: "WhatsApp Wavoip",
       meta: `${wavoipEffective} contatos efetivos`,
-      status: semaphore(wavoip, 5, 2),
+      status: semaphore(wavoipEffective, 5, 2),
       icon: Smartphone,
     },
     {

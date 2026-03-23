@@ -26,9 +26,8 @@ export function isEffectiveContact(event) {
 }
 
 export function isCallAttempt(event) {
-  // Conta QUALQUER tentativa de ligação (incluindo sem resposta)
-  const cat = getCategory(event.event_type);
-  return cat === "call";
+  // Conta tentativas de ligação 3C (source específico)
+  return event.source === "3c";
 }
 
 export const EVENT_LABELS = {
