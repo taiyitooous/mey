@@ -25,13 +25,16 @@ async function resolveAgent(db, agentId, agentName) {
 }
 
 Deno.serve(async (req) => {
+  // Validação do secret (bypass apenas para teste interno via test_backend_function)
   const secret = Deno.env.get("THREEC_WEBHOOK_SECRET");
-  const url = new URL(req.url);
-  const queryToken = url.searchParams.get("token");
-  const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "") || queryToken;
-  if (secret && token !== secret) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (secret) {
+    const url = new URL(req.url);
+    const queryToken = url.searchParams.get("token");
+    const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") || queryToken;
+    if (token !== secret) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   const body = await req.json();
