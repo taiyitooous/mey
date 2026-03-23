@@ -93,7 +93,7 @@ export default function Atividades() {
     return map;
   }, [sellerConfigs]);
 
-  const timeFiltered = events;
+  const timeFiltered = events; // filtered server-side
 
   const channelFiltered = useMemo(
     () => channelFilter === "all"
