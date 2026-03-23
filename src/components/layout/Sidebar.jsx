@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { label: "Atividades", icon: Activity, path: "/atividades" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
   { label: "Integrações", icon: Settings, path: "/integracoes" },
+  // Coordenadores não aparece na sidebar (acesso apenas por rota direta)
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
