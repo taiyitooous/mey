@@ -1,5 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.21';
-
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
@@ -27,7 +26,6 @@ async function resolveAgent(db, agentId, agentName) {
 
 Deno.serve(async (req) => {
   const secret = Deno.env.get("THREEC_WEBHOOK_SECRET");
-  const appId = Deno.env.get("BASE44_APP_ID");
   const url = new URL(req.url);
   const queryToken = url.searchParams.get("token");
   const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
@@ -39,8 +37,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json();
 
-  // Usar createClient com appId para operações de serviceRole em webhooks externos
-  const base44 = createClient({ appId });
+  const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole.entities;
 
   const saved = [];
