@@ -30,9 +30,12 @@ Deno.serve(async (req) => {
   const queryToken = url.searchParams.get("token");
   const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "") || queryToken;
+  // Permite bypass sem secret apenas no modo teste (sem secret configurado)
   if (secret && token !== secret) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  console.log("[3C] Webhook received, token ok");
 
   const body = await req.json();
 
