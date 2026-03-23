@@ -19,12 +19,10 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Remove token field from body before processing
   delete body.token;
 
-  console.log("[3C] Webhook received, event keys:", Object.keys(body).join(", "));
+  console.log("[3C] event:", Object.keys(body).join(", "));
 
-  // Use asServiceRole to invoke the processor function with proper auth context
   const base44 = createClientFromRequest(req);
   const result = await base44.asServiceRole.functions.invoke("threecWebhookProcessor", { body });
 
