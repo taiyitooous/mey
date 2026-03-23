@@ -10,15 +10,15 @@ import { subDays, startOfDay, endOfDay } from "date-fns";
 import { utcToZonedTime, zonedTimeToUtc } from "date-fns-tz";
 import { getCategory } from "@/lib/eventUtils";
 
-// Retorna início/fim do dia em SP em timestamps UTC
+// Retorna início/fim do dia em SP
 function startOfDaySP(date = new Date()) {
-  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return new Date(spStr + "T00:00:00Z").getTime() + (3 * 60 * 60 * 1000); // 00:00 SP = 03:00 UTC
+  const zonedDate = utcToZonedTime(date, "America/Sao_Paulo");
+  return zonedTimeToUtc(startOfDay(zonedDate), "America/Sao_Paulo");
 }
 
 function endOfDaySP(date = new Date()) {
-  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return new Date(spStr + "T23:59:59.999Z").getTime() + (3 * 60 * 60 * 1000);
+  const zonedDate = utcToZonedTime(date, "America/Sao_Paulo");
+  return zonedTimeToUtc(endOfDay(zonedDate), "America/Sao_Paulo");
 }
 
 const TIME_RANGES = [
