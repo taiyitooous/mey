@@ -42,9 +42,17 @@ export default function Atividades() {
   const [selectedSeller, setSelectedSeller] = useState(null);
   const queryClient = useQueryClient();
 
+  const range = TIME_RANGES.find((r) => r.key === timeRange) || TIME_RANGES[0];
+  const startDate = range.getStart();
+  const endDate = range.getEnd ? range.getEnd() : new Date();
+
   const { data: events = [] } = useQuery({
-    queryKey: ["events_all"],
-    queryFn: () => base44.entities.Event.list("-created_date", 5000),
+    queryKey: ["events_all", timeRange],
+    queryFn: () => base44.entities.Event.filter(
+      { created_date: { $gte: startDate.toISOString(), $lte: endDate.toISOString() } },
+      "-created_date",
+      2000
+    ),
     refetchInterval: 5000,
     staleTime: 0,
   });
@@ -52,11 +60,11 @@ export default function Atividades() {
   // Real-time subscription para refetch imediato
   useEffect(() => {
     const unsubscribe = base44.entities.Event.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["events_all"] });
+      queryClient.invalidateQueries({ queryKey: ["events_all", timeRange] });
     });
 
     return unsubscribe;
-  }, [queryClient]);
+  }, [queryClient, timeRange]);
 
   const { data: users = [] } = useQuery({
     queryKey: ["users_all"],
