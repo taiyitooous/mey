@@ -1,7 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.22';
-
-const base44App = createClient({ appId: Deno.env.get("BASE44_APP_ID") });
-const db = base44App.asServiceRole.entities;
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.22';
 
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
@@ -10,7 +7,7 @@ function mapStatus(status, speakingTime) {
   return "call.attempt";
 }
 
-async function resolveAgent(agentId, agentName) {
+async function resolveAgent(db, agentId, agentName) {
   const isValid = agentId && agentId !== "0" && agentName && agentName !== "null" && agentName !== "";
   if (!isValid) return { userName: "Sistema", userEmail: "" };
 
@@ -40,7 +37,23 @@ Deno.serve(async (req) => {
 
   console.log("[3C] Webhook received, token ok");
 
+  // Inject a fake Authorization header with the webhook token so the SDK
+  // can initialize properly in service role mode
+  const fakeAuthValue = `Bearer ${token || "webhook"}`;
+  const modifiedReq = new Request(req.url, {
+    method: req.method,
+    headers: (() => {
+      const h = new Headers(req.headers);
+      h.set("authorization", fakeAuthValue);
+      return h;
+    })(),
+    body: req.body,
+  });
+
   const body = await req.json();
+  const base44 = createClientFromRequest(modifiedReq);
+  const db = base44.asServiceRole.entities;
+
   const saved = [];
   const errors = [];
 
@@ -60,7 +73,7 @@ Deno.serve(async (req) => {
       const speakingTime = ch.speaking_with_agent_time || ch.speaking_time || 0;
       const eventType = mapStatus(status, speakingTime);
 
-      const { userName, userEmail } = await resolveAgent(agentId, agentName);
+      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
 
       const payload = JSON.stringify({
         result: eventType.split(".")[1],
@@ -96,7 +109,7 @@ Deno.serve(async (req) => {
       const agentId = String(agent.id || agent.extension_number || "");
       const agentName = agent.name || "";
 
-      const { userName, userEmail } = await resolveAgent(agentId, agentName);
+      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
 
       const payload = JSON.stringify({
         result: "connected",
