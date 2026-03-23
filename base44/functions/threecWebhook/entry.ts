@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.22';
 
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
