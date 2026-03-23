@@ -71,8 +71,8 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const isIdle = minsAgo !== null && minsAgo >= 60;
 
   // KPIs
-  const calls = events.filter((e) => getCategory(e.event_type) === "call").length;
-  const callsAnswered = events.filter((e) => getCategory(e.event_type) === "call" && isEffectiveContact(e)).length;
+  const calls = events.filter(isCallAttempt).length;
+  const callsAnswered = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
   const whas = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const stages = events.filter((e) => getCategory(e.event_type) === "stage").length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
@@ -80,7 +80,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const effective = events.filter(isEffectiveContact).length;
   const closed = wins + losses;
   const closeRate = closed > 0 ? Math.round((wins / closed) * 100) : 0;
-  // Taxa de contato = ligações atendidas / total de ligações (correto)
+  // Taxa de contato = ligações atendidas / total de ligações
   const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
   const uniqueLeads = new Set(events.map((e) => e.entity_id)).size;
 
