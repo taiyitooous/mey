@@ -93,10 +93,6 @@ export default function Atividades() {
     return map;
   }, [sellerConfigs]);
 
-  const range = TIME_RANGES.find((r) => r.key === timeRange) || TIME_RANGES[0];
-  const startDate = range.getStart();
-  const endDate = range.getEnd ? range.getEnd() : new Date();
-
   const timeFiltered = useMemo(
     () => events.filter((e) => {
       const d = new Date(e.created_date);
