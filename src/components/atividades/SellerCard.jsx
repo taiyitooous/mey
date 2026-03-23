@@ -105,6 +105,17 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
   return (
     <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor}`} onClick={onClick}>
+      {/* Status bar - top right */}
+      <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+        <div />
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-white text-xs font-medium ${statusInfo.color}`}>
+            {statusInfo.status}
+          </span>
+          <span className="text-xs text-muted-foreground">{statusInfo.time}</span>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -117,14 +128,20 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           />
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{displayName}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 rounded-full text-white text-xs font-medium ${statusInfo.color}`}>
-                {statusInfo.status}
-              </span>
-              <span className="text-xs text-muted-foreground">{statusInfo.time}</span>
-            </div>
+            <p className="text-xs text-muted-foreground">{actualCalls} ligações reais</p>
           </div>
         </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteProfile?.(name);
+          }}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* KPI row */}
