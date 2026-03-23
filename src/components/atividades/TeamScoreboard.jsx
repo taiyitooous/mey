@@ -42,13 +42,15 @@ function ScoreCard({ value, label, meta, status, icon: Icon }) {
 
 export default function TeamScoreboard({ events }) {
   const total = events.length;
-  const sellers = new Set(events.map((e) => e.user_name || e.created_by)).size;
+  const sellers = new Set(events.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
+  const calls = events.filter((e) => getCategory(e.event_type) === "call").length;
   const effective = events.filter(isEffectiveContact).length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const closed = wins + losses;
   const closeRate = closed > 0 ? Math.round((wins / closed) * 100) : 0;
-  const contactRate = total > 0 ? Math.round((effective / total) * 100) : 0;
+  // Taxa de contato = ligações atendidas / total de ligações (não total de ações)
+  const contactRate = calls > 0 ? Math.round((effective / calls) * 100) : 0;
 
   const cards = [
     {
