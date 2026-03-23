@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
 
   const body = await req.json();
 
-  // Webhook externo: usa createClientFromRequest mas força asServiceRole (sem tentar auth de usuário)
-  const base44 = createClientFromRequest(req);
+  // Webhook externo sem usuário: cria client com appId diretamente
+  const base44 = createClient({ appId: Deno.env.get("BASE44_APP_ID") });
   const db = base44.asServiceRole.entities;
 
   const saved = [];
