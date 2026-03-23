@@ -31,9 +31,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "") || queryToken;
 
-  // Para teste via test_backend_function, aceitar sem token
-  const isTestEnv = req.headers.get("x-base44-test") === "true";
-  if (secret && token !== secret && !isTestEnv) {
+  if (secret && token !== secret) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
