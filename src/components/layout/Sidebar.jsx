@@ -12,6 +12,7 @@ import {
   CalendarCheck,
   Activity,
   Settings,
+  Shield,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,8 @@ const NAV_ITEMS = [
   { label: "Cobrança", icon: Phone, path: "/cobranca" },
   { label: "Atividades", icon: Activity, path: "/atividades" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
+  { label: "Coordenadores", icon: Shield, path: "/coordenadores" },
   { label: "Integrações", icon: Settings, path: "/integracoes" },
-  // Coordenadores não aparece na sidebar (acesso apenas por rota direta)
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
