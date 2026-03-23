@@ -62,8 +62,11 @@ export default function Atividades() {
       const end = r.getEnd ? r.getEnd() : new Date();
       const all = await base44.entities.Event.list("-created_date", 2000);
       return all.filter((e) => {
-        const d = new Date(e.created_date).getTime();
-        return d >= start && d <= end;
+        // Extrair apenas a data (YYYY-MM-DD) em SP
+        const eventDateSP = new Date(e.created_date).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+        const startDateSP = start.toLocaleDateString("en-CA");
+        const endDateSP = end.toLocaleDateString("en-CA");
+        return eventDateSP >= startDateSP && eventDateSP <= endDateSP;
       });
     },
     refetchInterval: 5000,
