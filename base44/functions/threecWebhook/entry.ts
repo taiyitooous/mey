@@ -35,13 +35,7 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const appId = Deno.env.get("BASE44_APP_ID");
-  if (!appId) {
-    console.error("[3C] BASE44_APP_ID not set");
-    return Response.json({ error: "Server misconfigured" }, { status: 500 });
-  }
-
-  const base44 = createClient({ appId });
+  const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole.entities;
 
   const bodyText = await req.text();
