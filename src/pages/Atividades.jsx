@@ -48,11 +48,13 @@ export default function Atividades() {
 
   const { data: events = [] } = useQuery({
     queryKey: ["events_all", timeRange],
-    queryFn: () => base44.entities.Event.filter(
-      { created_date: { $gte: startDate.toISOString(), $lte: endDate.toISOString() } },
-      "-created_date",
-      2000
-    ),
+    queryFn: async () => {
+      const all = await base44.entities.Event.list("-created_date", 2000);
+      return all.filter((e) => {
+        const d = new Date(e.created_date);
+        return d >= startDate && d <= endDate;
+      });
+    },
     refetchInterval: 5000,
     staleTime: 0,
   });
