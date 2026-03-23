@@ -247,6 +247,7 @@ export default function Atividades() {
                 avatarUrl={userAvatarMap[seller.name]}
                 sellerConfig={sellerConfigMap[seller.name]}
                 onConfigUpdated={refetchConfigs}
+                onDeleteProfile={handleDeleteProfile}
                 onClick={() => setSelectedSeller(seller)}
               />
             ))}
