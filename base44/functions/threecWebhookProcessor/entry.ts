@@ -8,8 +8,9 @@ function mapStatus(status, speakingTime) {
 }
 
 async function resolveAgent(db, agentId, agentName) {
-  const isValid = agentId && agentId !== "0" && agentName && agentName !== "null" && agentName !== "";
-  if (!isValid) return { userName: "Sistema", userEmail: "" };
+  // agent_id vazio ou "0" = ligação sem agente identificável (discador automático sem atendimento real)
+  const isValid = agentId && agentId !== "0" && agentId !== "" && agentName && agentName !== "null" && agentName !== "" && agentName !== "null";
+  if (!isValid) return { userName: null, userEmail: "" };
 
   const mappings = await db.ThreecAgent.list();
   const found = mappings.find(
