@@ -30,7 +30,7 @@ const TIME_RANGES = [
 const CHANNELS = [
   { key: "all", label: "Todos" },
   { key: "call", label: "3C" },
-  { key: "whatsapp", label: "WhatsApp" },
+  { key: "whatsapp", label: "WhatsApp Wavoip" },
   { key: "stage", label: "Etapa" },
   { key: "won", label: "Ganho" },
   { key: "lost", label: "Perdido" },
