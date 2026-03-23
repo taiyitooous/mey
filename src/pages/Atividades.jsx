@@ -9,30 +9,16 @@ import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
 
-// Converte uma data "YYYY-MM-DD HH:MM:SS" em SP para UTC Date
-function spDateToUTC(spDateStr) {
-  // Cria um Date que representa o horário em SP usando Intl
-  const [datePart, timePart] = spDateStr.split(" ");
-  const [y, m, d] = datePart.split("-").map(Number);
-  const [h, min, s] = (timePart || "00:00:00").split(":").map(Number);
-  // Tenta cada offset até achar o que bate com SP
-  for (const offsetH of [3, 2]) {
-    const candidate = new Date(Date.UTC(y, m - 1, d, h + offsetH, min, s));
-    const check = candidate.toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false });
-    const [cd, ct] = check.split(", ");
-    if (cd === datePart && ct?.startsWith(`${String(h).padStart(2,"0")}:`)) return candidate;
-  }
-  return new Date(Date.UTC(y, m - 1, d, h + 3, min, s));
-}
-
+// Retorna início do dia no fuso SP como Date UTC
+// SP = UTC-3 (sem horário de verão a partir de 2019)
 function startOfDaySP(date = new Date()) {
-  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return spDateToUTC(`${spStr} 00:00:00`);
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // "YYYY-MM-DD"
+  return new Date(`${spStr}T00:00:00-03:00`);
 }
 
 function endOfDaySP(date = new Date()) {
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return spDateToUTC(`${spStr} 23:59:59`);
+  return new Date(`${spStr}T23:59:59.999-03:00`);
 }
 
 const TIME_RANGES = [
