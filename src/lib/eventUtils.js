@@ -26,8 +26,57 @@ export function isEffectiveContact(event) {
 }
 
 export function isCallAttempt(event) {
-  // Conta tentativas de ligação 3C (source específico)
-  return event.source === "3c";
+  // Conta apenas chamadas finalizadas 3C
+  if (event.source !== "3c") return false;
+  const types = ["call.ended", "call-history-was-created"];
+  return types.includes(event.event_type);
+}
+
+export function deduplicateCallEvents(events) {
+  // Dedup por call_id; se não tiver, por agent_id+phone+timestamp (60s janela)
+  const seenCallIds = new Set();
+  const seenCompositeKeys = new Set();
+  const dedupedEvents = [];
+
+  for (const event of events) {
+    if (!isCallAttempt(event)) continue;
+
+    try {
+      const payload = event.payload ? JSON.parse(event.payload) : {};
+      const callId = payload.call_id;
+
+      if (callId) {
+        if (seenCallIds.has(callId)) continue;
+        seenCallIds.add(callId);
+      } else {
+        // Fallback: agent_id + phone + timestamp (60s window)
+        const agentId = payload.agent_id || event.user_name;
+        const phone = payload.phone;
+        const timestamp = new Date(event.created_date).getTime();
+        
+        if (!agentId || !phone) continue;
+
+        let isDuplicate = false;
+        for (const key of seenCompositeKeys) {
+          const [pAgentId, pPhone, pTimestamp] = key.split("|");
+          if (pAgentId === agentId && pPhone === phone && Math.abs(timestamp - parseInt(pTimestamp)) <= 60000) {
+            isDuplicate = true;
+            break;
+          }
+        }
+
+        if (isDuplicate) continue;
+        seenCompositeKeys.add(`${agentId}|${phone}|${timestamp}`);
+      }
+
+      dedupedEvents.push(event);
+    } catch {
+      // Se falhar parse, inclui mesmo assim
+      dedupedEvents.push(event);
+    }
+  }
+
+  return dedupedEvents;
 }
 
 export const EVENT_LABELS = {
