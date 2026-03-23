@@ -33,7 +33,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [openEditProfile, setOpenEditProfile] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -46,22 +46,6 @@ export default function Sidebar({ collapsed, onToggle }) {
       }
     },
   });
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingPhoto(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      await base44.auth.updateMe({ avatar_url: file_url });
-      queryClient.invalidateQueries({ queryKey: ["current_user"] });
-    } catch (error) {
-      console.error("Erro ao enviar foto:", error);
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
 
   return (
     <aside
@@ -114,33 +98,21 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div className="p-2 border-t border-border space-y-3">
         {/* User Profile */}
         {user && (
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <img
-                src={user.avatar_url || "https://via.placeholder.com/40"}
-                alt={user.full_name}
-                className="w-10 h-10 rounded-lg object-cover"
-              />
-              <label className="absolute inset-0 rounded-lg bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                <Camera className="w-4 h-4 text-white" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  disabled={uploadingPhoto}
-                  className="hidden"
-                />
-              </label>
-            </div>
+          <button
+            onClick={() => setOpenEditProfile(true)}
+            className="flex items-center gap-3 w-full hover:opacity-70 transition-opacity"
+          >
+            <img
+              src={user.avatar_url || "https://via.placeholder.com/40"}
+              alt={user.full_name}
+              className="w-10 h-10 rounded-lg object-cover"
+            />
             {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {user.full_name || "Usuário"}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-              </div>
+              <p className="text-sm font-semibold text-foreground truncate flex-1 text-left">
+                {user.full_name || "Usuário"}
+              </p>
             )}
-          </div>
+          </button>
         )}
 
         <button
@@ -159,6 +131,99 @@ export default function Sidebar({ collapsed, onToggle }) {
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
       </div>
+
+      {/* Edit Profile Dialog */}
+      {openEditProfile && user && (
+        <EditProfileDialog user={user} onClose={() => setOpenEditProfile(false)} />
+      )}
     </aside>
+  );
+}
+
+function EditProfileDialog({ user, onClose }) {
+  const [fullName, setFullName] = useState(user.full_name || "");
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.auth.updateMe({ avatar_url: file_url });
+      queryClient.invalidateQueries({ queryKey: ["current_user"] });
+    } catch (error) {
+      console.error("Erro ao enviar foto:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (fullName.trim()) {
+      await base44.auth.updateMe({ full_name: fullName });
+      queryClient.invalidateQueries({ queryKey: ["current_user"] });
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-card rounded-lg p-6 w-96 shadow-lg space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-semibold">Editar Perfil</h2>
+
+        {/* Photo */}
+        <div className="flex flex-col items-center gap-3">
+          <img
+            src={user.avatar_url || "https://via.placeholder.com/80"}
+            alt={user.full_name}
+            className="w-20 h-20 rounded-lg object-cover"
+          />
+          <label className="text-sm text-primary cursor-pointer hover:underline">
+            {uploading ? "Enviando..." : "Alterar foto"}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {/* Name */}
+        <div>
+          <label className="text-sm font-medium">Nome</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="w-full border border-border rounded-md px-3 py-2 mt-1 text-sm"
+            placeholder="Seu nome"
+          />
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-2 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 px-3 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSaveName}
+            className="flex-1 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+          >
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
