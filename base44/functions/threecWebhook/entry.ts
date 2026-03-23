@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.22';
+import { createClient } from 'npm:@base44/sdk@0.8.21';
 
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
@@ -35,21 +35,24 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  console.log("[3C] Webhook received, token ok");
-
-  // Garantir que o BASE44_APP_ID está no header para o SDK funcionar corretamente
-  const appId = Deno.env.get("BASE44_APP_ID") || "";
-  const headers = new Headers(req.headers);
-  if (appId && !headers.get("x-app-id")) {
-    headers.set("x-app-id", appId);
+  const appId = Deno.env.get("BASE44_APP_ID");
+  if (!appId) {
+    console.error("[3C] BASE44_APP_ID not set");
+    return Response.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
-  const bodyText = await req.text();
-  const body = JSON.parse(bodyText);
-
-  const enrichedReq = new Request(req.url, { method: req.method, headers, body: bodyText });
-  const base44 = createClientFromRequest(enrichedReq);
+  const base44 = createClient({ appId });
   const db = base44.asServiceRole.entities;
+
+  const bodyText = await req.text();
+  let body;
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  console.log("[3C] Webhook received, event keys:", Object.keys(body).join(", "));
 
   const saved = [];
   const errors = [];
@@ -70,7 +73,10 @@ Deno.serve(async (req) => {
       const speakingTime = ch.speaking_with_agent_time || ch.speaking_time || 0;
       const eventType = mapStatus(status, speakingTime);
 
+      console.log(`[3C] call-history: agent=${agentId}/${agentName} status=${status} speaking=${speakingTime} => ${eventType}`);
+
       const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
+      console.log(`[3C] resolved agent: ${userName}`);
 
       const payload = JSON.stringify({
         result: eventType.split(".")[1],
@@ -105,6 +111,8 @@ Deno.serve(async (req) => {
 
       const agentId = String(agent.id || agent.extension_number || "");
       const agentName = agent.name || "";
+
+      console.log(`[3C] call-was-connected: agent=${agentId}/${agentName}`);
 
       const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
 
