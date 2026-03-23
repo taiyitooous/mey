@@ -44,28 +44,21 @@ const RESULT_EVENTS = [
 ];
 
 export default function Atividades() {
-  const [timeRange, setTimeRange] = useState("hoje");
-  const [channelFilter, setChannelFilter] = useState("all");
-  const [onlyWithResult, setOnlyWithResult] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState(null);
   const queryClient = useQueryClient();
 
-  const range = TIME_RANGES.find((r) => r.key === timeRange) || TIME_RANGES[0];
-  const startDate = range.getStart();
-  const endDate = range.getEnd ? range.getEnd() : new Date();
+  // Hoje apenas
+  const startDate = startOfDaySP(new Date());
+  const endDate = new Date();
 
   const { data: events = [] } = useQuery({
-    queryKey: ["events_all", timeRange],
+    queryKey: ["events_hoje"],
     queryFn: async () => {
-      const r = TIME_RANGES.find((x) => x.key === timeRange) || TIME_RANGES[0];
-      const start = r.getStart();
-      const end = r.getEnd ? r.getEnd() : new Date();
       const all = await base44.entities.Event.list("-created_date", 2000);
       return all.filter((e) => {
-        // Extrair apenas a data (YYYY-MM-DD) em SP
         const eventDateSP = new Date(e.created_date).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        const startDateSP = new Date(start).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        const endDateSP = new Date(end).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+        const startDateSP = new Date(startDate).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+        const endDateSP = new Date(endDate).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
         return eventDateSP >= startDateSP && eventDateSP <= endDateSP;
       });
     },
@@ -74,14 +67,14 @@ export default function Atividades() {
     gcTime: 0,
   });
 
-  // Real-time subscription para refetch imediato
+  // Real-time subscription
   useEffect(() => {
     const unsubscribe = base44.entities.Event.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["events_all", timeRange] });
+      queryClient.invalidateQueries({ queryKey: ["events_hoje"] });
     });
 
     return unsubscribe;
-  }, [queryClient, timeRange]);
+  }, [queryClient]);
 
   const { data: users = [] } = useQuery({
     queryKey: ["users_all"],
@@ -110,32 +103,15 @@ export default function Atividades() {
     return map;
   }, [sellerConfigs]);
 
-  const timeFiltered = events;
-
-  const channelFiltered = useMemo(
-    () => channelFilter === "all"
-      ? timeFiltered
-      : timeFiltered.filter((e) => getCategory(e.event_type) === channelFilter),
-    [timeFiltered, channelFilter]
-  );
-
-  const filtered = useMemo(
-    () => onlyWithResult
-      ? channelFiltered.filter((e) => RESULT_EVENTS.includes(e.event_type))
-      : channelFiltered,
-    [channelFiltered, onlyWithResult]
-  );
-
   const sellers = useMemo(() => {
     const map = {};
-    // Always group by time-filtered events for seller cards
-    timeFiltered.forEach((event) => {
+    events.forEach((event) => {
       const key = event.user_name || event.created_by || "Sistema";
       if (!map[key]) map[key] = { name: key, events: [] };
       map[key].events.push(event);
     });
     return Object.values(map).sort((a, b) => b.events.length - a.events.length);
-  }, [timeFiltered]);
+  }, [events]);
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
@@ -153,61 +129,15 @@ export default function Atividades() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Check-in & Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-1">Performance do time em tempo real</p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
-          {TIME_RANGES.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setTimeRange(r.key)}
-              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                timeRange === r.key
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {CHANNELS.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => setChannelFilter(c.key)}
-              className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${
-                channelFilter === c.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/70"
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={() => setOnlyWithResult(!onlyWithResult)}
-          className={`px-3 py-1.5 text-xs rounded-lg font-medium border transition-colors shrink-0 ${
-            onlyWithResult
-              ? "bg-success/10 text-success border-success/30"
-              : "border-border text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          ✓ Somente com resultado
-        </button>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard em Tempo Real</h1>
+        <p className="text-sm text-muted-foreground mt-1">Performance do time agora</p>
       </div>
 
       {/* Row 1: Scoreboard */}
-      <TeamScoreboard events={filtered} />
+      <TeamScoreboard events={events} />
 
       {/* Row 2: Activity chart */}
-      <TeamActivityChart events={timeFiltered} />
+      <TeamActivityChart events={events} />
 
       {/* Row 3: Seller cards */}
       <div>

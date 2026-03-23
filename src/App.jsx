@@ -16,6 +16,7 @@ import LeadDetail from '@/pages/LeadDetail';
 import Hoje from '@/pages/Hoje';
 import Atividades from '@/pages/Atividades';
 import Integracoes from '@/pages/Integracoes';
+import Coordenadores from '@/pages/Coordenadores';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -55,6 +56,7 @@ const AuthenticatedApp = () => {
         <Route path="/eventos" element={<Eventos />} />
         <Route path="/hoje" element={<Hoje />} />
         <Route path="/atividades" element={<Atividades />} />
+        <Route path="/coordenadores" element={<Coordenadores />} />
         <Route path="/integracoes" element={<Integracoes />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
