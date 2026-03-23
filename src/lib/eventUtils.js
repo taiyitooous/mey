@@ -58,7 +58,9 @@ export function buildHourlyData(events) {
     hourly[h] = { hour: `${h}h`, calls: 0, callsAnswered: 0, whatsapp: 0, stage: 0, ganhos: 0, perdidos: 0 };
   }
   events.forEach((e) => {
-    const d = new Date(e.created_date);
+    const raw = e.created_date;
+    const iso = raw && !raw.endsWith("Z") && !raw.includes("+") ? raw + "Z" : raw;
+    const d = new Date(iso);
     // Hora em SP (UTC-3)
     const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (!hourly[h]) return;
