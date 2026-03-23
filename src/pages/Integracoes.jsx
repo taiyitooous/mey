@@ -343,25 +343,43 @@ export default function Integracoes() {
     queryFn: () => base44.entities.User.list(),
   });
 
-  const refetch = () => queryClient.invalidateQueries({ queryKey: ["threec_agents"] });
+  const refetch3C = () => queryClient.invalidateQueries({ queryKey: ["threec_agents"] });
+  const refetchWavoip = () => queryClient.invalidateQueries({ queryKey: ["wavoip_config"] });
 
-  const handleSave = async (id, data) => {
+  const handleSave3C = async (id, data) => {
     await base44.entities.ThreecAgent.update(id, data);
-    refetch();
+    refetch3C();
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete3C = async (id) => {
     await base44.entities.ThreecAgent.delete(id);
-    refetch();
+    refetch3C();
   };
 
-  const handleAdd = async (data) => {
+  const handleAdd3C = async (data) => {
     await base44.entities.ThreecAgent.create(data);
-    setShowNew(false);
-    refetch();
+    setShowNew3C(false);
+    refetch3C();
   };
 
-  const activeCount = agents.filter((a) => a.active !== false).length;
+  const handleSaveWavoip = async (id, data) => {
+    await base44.entities.WavoipConfig.update(id, data);
+    refetchWavoip();
+  };
+
+  const handleDeleteWavoip = async (id) => {
+    await base44.entities.WavoipConfig.delete(id);
+    refetchWavoip();
+  };
+
+  const handleAddWavoip = async (data) => {
+    await base44.entities.WavoipConfig.create(data);
+    setShowNewWavoip(false);
+    refetchWavoip();
+  };
+
+  const activeCount3C = agents.filter((a) => a.active !== false).length;
+  const activeCountWavoip = wavoipDevices.filter((d) => d.active !== false).length;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
