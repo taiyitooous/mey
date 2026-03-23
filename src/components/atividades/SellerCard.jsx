@@ -65,10 +65,17 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
     let totalSeconds = 0;
     events.forEach((e) => {
       if (e.payload) {
-        const payload = JSON.parse(e.payload);
-        const speakingTime = payload.speaking_time || "00:00:00";
-        const [h, m, s] = speakingTime.split(":").map(Number);
-        totalSeconds += (h * 3600) + (m * 60) + s;
+        try {
+          const payload = typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload;
+          const speakingTime = payload?.speaking_time;
+          if (typeof speakingTime === "string") {
+            const parts = speakingTime.split(":").map(Number);
+            const h = parts[0] || 0;
+            const m = parts[1] || 0;
+            const s = parts[2] || 0;
+            totalSeconds += (h * 3600) + (m * 60) + s;
+          }
+        } catch (_) {}
       }
     });
     const hours = Math.floor(totalSeconds / 3600);
