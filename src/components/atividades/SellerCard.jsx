@@ -6,7 +6,7 @@ import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight } from "lucide-
 import { differenceInMinutes, formatDistanceToNow, getHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { getCategory, isEffectiveContact, isCallAttempt } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, isCallAttempt, deduplicateCallEvents } from "@/lib/eventUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import SellerAvatarEditor from "./SellerAvatarEditor";
 
@@ -31,11 +31,12 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const isActive = minsAgo !== null && minsAgo < 15;
   const isIdle = minsAgo !== null && minsAgo >= 60;
 
-  const calls = events.filter(isCallAttempt).length;
+  const dedupedCalls = deduplicateCallEvents(events);
+  const calls = dedupedCalls.length;
   const whas = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
-  const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
+  const effective = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   // Taxa de contato = ligações atendidas / total de ligações
   const contactRate = calls > 0 ? Math.round((effective / calls) * 100) : 0;
 
