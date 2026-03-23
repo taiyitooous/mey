@@ -56,24 +56,24 @@ Deno.serve(async (req) => {
 
       if (isValidAgent) {
         // Tentar resolver agente pelo ID
-        const agentMappings = await base44.asServiceRole.entities.ThreecAgent.list();
-        let mapping = agentMappings.find(
+        const agentMappings = await base44.entities.ThreecAgent.list();
+        let agentMapping = agentMappings.find(
           (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
         );
 
         // Se não encontrou, criar automaticamente
-        if (!mapping) {
-          await base44.asServiceRole.entities.ThreecAgent.create({
+        if (!agentMapping) {
+          await base44.entities.ThreecAgent.create({
             agent_id: agentId,
             agent_name_3c: agentName,
             user_name: agentName,
             active: true,
           });
-          mapping = { user_name: agentName, user_email: "" };
+          agentMapping = { user_name: agentName, user_email: "" };
         }
 
-        userName = mapping?.user_name || agentName;
-        userEmail = mapping?.user_email || "";
+        userName = agentMapping.user_name || agentName;
+        userEmail = agentMapping.user_email || "";
       }
 
       const payload = JSON.stringify({
