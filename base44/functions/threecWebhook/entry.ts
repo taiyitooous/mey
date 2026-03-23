@@ -37,24 +37,18 @@ Deno.serve(async (req) => {
 
   console.log("[3C] Webhook received, token ok");
 
-  // Read body first
+  // Garantir que o BASE44_APP_ID está no header para o SDK funcionar corretamente
+  const appId = Deno.env.get("BASE44_APP_ID") || "";
+  const headers = new Headers(req.headers);
+  if (appId && !headers.get("x-app-id")) {
+    headers.set("x-app-id", appId);
+  }
+
   const bodyText = await req.text();
   const body = JSON.parse(bodyText);
 
-  // Build a new request with the body text and a valid-looking auth header
-  // so createClientFromRequest can use asServiceRole
-  const serviceReq = new Request(req.url, {
-    method: "POST",
-    headers: (() => {
-      const h = new Headers(req.headers);
-      h.set("authorization", `Bearer ${token || secret || "webhook"}`);
-      h.set("x-app-id", Deno.env.get("BASE44_APP_ID") || "");
-      return h;
-    })(),
-    body: bodyText,
-  });
-
-  const base44 = createClientFromRequest(serviceReq);
+  const enrichedReq = new Request(req.url, { method: req.method, headers, body: bodyText });
+  const base44 = createClientFromRequest(enrichedReq);
   const db = base44.asServiceRole.entities;
 
   const saved = [];
