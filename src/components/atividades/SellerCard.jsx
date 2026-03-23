@@ -36,7 +36,8 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const effective = events.filter(isEffectiveContact).length;
-  const contactRate = events.length > 0 ? Math.round((effective / events.length) * 100) : 0;
+  // Taxa de contato = ligações atendidas / total de ligações
+  const contactRate = calls > 0 ? Math.round((effective / calls) * 100) : 0;
 
   const sparkData = buildSparkline(events);
 
