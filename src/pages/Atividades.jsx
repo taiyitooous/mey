@@ -62,11 +62,15 @@ export default function Atividades() {
       const r = TIME_RANGES.find((x) => x.key === timeRange) || TIME_RANGES[0];
       const start = r.getStart();
       const end = r.getEnd ? r.getEnd() : new Date();
+      console.log("[Atividades] período:", start.toISOString(), "→", end.toISOString());
       const all = await base44.entities.Event.list("-created_date", 2000);
-      return all.filter((e) => {
+      console.log("[Atividades] total eventos:", all.length);
+      const result = all.filter((e) => {
         const d = new Date(e.created_date);
         return d >= start && d <= end;
       });
+      console.log("[Atividades] eventos no período:", result.length);
+      return result;
     },
     refetchInterval: 5000,
     staleTime: 0,
