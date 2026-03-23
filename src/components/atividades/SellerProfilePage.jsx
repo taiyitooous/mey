@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { format, getHours, differenceInMinutes, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getCategory, isEffectiveContact, EVENT_LABELS, buildHourlyData } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, isCallAttempt, EVENT_LABELS, buildHourlyData } from "@/lib/eventUtils";
 
 const EVENT_ICONS = {
   call: Phone,
