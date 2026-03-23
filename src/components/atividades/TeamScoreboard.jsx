@@ -58,13 +58,6 @@ export default function TeamScoreboard({ events }) {
 
   const cards = [
     {
-      value: total,
-      label: "Ações totais",
-      meta: `${sellers} vendedor${sellers !== 1 ? "es" : ""} ativo${sellers !== 1 ? "s" : ""}`,
-      status: semaphore(total, 30, 10),
-      icon: Zap,
-    },
-    {
       value: calls,
       label: "Ligações 3C",
       meta: `${contactRate}% taxa de contato`,
