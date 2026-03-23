@@ -113,19 +113,19 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className="bg-green-500 text-[10px] mx-12 font-medium rounded-full whitespace-nowrap">
+          <span className={`px-2 py-0.5 rounded-full text-white text-[10px] font-medium whitespace-nowrap ${statusInfo.color}`}>
             {statusInfo.status}
           </span>
-          
-          <Button
-            variant="ghost"
-            size="icon" className="text-destructive mt-2 text-sm font-medium rounded-lg inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-6 w-6 hover:bg-destructive/10"
-
+          <span className="text-[10px] text-muted-foreground">{statusInfo.time}</span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-destructive hover:bg-destructive/10 mt-0.5"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteProfile?.(name);
-            }}>
-            
+            }}
+          >
             <Trash2 className="w-3 h-3" />
           </Button>
         </div>
