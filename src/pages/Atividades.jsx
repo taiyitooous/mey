@@ -64,8 +64,8 @@ export default function Atividades() {
       return all.filter((e) => {
         // Extrair apenas a data (YYYY-MM-DD) em SP
         const eventDateSP = new Date(e.created_date).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        const startDateSP = start.toLocaleDateString("en-CA");
-        const endDateSP = end.toLocaleDateString("en-CA");
+        const startDateSP = new Date(start).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+        const endDateSP = new Date(end).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
         return eventDateSP >= startDateSP && eventDateSP <= endDateSP;
       });
     },
