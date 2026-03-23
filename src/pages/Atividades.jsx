@@ -9,16 +9,15 @@ import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
 
-// Retorna início do dia no fuso SP como Date UTC
-// SP = UTC-3 (sem horário de verão a partir de 2019)
+// Retorna início/fim do dia em SP em timestamps UTC
 function startOfDaySP(date = new Date()) {
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // "YYYY-MM-DD"
-  return new Date(`${spStr}T00:00:00-03:00`);
+  return new Date(spStr + "T00:00:00Z").getTime() - (3 * 60 * 60 * 1000); // Converter para UTC-3
 }
 
 function endOfDaySP(date = new Date()) {
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return new Date(`${spStr}T23:59:59.999-03:00`);
+  return new Date(spStr + "T23:59:59.999Z").getTime() - (3 * 60 * 60 * 1000); // Converter para UTC-3
 }
 
 const TIME_RANGES = [
