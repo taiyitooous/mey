@@ -12,13 +12,13 @@ async function resolveAgent(db, agentId, agentName) {
   if (!isValid) return { userName: "Sistema", userEmail: "" };
 
   const mappings = await db.ThreecAgent.list();
-  let found = mappings.find(
+  const found = mappings.find(
     (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
   );
 
   if (!found) {
     await db.ThreecAgent.create({ agent_id: agentId, agent_name_3c: agentName, user_name: agentName, active: true });
-    found = { user_name: agentName, user_email: "" };
+    return { userName: agentName, userEmail: "" };
   }
 
   return { userName: found.user_name || agentName, userEmail: found.user_email || "" };
@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json();
 
+  // Para webhooks externos sem usuário autenticado, usamos asServiceRole diretamente
   const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole.entities;
 
