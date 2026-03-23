@@ -136,27 +136,29 @@ export default function Atividades() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard em Tempo Real</h1>
-          <p className="text-sm text-muted-foreground mt-1">Performance do time agora</p>
-        </div>
-        
-        {/* Filtros de período */}
-        <div className="flex gap-2 flex-wrap justify-end">
-          {TIME_RANGES.map((range) => (
-            <button
-              key={range.key}
-              onClick={() => setTimeRange(range.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                timeRange === range.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              }`}
-            >
-              {range.label}
-            </button>
-          ))}
+      <div>
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Check-in & Analytics</h1>
+            <p className="text-sm text-muted-foreground mt-1">Performance do time em tempo real</p>
+          </div>
+          
+          {/* Filtros de período */}
+          <div className="flex gap-2 flex-wrap justify-end">
+            {TIME_RANGES.map((range) => (
+              <button
+                key={range.key}
+                onClick={() => setTimeRange(range.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  timeRange === range.key
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                {range.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
