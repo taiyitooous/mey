@@ -93,13 +93,7 @@ export default function Atividades() {
     return map;
   }, [sellerConfigs]);
 
-  const timeFiltered = useMemo(
-    () => events.filter((e) => {
-      const d = new Date(e.created_date);
-      return d >= startDate && d <= endDate;
-    }),
-    [events, timeRange]
-  );
+  const timeFiltered = events;
 
   const channelFiltered = useMemo(
     () => channelFilter === "all"
