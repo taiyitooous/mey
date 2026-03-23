@@ -75,13 +75,12 @@ export function buildHourlyData(events) {
     // Hora em SP (UTC-3)
     const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (!hourly[h]) return;
-    const cat = getCategory(e.event_type);
-    if (cat === "call") {
+    if (isCallAttempt(e)) {
       hourly[h].calls++;
       if (isEffectiveContact(e)) hourly[h].callsAnswered++;
     }
-    if (cat === "whatsapp") hourly[h].whatsapp++;
-    if (cat === "stage") hourly[h].stage++;
+    if (getCategory(e.event_type) === "whatsapp") hourly[h].whatsapp++;
+    if (getCategory(e.event_type) === "stage") hourly[h].stage++;
     if (e.event_type === "lead.won") hourly[h].ganhos++;
     if (e.event_type === "lead.lost") hourly[h].perdidos++;
   });
