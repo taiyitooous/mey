@@ -1,7 +1,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { getCategory, isEffectiveContact } from "@/lib/eventUtils";
-import { Phone, MessageCircle, Trophy, Target, Zap } from "lucide-react";
+import { Phone, MessageCircle, Trophy, Target, Zap, Smartphone } from "lucide-react";
 
 const STATUS = {
   bom: "bg-success/10 text-success border-success/20",
