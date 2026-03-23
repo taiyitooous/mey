@@ -25,6 +25,7 @@ async function resolveAgent(db, agentId, agentName) {
 }
 
 Deno.serve(async (req) => {
+  console.log("[START] threecWebhook called, method:", req.method);
   // Validação temporariamente desabilitada para teste — reativar depois
   // const secret = Deno.env.get("THREEC_WEBHOOK_SECRET");
   // const url = new URL(req.url);
