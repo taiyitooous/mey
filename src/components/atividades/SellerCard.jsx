@@ -6,7 +6,7 @@ import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight } from "lucide-
 import { differenceInMinutes, formatDistanceToNow, getHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { getCategory, isEffectiveContact } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, isCallAttempt } from "@/lib/eventUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import SellerAvatarEditor from "./SellerAvatarEditor";
 
