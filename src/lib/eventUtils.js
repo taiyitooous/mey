@@ -19,6 +19,7 @@ export function isEffectiveContact(event) {
     } catch { return false; }
   }
   if (event.event_type === "whatsapp_replied" || event.event_type === "lead.whatsapp_replied") return true;
+  if (event.event_type === "whatsapp_call_received") return true;
   return false;
 }
 
