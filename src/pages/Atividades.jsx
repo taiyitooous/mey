@@ -70,6 +70,7 @@ export default function Atividades() {
     },
     refetchInterval: 5000,
     staleTime: 0,
+    gcTime: 0,
   });
 
   // Real-time subscription para refetch imediato
