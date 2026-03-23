@@ -44,6 +44,7 @@ export default function TeamScoreboard({ events }) {
   const total = events.length;
   const sellers = new Set(events.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
   const calls = events.filter((e) => getCategory(e.event_type) === "call").length;
+  const wavoip = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const effective = events.filter(isEffectiveContact).length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
@@ -61,25 +62,25 @@ export default function TeamScoreboard({ events }) {
       icon: Zap,
     },
     {
-      value: effective,
-      label: "Contatos efetivos",
+      value: calls,
+      label: "Ligações 3C",
       meta: `${contactRate}% taxa de contato`,
       status: semaphore(contactRate, 40, 20),
       icon: Phone,
     },
     {
-      value: wins,
-      label: "Ganhos",
-      meta: `${losses} perdidos no período`,
-      status: semaphore(wins, 3, 1),
-      icon: Trophy,
+      value: wavoip,
+      label: "WhatsApp Wavoip",
+      meta: `${effective} contatos efetivos`,
+      status: semaphore(wavoip, 5, 2),
+      icon: Smartphone,
     },
     {
-      value: `${closeRate}%`,
-      label: "Close Rate",
-      meta: `${closed} fechados (ganho+perda)`,
-      status: semaphore(closeRate, 30, 15),
-      icon: Target,
+      value: wins,
+      label: "Ganhos",
+      meta: `${closeRate}% close rate`,
+      status: semaphore(wins, 3, 1),
+      icon: Trophy,
     },
   ];
 
