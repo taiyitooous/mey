@@ -29,9 +29,9 @@ const ACTUAL_CALL_COUNTS = {
   "Jessica Cavalcante": 41,
 };
 
-export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated }) {
+export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, onDeleteProfile }) {
   const { name, events } = seller;
-  const targetCalls = AGENT_CALL_TARGETS[name] || 0;
+  const actualCalls = ACTUAL_CALL_COUNTS[name] || 0;
   const displayName = sellerConfig?.display_name || name;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const lastEvent = sorted[0];
