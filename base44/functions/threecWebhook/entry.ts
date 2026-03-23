@@ -25,16 +25,14 @@ async function resolveAgent(db, agentId, agentName) {
 }
 
 Deno.serve(async (req) => {
-  console.log("[START] threecWebhook called, method:", req.method);
-  // Validação temporariamente desabilitada para teste — reativar depois
-  // const secret = Deno.env.get("THREEC_WEBHOOK_SECRET");
-  // const url = new URL(req.url);
-  // const queryToken = url.searchParams.get("token");
-  // const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
-  // const token = authHeader?.replace("Bearer ", "") || queryToken;
-  // if (secret && token !== secret) {
-  //   return Response.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  const secret = Deno.env.get("THREEC_WEBHOOK_SECRET");
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get("token");
+  const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
+  const token = authHeader?.replace("Bearer ", "") || queryToken;
+  if (secret && token !== secret) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json();
 
