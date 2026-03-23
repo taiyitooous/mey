@@ -11,13 +11,13 @@ import { getCategory } from "@/lib/eventUtils";
 
 // Retorna início/fim do dia em SP em timestamps UTC
 function startOfDaySP(date = new Date()) {
-  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // "YYYY-MM-DD"
-  return new Date(spStr + "T00:00:00Z").getTime() - (3 * 60 * 60 * 1000); // Converter para UTC-3
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return new Date(spStr + "T00:00:00Z").getTime() + (3 * 60 * 60 * 1000); // 00:00 SP = 03:00 UTC
 }
 
 function endOfDaySP(date = new Date()) {
   const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  return new Date(spStr + "T23:59:59.999Z").getTime() - (3 * 60 * 60 * 1000); // Converter para UTC-3
+  return new Date(spStr + "T23:59:59.999Z").getTime() + (3 * 60 * 60 * 1000);
 }
 
 const TIME_RANGES = [
