@@ -46,6 +46,8 @@ const RESULT_EVENTS = [
 export default function Atividades() {
   const [selectedSeller, setSelectedSeller] = useState(null);
   const [timeRange, setTimeRange] = useState("hoje");
+  const [selectedChannel, setSelectedChannel] = useState("all");
+  const [resultOnly, setResultOnly] = useState(false);
   const queryClient = useQueryClient();
 
   // Filtro de período
@@ -111,15 +113,31 @@ export default function Atividades() {
     return map;
   }, [sellerConfigs]);
 
+  const filteredEvents = useMemo(() => {
+    let filtered = [...events];
+    
+    // Filtro de canal
+    if (selectedChannel !== "all") {
+      filtered = filtered.filter((e) => getCategory(e.event_type) === selectedChannel);
+    }
+    
+    // Filtro de resultado apenas
+    if (resultOnly) {
+      filtered = filtered.filter((e) => RESULT_EVENTS.includes(e.event_type));
+    }
+    
+    return filtered;
+  }, [events, selectedChannel, resultOnly]);
+
   const sellers = useMemo(() => {
     const map = {};
-    events.forEach((event) => {
+    filteredEvents.forEach((event) => {
       const key = event.user_name || event.created_by || "Sistema";
       if (!map[key]) map[key] = { name: key, events: [] };
       map[key].events.push(event);
     });
     return Object.values(map).sort((a, b) => b.events.length - a.events.length);
-  }, [events]);
+  }, [filteredEvents]);
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
@@ -162,11 +180,41 @@ export default function Atividades() {
         </div>
       </div>
 
+      {/* Filtros de canal e resultado */}
+      <div className="flex gap-2 flex-wrap items-center pb-2 border-b border-border">
+        <div className="flex gap-1.5 flex-wrap">
+          {CHANNELS.map((channel) => (
+            <button
+              key={channel.key}
+              onClick={() => setSelectedChannel(channel.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                selectedChannel === channel.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              {channel.label}
+            </button>
+          ))}
+        </div>
+        
+        <button
+          onClick={() => setResultOnly(!resultOnly)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ml-auto ${
+            resultOnly
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          }`}
+        >
+          ✓ Somente com resultado
+        </button>
+      </div>
+
       {/* Row 1: Scoreboard */}
-      <TeamScoreboard events={events} />
+      <TeamScoreboard events={filteredEvents} />
 
       {/* Row 2: Activity chart */}
-      <TeamActivityChart events={events} />
+      <TeamActivityChart events={filteredEvents} />
 
       {/* Row 3: Seller cards */}
       <div>
