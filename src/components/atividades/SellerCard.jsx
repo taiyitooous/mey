@@ -39,16 +39,16 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const effective = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
-  const contactRate = calls > 0 ? Math.round((effective / calls) * 100) : 0;
+  const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {
     if (!lastDate) return { status: "Offline", color: "bg-gray-400", time: "00:00:00" };
-    
+
     const lastCallType = lastEvent?.payload ? JSON.parse(lastEvent.payload)?.source : null;
     let status = "Manual";
     let color = "bg-orange-500";
-    
+
     if (isActive) {
       status = "Falando";
       color = "bg-green-500";
@@ -62,7 +62,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       status = "Offline";
       color = "bg-gray-400";
     }
-    
+
     // Calculate total time (duration of all calls in HH:MM:SS)
     let totalSeconds = 0;
     events.forEach((e) => {
@@ -75,16 +75,16 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             const h = parts[0] || 0;
             const m = parts[1] || 0;
             const s = parts[2] || 0;
-            totalSeconds += (h * 3600) + (m * 60) + s;
+            totalSeconds += h * 3600 + m * 60 + s;
           }
         } catch (_) {}
       }
     });
     const hours = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const mins = Math.floor(totalSeconds % 3600 / 60);
     const secs = totalSeconds % 60;
     const time = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-    
+
     return { status, color, time };
   }, [lastDate, lastEvent, isActive, isIdle, minsAgo, events]);
 
@@ -105,27 +105,27 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             displayName={sellerConfig?.display_name}
             avatarUrl={sellerConfig?.avatar_url || avatarUrl}
             onUpdated={onConfigUpdated}
-            size="sm"
-          />
+            size="sm" />
+          
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{displayName}</p>
             <p className="text-xs text-muted-foreground truncate">{calls} ligações reais</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={`px-2 py-0.5 rounded-full text-white text-[10px] font-medium whitespace-nowrap ${statusInfo.color}`}>
+          <span className="bg-green-500 text-[10px] mx-12 font-medium rounded-full whitespace-nowrap">
             {statusInfo.status}
           </span>
-          <span className="text-[10px] text-muted-foreground">{statusInfo.time}</span>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 text-destructive hover:bg-destructive/10 mt-0.5"
+          
+          <Button
+            variant="ghost"
+            size="icon" className="text-destructive mt-2 text-sm font-medium rounded-lg inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-6 w-6 hover:bg-destructive/10"
+
             onClick={(e) => {
               e.stopPropagation();
               onDeleteProfile?.(name);
-            }}
-          >
+            }}>
+            
             <Trash2 className="w-3 h-3" />
           </Button>
         </div>
@@ -134,29 +134,29 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-1.5">
         {[
-          { icon: Phone, value: calls, label: "3C" },
-          { icon: MessageCircle, value: whas, label: "WA" },
-          { icon: Trophy, value: wins, label: "Ganhos" },
-          { label: "Contato", value: `${contactRate}%`, plain: true },
-        ].map(({ icon: Icon, value, label, plain }) => (
-          <div key={label} className="text-center bg-muted/50 rounded-lg py-2">
+        { icon: Phone, value: calls, label: "3C" },
+        { icon: MessageCircle, value: whas, label: "WA" },
+        { icon: Trophy, value: wins, label: "Ganhos" },
+        { label: "Contato", value: `${contactRate}%`, plain: true }].
+        map(({ icon: Icon, value, label, plain }) =>
+        <div key={label} className="text-center bg-muted/50 rounded-lg py-2">
             {Icon && !plain ? <Icon className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-0.5" /> : null}
             <p className="text-sm font-bold leading-tight">{value}</p>
             <p className="text-[10px] text-muted-foreground">{label}</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Sparkline */}
-      {events.length > 0 && (
-        <div className="h-10">
+      {events.length > 0 &&
+      <div className="h-10">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={sparkData}>
               <Line type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={1.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
-      )}
+      }
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1">
@@ -169,6 +169,6 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
-    </Card>
-  );
+    </Card>);
+
 }
