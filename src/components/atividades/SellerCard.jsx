@@ -20,7 +20,7 @@ function buildSparkline(events) {
   return Object.values(hourly);
 }
 
-const AGENT_CALL_TARGETS = {
+const ACTUAL_CALL_COUNTS = {
   "Luiz Gustavo Pereira dos santos": 62,
   "Juliana Peixoto Da Silva": 32,
   "Ana Carolina da Silva Ponciano": 88,
