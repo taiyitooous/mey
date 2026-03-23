@@ -40,7 +40,7 @@ const CHANNELS = [
 const RESULT_EVENTS = [
   "lead.won", "lead.lost", "payment.paid",
   "collection.promise_made", "collection.agreement_made",
-  "call_answered", "whatsapp_replied",
+  "call_answered", "whatsapp_replied", "whatsapp_call_received",
 ];
 
 export default function Atividades() {
