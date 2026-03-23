@@ -1,4 +1,15 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClient } from 'npm:@base44/sdk@0.8.21';
+
+const APP_ID = Deno.env.get("BASE44_APP_ID");
+
+async function getAuthenticatedDb() {
+  const base44 = createClient({ appId: APP_ID });
+  await base44.auth.loginViaEmailPassword(
+    Deno.env.get("BASE44_ADMIN_EMAIL"),
+    Deno.env.get("BASE44_ADMIN_PASSWORD")
+  );
+  return base44.entities;
+}
 
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
@@ -35,9 +46,6 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const base44 = createClientFromRequest(req);
-  const db = base44.asServiceRole.entities;
-
   const bodyText = await req.text();
   let body;
   try {
@@ -47,8 +55,8 @@ Deno.serve(async (req) => {
   }
 
   console.log("[3C] Webhook received, event keys:", Object.keys(body).join(", "));
-  console.log("[3C] Raw body (first 800):", JSON.stringify(body).slice(0, 800));
 
+  const db = await getAuthenticatedDb();
   const saved = [];
   const errors = [];
 
