@@ -124,7 +124,7 @@ export default function Eventos() {
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {event.created_date && format(new Date(event.created_date), "dd/MM HH:mm")}
+                    {formatSP(event.created_date)}
                   </span>
                 </div>
               </Card>
