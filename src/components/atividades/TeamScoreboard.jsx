@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { getCategory, isEffectiveContact } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, deduplicateCallEvents } from "@/lib/eventUtils";
 import { Phone, MessageCircle, Trophy, Target, Zap, Smartphone } from "lucide-react";
 import { isCallAttempt } from "@/lib/eventUtils";
 
@@ -42,11 +42,12 @@ function ScoreCard({ value, label, meta, status, icon: Icon }) {
 }
 
 export default function TeamScoreboard({ events }) {
+  const dedupedCalls = deduplicateCallEvents(events);
   const total = events.length;
   const sellers = new Set(events.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
-  const calls = events.filter(isCallAttempt).length;
+  const calls = dedupedCalls.length;
   const wavoip = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
-  const callsAnswered = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
+  const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   const wavoipEffective = events.filter((e) => getCategory(e.event_type) === "whatsapp" && isEffectiveContact(e)).length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
