@@ -9,15 +9,15 @@ import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import { subDays } from "date-fns";
 import { getCategory } from "@/lib/eventUtils";
 
-// Retorna início/fim do dia em SP
+// Retorna início/fim do dia em SP (em timestamps UTC)
 function startOfDaySP(date = new Date()) {
-  const zonedDate = utcToZonedTime(date, "America/Sao_Paulo");
-  return zonedTimeToUtc(startOfDay(zonedDate), "America/Sao_Paulo");
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return new Date(spStr + "T00:00:00-03:00").getTime();
 }
 
 function endOfDaySP(date = new Date()) {
-  const zonedDate = utcToZonedTime(date, "America/Sao_Paulo");
-  return zonedTimeToUtc(endOfDay(zonedDate), "America/Sao_Paulo");
+  const spStr = date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return new Date(spStr + "T23:59:59.999-03:00").getTime();
 }
 
 const TIME_RANGES = [
