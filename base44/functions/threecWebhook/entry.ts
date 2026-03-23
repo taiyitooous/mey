@@ -1,4 +1,30 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+const BASE44_API = "https://api.base44.com/api";
+const APP_ID = Deno.env.get("BASE44_APP_ID");
+
+async function apiCall(method, path, body) {
+  const res = await fetch(`${BASE44_API}/apps/${APP_ID}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": Deno.env.get("THREEC_WEBHOOK_SECRET") || "",
+      "x-app-id": APP_ID,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API ${method} ${path} → ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+async function dbList(entity) {
+  return apiCall("GET", `/entities/${entity}/`);
+}
+
+async function dbCreate(entity, data) {
+  return apiCall("POST", `/entities/${entity}/`, data);
+}
 
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
@@ -7,17 +33,17 @@ function mapStatus(status, speakingTime) {
   return "call.attempt";
 }
 
-async function resolveAgent(db, agentId, agentName) {
+async function resolveAgent(agentId, agentName) {
   const isValid = agentId && agentId !== "0" && agentName && agentName !== "null" && agentName !== "";
   if (!isValid) return { userName: "Sistema", userEmail: "" };
 
-  const mappings = await db.ThreecAgent.list();
+  const mappings = await dbList("ThreecAgent");
   const found = mappings.find(
     (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
   );
 
   if (!found) {
-    await db.ThreecAgent.create({ agent_id: agentId, agent_name_3c: agentName, user_name: agentName, active: true });
+    await dbCreate("ThreecAgent", { agent_id: agentId, agent_name_3c: agentName, user_name: agentName, active: true });
     return { userName: agentName, userEmail: "" };
   }
 
@@ -35,11 +61,6 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
-
-  // Webhook externo: createClientFromRequest + asServiceRole (não precisa de usuário autenticado)
-  const base44 = createClientFromRequest(req);
-  const db = base44.asServiceRole.entities;
-
   const saved = [];
   const errors = [];
 
@@ -59,7 +80,7 @@ Deno.serve(async (req) => {
       const speakingTime = ch.speaking_with_agent_time || ch.speaking_time || 0;
       const eventType = mapStatus(status, speakingTime);
 
-      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
+      const { userName, userEmail } = await resolveAgent(agentId, agentName);
 
       const payload = JSON.stringify({
         result: eventType.split(".")[1],
@@ -74,7 +95,7 @@ Deno.serve(async (req) => {
         agent_id: agentId,
       });
 
-      await db.Event.create({
+      await dbCreate("Event", {
         entity_type: "lead",
         entity_id: mailingData.identifier || ch._id || "3c_unknown",
         event_type: eventType,
@@ -95,7 +116,7 @@ Deno.serve(async (req) => {
       const agentId = String(agent.id || agent.extension_number || "");
       const agentName = agent.name || "";
 
-      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
+      const { userName, userEmail } = await resolveAgent(agentId, agentName);
 
       const payload = JSON.stringify({
         result: "connected",
@@ -104,7 +125,7 @@ Deno.serve(async (req) => {
         agent_id: agentId,
       });
 
-      await db.Event.create({
+      await dbCreate("Event", {
         entity_type: "lead",
         entity_id: call.id || "3c_unknown",
         event_type: "call.answered",
