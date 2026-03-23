@@ -123,8 +123,9 @@ Deno.serve(async (req) => {
       console.log("[3C UNKNOWN EVENT]", keys[0], JSON.stringify(body).slice(0, 300));
     }
   } catch (err) {
-    console.error("[ERROR]", err.message);
+    console.error("[ERROR]", err.message, err.stack);
     errors.push({ error: err.message });
+    return Response.json({ error: err.message, stack: err.stack }, { status: 500 });
   }
 
   return Response.json({ received: 1, saved: saved.length, errors, items: saved });
