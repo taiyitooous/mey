@@ -105,6 +105,105 @@ function AgentRow({ agent, users, onSave, onDelete }) {
   );
 }
 
+function WavoipDeviceRow({ device, users, onSave, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    device_name: device.device_name || "",
+    device_token: device.device_token || "",
+    user_name: device.user_name || "",
+    user_email: device.user_email || "",
+    active: device.active !== false,
+  });
+
+  const handleSave = async () => {
+    await onSave(device.id, form);
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+        <button onClick={() => onSave(device.id, { active: !form.active })} className="shrink-0">
+          {form.active
+            ? <CheckCircle2 className="w-4 h-4 text-success" />
+            : <Circle className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        <div className="flex-1 grid grid-cols-3 gap-2 min-w-0">
+          <div>
+            <p className="text-xs text-muted-foreground">Nome do dispositivo</p>
+            <p className="text-sm font-semibold">{device.device_name || "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Token (últimos 8 chars)</p>
+            <p className="text-sm font-mono">...{device.device_token.slice(-8)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Usuário MEY</p>
+            <p className="text-sm font-medium">{device.user_name}</p>
+            {device.user_email && <p className="text-xs text-muted-foreground">{device.user_email}</p>}
+          </div>
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Editar</Button>
+          <Button variant="ghost" size="sm" onClick={() => onDelete(device.id)}>
+            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3 rounded-lg border bg-accent/20 space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Nome do dispositivo</label>
+          <Input
+            value={form.device_name}
+            onChange={(e) => setForm({ ...form, device_name: e.target.value })}
+            placeholder="ex: WhatsApp 1"
+            className="h-8 text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Token *</label>
+          <Input
+            value={form.device_token}
+            onChange={(e) => setForm({ ...form, device_token: e.target.value })}
+            placeholder="Cole o token do dispositivo"
+            className="h-8 text-sm font-mono"
+            type="password"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Nome usuário MEY *</label>
+          <Input
+            value={form.user_name}
+            onChange={(e) => setForm({ ...form, user_name: e.target.value })}
+            placeholder="Nome completo"
+            className="h-8 text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Email usuário MEY</label>
+          <Input
+            value={form.user_email}
+            onChange={(e) => setForm({ ...form, user_email: e.target.value })}
+            placeholder="email@empresa.com"
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancelar</Button>
+        <Button size="sm" onClick={handleSave}>
+          <Save className="w-3.5 h-3.5 mr-1" /> Salvar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function NewAgentRow({ users, onAdd }) {
   const [form, setForm] = useState({ agent_id: "", agent_name_3c: "", user_name: "", user_email: "", active: true });
 
