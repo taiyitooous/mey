@@ -1,11 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
-// Status 3C: 1=waiting, 2=dialing, 3=connected, 4=acw, 5=no_answer/cancelled
 function mapStatus(status, speakingTime) {
   if (speakingTime > 0) return "call.answered";
   if (status === 3) return "call.answered";
   if (status === 5) return "call.no_answer";
   return "call.attempt";
+}
+
+async function resolveAgent(db, agentId, agentName) {
+  const isValid = agentId && agentId !== "0" && agentName && agentName !== "null";
+  if (!isValid) return { userName: "Sistema", userEmail: "" };
+
+  const mappings = await db.ThreecAgent.list();
+  let found = mappings.find(
+    (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
+  );
+
+  if (!found) {
+    await db.ThreecAgent.create({ agent_id: agentId, agent_name_3c: agentName, user_name: agentName, active: true });
+    found = { user_name: agentName, user_email: "" };
+  }
+
+  return { userName: found.user_name || agentName, userEmail: found.user_email || "" };
 }
 
 Deno.serve(async (req) => {
@@ -21,76 +37,43 @@ Deno.serve(async (req) => {
 
   const body = await req.json();
   const base44 = createClientFromRequest(req);
+  const db = base44.asServiceRole.entities;
 
   const saved = [];
   const errors = [];
 
   try {
-    // call-history-was-created: ligação finalizada
     if (body["call-history-was-created"]) {
       const data = body["call-history-was-created"];
       const ch = data.callHistory || {};
-      // LOG COMPLETO para diagnóstico de campos do agente
-      console.log("[3C RAW callHistory]", JSON.stringify(ch, null, 2));
-      console.log("[3C RAW agent]", JSON.stringify(ch.agent || data.agent || {}, null, 2));
       const agent = ch.agent || {};
       const campaign = ch.campaign || {};
       const mailingData = ch.mailing_data || {};
       const contactData = mailingData.data || {};
 
-      const agentName = agent.name || "Desconhecido";
       const agentId = String(agent.id || "");
+      const agentName = agent.name || "";
       const phone = ch.number || mailingData.phone || "";
       const status = ch.status || 0;
       const speakingTime = ch.speaking_with_agent_time || ch.speaking_time || 0;
       const eventType = mapStatus(status, speakingTime);
-      const contactName = contactData.Nome || contactData.nome || "";
-      const qualification = ch.qualification?.name || "";
-      const callMode = ch.call_mode || "";
 
-      // Validar dados do agente (descartar se inválidos)
-      const isValidAgent = agentId && agentId !== "0" && agentName && agentName !== "null";
-      
-      let userName = "Sistema";
-      let userEmail = "";
-
-      if (isValidAgent) {
-        // Tentar resolver agente pelo ID
-        const agentMappings = await base44.entities.ThreecAgent.list();
-        let agentMapping = agentMappings.find(
-          (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
-        );
-
-        // Se não encontrou, criar automaticamente
-        if (!agentMapping) {
-          await base44.entities.ThreecAgent.create({
-            agent_id: agentId,
-            agent_name_3c: agentName,
-            user_name: agentName,
-            active: true,
-          });
-          agentMapping = { user_name: agentName, user_email: "" };
-        }
-
-        userName = agentMapping.user_name || agentName;
-        userEmail = agentMapping.user_email || "";
-      }
+      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
 
       const payload = JSON.stringify({
         result: eventType.split(".")[1],
         duration: ch.calling_time || 0,
         speaking_time: speakingTime,
         phone,
-        contact_name: contactName,
+        contact_name: contactData.Nome || contactData.nome || "",
         campaign: campaign.name || "",
-        call_mode: callMode,
-        qualification,
+        call_mode: ch.call_mode || "",
+        qualification: ch.qualification?.name || "",
         raw_status: status,
         agent_id: agentId,
-        mapped: !!mapping,
       });
 
-      await base44.asServiceRole.entities.Event.create({
+      await db.Event.create({
         entity_type: "lead",
         entity_id: mailingData.identifier || ch._id || "3c_unknown",
         event_type: eventType,
@@ -103,34 +86,24 @@ Deno.serve(async (req) => {
       saved.push({ event_type: eventType, agent: userName });
     }
 
-    // call-was-connected: agente atendeu / conectou
     else if (body["call-was-connected"]) {
       const data = body["call-was-connected"];
       const agent = data.agent || {};
       const call = data.call || {};
 
-      const agentName = agent.name || "Desconhecido";
       const agentId = String(agent.id || agent.extension_number || "");
-      const phone = call.phone || "";
-      const callMode = call.call_mode || "";
+      const agentName = agent.name || "";
 
-      const agentMappings = await base44.asServiceRole.entities.ThreecAgent.list();
-      const mapping = agentMappings.find(
-        (m) => m.active !== false && (String(m.agent_id) === agentId || m.agent_name_3c?.toLowerCase() === agentName.toLowerCase())
-      );
-
-      const userName = mapping?.user_name || agentName;
-      const userEmail = mapping?.user_email || "";
+      const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
 
       const payload = JSON.stringify({
         result: "connected",
-        phone,
-        call_mode: callMode,
+        phone: call.phone || "",
+        call_mode: call.call_mode || "",
         agent_id: agentId,
-        mapped: !!mapping,
       });
 
-      await base44.asServiceRole.entities.Event.create({
+      await db.Event.create({
         entity_type: "lead",
         entity_id: call.id || "3c_unknown",
         event_type: "call.answered",
@@ -144,7 +117,6 @@ Deno.serve(async (req) => {
     }
 
     else {
-      // Evento desconhecido — salvar genérico para diagnóstico
       const keys = Object.keys(body);
       console.log("[3C UNKNOWN EVENT]", keys[0], JSON.stringify(body).slice(0, 300));
     }
