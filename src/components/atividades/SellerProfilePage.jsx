@@ -274,7 +274,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
                           {EVENT_LABELS[event.event_type] || event.event_type}
                         </p>
                         <span className="text-xs text-muted-foreground shrink-0 font-mono">
-                          {event.created_date && format(new Date(event.created_date), "dd/MM HH:mm")}
+                          {event.created_date && new Date(event.created_date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
