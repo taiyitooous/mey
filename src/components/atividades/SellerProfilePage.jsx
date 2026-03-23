@@ -119,8 +119,8 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const resolvedAvatarUrl = sellerConfig?.avatar_url || avatarUrl;
 
   const kpiCards = [
-    { label: "Ações totais", value: events.length, icon: Zap },
-    { label: "Contatos efetivos", value: effective, icon: Phone },
+    { label: "Ligações 3C", value: calls, icon: Phone },
+    { label: "WhatsApp Wavoip", value: whas, icon: MessageCircle },
     { label: "Taxa de contato", value: `${contactRate}%`, icon: Target },
     { label: "Leads únicos", value: uniqueLeads, icon: Users },
     { label: "Ganhos", value: wins, cls: "text-success", icon: Trophy },
