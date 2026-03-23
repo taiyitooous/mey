@@ -37,8 +37,47 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const effective = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
-  // Taxa de contato = ligações atendidas / total de ligações
   const contactRate = calls > 0 ? Math.round((effective / calls) * 100) : 0;
+
+  // Calculate status and time
+  const statusInfo = useMemo(() => {
+    if (!lastDate) return { status: "Offline", color: "bg-gray-400", time: "00:00:00" };
+    
+    const lastCallType = lastEvent?.payload ? JSON.parse(lastEvent.payload)?.source : null;
+    let status = "Manual";
+    let color = "bg-orange-500";
+    
+    if (isActive) {
+      status = "Falando";
+      color = "bg-green-500";
+    } else if (isIdle) {
+      status = "Ocioso";
+      color = "bg-red-500";
+    } else if (minsAgo && minsAgo < 60) {
+      status = "Manual";
+      color = "bg-orange-500";
+    } else if (minsAgo && minsAgo >= 60) {
+      status = "Offline";
+      color = "bg-gray-400";
+    }
+    
+    // Calculate total time (duration of all calls in HH:MM:SS)
+    let totalSeconds = 0;
+    events.forEach((e) => {
+      if (e.payload) {
+        const payload = JSON.parse(e.payload);
+        const speakingTime = payload.speaking_time || "00:00:00";
+        const [h, m, s] = speakingTime.split(":").map(Number);
+        totalSeconds += (h * 3600) + (m * 60) + s;
+      }
+    });
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    const time = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    
+    return { status, color, time };
+  }, [lastDate, lastEvent, isActive, isIdle, minsAgo, events]);
 
   const sparkData = buildSparkline(events);
 
