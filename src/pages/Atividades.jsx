@@ -113,6 +113,20 @@ export default function Atividades() {
     return map;
   }, [sellerConfigs]);
 
+  const handleDeleteProfile = async (sellerName) => {
+    if (confirm(`Tem certeza que deseja deletar o perfil de ${sellerName}?`)) {
+      try {
+        const config = sellerConfigs.find((c) => c.seller_key === sellerName);
+        if (config) {
+          await base44.asServiceRole.entities.SellerConfig.delete(config.id);
+          refetchConfigs();
+        }
+      } catch (error) {
+        console.error("Erro ao deletar perfil:", error);
+      }
+    }
+  };
+
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
     
