@@ -80,6 +80,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const effective = events.filter(isEffectiveContact).length;
   const closed = wins + losses;
   const closeRate = closed > 0 ? Math.round((wins / closed) * 100) : 0;
+  // Taxa de contato = ligações atendidas / total de ligações (correto)
   const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
   const uniqueLeads = new Set(events.map((e) => e.entity_id)).size;
 
