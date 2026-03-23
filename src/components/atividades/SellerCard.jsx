@@ -22,7 +22,7 @@ function buildSparkline(events) {
 
 
 
-export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, onDeleteProfile }) {
+export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated }) {
   const { name, events } = seller;
   const displayName = sellerConfig?.display_name || name;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
@@ -117,17 +117,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             {statusInfo.status}
           </span>
           <span className="text-[10px] text-muted-foreground">{statusInfo.time}</span>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 text-destructive hover:bg-destructive/10 mt-0.5"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteProfile?.(name);
-            }}
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
+
         </div>
       </div>
 
