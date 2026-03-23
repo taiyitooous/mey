@@ -4,7 +4,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend, CartesianGrid,
 } from "recharts";
-import { buildHourlyData } from "@/lib/eventUtils";
+import { buildHourlyData, isCallAttempt, isEffectiveContact } from "@/lib/eventUtils";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
