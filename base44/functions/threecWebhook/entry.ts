@@ -37,21 +37,24 @@ Deno.serve(async (req) => {
 
   console.log("[3C] Webhook received, token ok");
 
-  // Inject a fake Authorization header with the webhook token so the SDK
-  // can initialize properly in service role mode
-  const fakeAuthValue = `Bearer ${token || "webhook"}`;
-  const modifiedReq = new Request(req.url, {
-    method: req.method,
+  // Read body first
+  const bodyText = await req.text();
+  const body = JSON.parse(bodyText);
+
+  // Build a new request with the body text and a valid-looking auth header
+  // so createClientFromRequest can use asServiceRole
+  const serviceReq = new Request(req.url, {
+    method: "POST",
     headers: (() => {
       const h = new Headers(req.headers);
-      h.set("authorization", fakeAuthValue);
+      h.set("authorization", `Bearer ${token || secret || "webhook"}`);
+      h.set("x-app-id", Deno.env.get("BASE44_APP_ID") || "");
       return h;
     })(),
-    body: req.body,
+    body: bodyText,
   });
 
-  const body = await req.json();
-  const base44 = createClientFromRequest(modifiedReq);
+  const base44 = createClientFromRequest(serviceReq);
   const db = base44.asServiceRole.entities;
 
   const saved = [];
