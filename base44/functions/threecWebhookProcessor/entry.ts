@@ -25,8 +25,6 @@ async function resolveAgent(db, agentId, agentName) {
 }
 
 Deno.serve(async (req) => {
-  // This function is called internally from threecWebhook via asServiceRole.functions.invoke
-  // so it has the proper auth context
   const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole.entities;
 
@@ -51,10 +49,10 @@ Deno.serve(async (req) => {
       const speakingTime = ch.speaking_with_agent_time || ch.speaking_time || 0;
       const eventType = mapStatus(status, speakingTime);
 
-      console.log(`[3C-proc] call-history: agent=${agentId}/${agentName} status=${status} speaking=${speakingTime} => ${eventType}`);
+      console.log(`[3C] call-history: agent=${agentId}/${agentName} status=${status} speaking=${speakingTime} => ${eventType}`);
 
       const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
-      console.log(`[3C-proc] resolved agent: ${userName}`);
+      console.log(`[3C] resolved: ${userName}`);
 
       const payload = JSON.stringify({
         result: eventType.split(".")[1],
@@ -90,7 +88,7 @@ Deno.serve(async (req) => {
       const agentId = String(agent.id || agent.extension_number || "");
       const agentName = agent.name || "";
 
-      console.log(`[3C-proc] call-was-connected: agent=${agentId}/${agentName}`);
+      console.log(`[3C] call-was-connected: agent=${agentId}/${agentName}`);
 
       const { userName, userEmail } = await resolveAgent(db, agentId, agentName);
 
@@ -115,11 +113,10 @@ Deno.serve(async (req) => {
     }
 
     else {
-      const keys = Object.keys(body);
-      console.log("[3C-proc UNKNOWN EVENT]", keys[0]);
+      console.log("[3C] unknown event:", Object.keys(body)[0]);
     }
   } catch (err) {
-    console.error("[3C-proc ERROR]", err.message);
+    console.error("[3C] error:", err.message);
     errors.push({ error: err.message });
   }
 
