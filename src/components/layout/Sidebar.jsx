@@ -141,7 +141,6 @@ export default function Sidebar({ collapsed, onToggle }) {
 }
 
 function EditProfileDialog({ user, onClose }) {
-  const [fullName, setFullName] = useState(user.full_name || "");
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -154,18 +153,11 @@ function EditProfileDialog({ user, onClose }) {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       await base44.auth.updateMe({ avatar_url: file_url });
       queryClient.invalidateQueries({ queryKey: ["current_user"] });
+      onClose();
     } catch (error) {
       console.error("Erro ao enviar foto:", error);
     } finally {
       setUploading(false);
-    }
-  };
-
-  const handleSaveName = async () => {
-    if (fullName.trim()) {
-      await base44.auth.updateMe({ full_name: fullName });
-      queryClient.invalidateQueries({ queryKey: ["current_user"] });
-      onClose();
     }
   };
 
@@ -196,33 +188,13 @@ function EditProfileDialog({ user, onClose }) {
           </label>
         </div>
 
-        {/* Name */}
-        <div>
-          <label className="text-sm font-medium">Nome</label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full border border-border rounded-md px-3 py-2 mt-1 text-sm"
-            placeholder="Seu nome"
-          />
-        </div>
-
-        {/* Buttons */}
-        <div className="flex gap-2 pt-2">
-          <button
-            onClick={onClose}
-            className="flex-1 px-3 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSaveName}
-            className="flex-1 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
-          >
-            Salvar
-          </button>
-        </div>
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="w-full px-3 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted"
+        >
+          Fechar
+        </button>
       </div>
     </div>
   );
