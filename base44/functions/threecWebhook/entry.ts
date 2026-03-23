@@ -7,7 +7,12 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "") || queryToken;
 
-  if (secret && token !== secret) {
+  // Also accept token from body for testing purposes
+  const bodyForToken = bodyText ? (() => { try { return JSON.parse(bodyText || "{}"); } catch { return {}; } })() : null;
+  const bodyToken = bodyForToken?.token;
+  const effectiveToken = token || bodyToken;
+
+  if (secret && effectiveToken !== secret) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
