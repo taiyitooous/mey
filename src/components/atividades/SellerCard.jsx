@@ -96,44 +96,39 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
 
   return (
-    <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor}`} onClick={onClick}>
-      {/* Status bar - top right */}
-      <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-        <div />
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded-full text-white text-xs font-medium ${statusInfo.color}`}>
-            {statusInfo.status}
-          </span>
-          <span className="text-xs text-muted-foreground">{statusInfo.time}</span>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+    <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor} border`} onClick={onClick}>
+      {/* Header with status */}
+      <div className="flex items-start justify-between gap-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <SellerAvatarEditor
             sellerKey={name}
             displayName={sellerConfig?.display_name}
             avatarUrl={sellerConfig?.avatar_url || avatarUrl}
             onUpdated={onConfigUpdated}
-            size="md"
+            size="sm"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{displayName}</p>
-            <p className="text-xs text-muted-foreground">{actualCalls} ligações reais</p>
+            <p className="text-xs text-muted-foreground truncate">{calls} ligações reais</p>
           </div>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteProfile?.(name);
-          }}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`px-2 py-0.5 rounded-full text-white text-[10px] font-medium whitespace-nowrap ${statusInfo.color}`}>
+            {statusInfo.status}
+          </span>
+          <span className="text-[10px] text-muted-foreground">{statusInfo.time}</span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-destructive hover:bg-destructive/10 mt-0.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteProfile?.(name);
+            }}
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
 
       {/* KPI row */}
