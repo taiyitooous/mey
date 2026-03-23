@@ -24,10 +24,10 @@ function endOfDaySP(date = new Date()) {
 }
 
 const TIME_RANGES = [
-  { key: "hoje", label: "Hoje", getStart: () => startOfDay(new Date()) },
-  { key: "ontem", label: "Ontem", getStart: () => startOfYesterday(), getEnd: () => endOfYesterday() },
-  { key: "7d", label: "7 dias", getStart: () => startOfDay(subDays(new Date(), 6)) },
-  { key: "30d", label: "30 dias", getStart: () => startOfDay(subDays(new Date(), 29)) },
+  { key: "hoje", label: "Hoje", getStart: () => startOfDaySP(new Date()) },
+  { key: "ontem", label: "Ontem", getStart: () => startOfDaySP(subDays(new Date(), 1)), getEnd: () => endOfDaySP(subDays(new Date(), 1)) },
+  { key: "7d", label: "7 dias", getStart: () => startOfDaySP(subDays(new Date(), 6)) },
+  { key: "30d", label: "30 dias", getStart: () => startOfDaySP(subDays(new Date(), 29)) },
 ];
 
 const CHANNELS = [
