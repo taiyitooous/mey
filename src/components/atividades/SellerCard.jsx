@@ -89,7 +89,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   return (
     <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor}`} onClick={onClick}>
       {/* Header */}
-      <div className="flex items-start justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <SellerAvatarEditor
             sellerKey={name}
@@ -98,16 +98,16 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             onUpdated={onConfigUpdated}
             size="md"
           />
-          <div className="min-w-0 -ml-2">
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-success animate-pulse" : isIdle ? "bg-destructive" : "bg-muted-foreground/50"}`} />
-              <p className="text-xs text-muted-foreground truncate">
-                {isActive ? "Ativo agora" : lastDate ? `Há ${formatDistanceToNow(lastDate, { locale: ptBR })}` : "Sem atividade"}
-              </p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate">{displayName}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded-full text-white text-xs font-medium ${statusInfo.color}`}>
+                {statusInfo.status}
+              </span>
+              <span className="text-xs text-muted-foreground">{statusInfo.time}</span>
             </div>
           </div>
         </div>
-        {isIdle && <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />}
       </div>
 
       {/* KPI row */}
