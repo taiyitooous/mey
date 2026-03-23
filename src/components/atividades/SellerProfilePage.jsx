@@ -115,6 +115,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
 
   const displayName = sellerConfig?.display_name || seller.name;
   const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const resolvedAvatarUrl = sellerConfig?.avatar_url || avatarUrl;
 
   const kpiCards = [
     { label: "Ações totais", value: events.length, icon: Zap },
