@@ -47,6 +47,7 @@ export default function TeamScoreboard({ events }) {
   const calls = events.filter(isCallAttempt).length;
   const wavoip = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const callsAnswered = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
+  const wavoipEffective = events.filter((e) => getCategory(e.event_type) === "whatsapp" && isEffectiveContact(e)).length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const closed = wins + losses;
