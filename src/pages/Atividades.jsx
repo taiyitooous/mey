@@ -63,7 +63,10 @@ export default function Atividades() {
       const end = r.getEnd ? r.getEnd() : new Date();
       const all = await base44.entities.Event.list("-created_date", 2000);
       return all.filter((e) => {
-        const d = new Date(e.created_date);
+        // Garantir parse correto: adicionar Z se não tiver timezone info
+        const raw = e.created_date;
+        const iso = raw && !raw.endsWith("Z") && !raw.includes("+") ? raw + "Z" : raw;
+        const d = new Date(iso);
         return d >= start && d <= end;
       });
     },
