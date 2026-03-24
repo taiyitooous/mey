@@ -45,15 +45,19 @@ export default function TeamScoreboard({ events }) {
   const total = events.length;
   const sellers = new Set(events.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
   const calls = dedupedCalls.length;
-  const wavoip = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
-  const wavoipEffective = events.filter((e) => getCategory(e.event_type) === "whatsapp" && isEffectiveContact(e)).length;
+  const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
+
+  // Wavoip: conta apenas eventos de "fim" (received = atendida, missed = não atendida)
+  const wavoipAttempts = events.filter(isWavoipCallAttempt).filter((e) => e.event_type !== "whatsapp_call_started");
+  const wavoipAnswered = wavoipAttempts.filter(isWavoipCallAnswered).length;
+  const wavoipTotal = wavoipAttempts.length;
+  const wavoipRate = wavoipTotal > 0 ? Math.round((wavoipAnswered / wavoipTotal) * 100) : 0;
+
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const closed = wins + losses;
   const closeRate = closed > 0 ? Math.round((wins / closed) * 100) : 0;
-  // Taxa de contato = ligações atendidas / total de ligações
-  const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
 
   const cards = [
     {
@@ -64,10 +68,10 @@ export default function TeamScoreboard({ events }) {
       icon: Phone,
     },
     {
-      value: wavoipEffective,
-      label: "WhatsApp Wavoip",
-      meta: `${wavoipEffective} contatos efetivos`,
-      status: semaphore(wavoipEffective, 5, 2),
+      value: wavoipTotal,
+      label: "Ligações WhatsApp",
+      meta: wavoipTotal > 0 ? `${wavoipAnswered} atendidas (${wavoipRate}%)` : "Nenhuma ligação",
+      status: wavoipTotal === 0 ? "atencao" : semaphore(wavoipRate, 50, 25),
       icon: Smartphone,
     },
     {
