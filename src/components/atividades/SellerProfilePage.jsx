@@ -58,7 +58,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
 
   const { data: sellerLeads = [] } = useQuery({
     queryKey: ["leads_seller", seller?.name],
-    queryFn: () => base44.entities.Lead.filter({ seller_name: seller.name, status: "open" }),
+    queryFn: () => base44.entities.Lead.list(),
     enabled: !!seller?.name,
   });
 
