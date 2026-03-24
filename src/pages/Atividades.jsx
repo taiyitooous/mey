@@ -231,7 +231,7 @@ export default function Atividades() {
       consolidated[sellerFirstName] = mergedSeller;
     });
 
-    // Filtrar eventos consolidados por filteredEvents e retornar
+    // Retornar apenas os que têm 3C
     return Object.values(consolidated)
       .filter((seller) => {
         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
@@ -243,7 +243,7 @@ export default function Atividades() {
       }))
       .filter((seller) => seller.events.length > 0)
       .sort((a, b) => b.events.length - a.events.length);
-  }, [filteredEvents, events, wavoipUserNames]);
+  }, [filteredEvents, events, wavoipUserNames, userAvatarMap, sellerConfigMap]);
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
