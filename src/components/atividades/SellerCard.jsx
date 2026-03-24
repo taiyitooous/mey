@@ -23,7 +23,7 @@ function buildSparkline(events) {
 
 
 export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated }) {
-  const { name, events } = seller;
+  const { name, email, events } = seller;
   const displayName = sellerConfig?.display_name || name;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const lastEvent = sorted[0];
