@@ -167,11 +167,13 @@ export default function Atividades() {
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
+    // Chave normalizada para buscar config (primeiro nome em minúsculas)
+    const normalizedKey = selectedSeller.name ? selectedSeller.name.split(" ")[0].toLowerCase().trim() : "";
     return (
       <SellerProfilePage
         seller={selectedSeller}
         avatarUrl={userAvatarMap[selectedSeller?.name]}
-        sellerConfig={sellerConfigMap[selectedSeller?.name]}
+        sellerConfig={sellerConfigMap[normalizedKey]}
         onClose={() => setSelectedSeller(null)}
       />
     );
