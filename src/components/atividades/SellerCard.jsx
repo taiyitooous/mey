@@ -39,9 +39,12 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
 
-  // WhatsApp: conta todas as ligações (tentadas + respondidas)
-  const whatsappCalls = events.filter(isWavoipCallAttempt).length;
-  const whatsappAnswered = events.filter((e) => isWavoipCallAnswered(e)).length;
+  // WhatsApp: conta todas as ligações exceto "started"
+  const whatsappCalls = events.filter((e) => 
+    e.source === "whatsapp" && 
+    ["whatsapp_call_received", "whatsapp_call_missed", "whatsapp_call_ended"].includes(e.event_type)
+  ).length;
+  const whatsappAnswered = events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {
