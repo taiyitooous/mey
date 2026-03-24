@@ -7,7 +7,7 @@ import TeamActivityChart from "@/components/atividades/TeamActivityChart";
 import SellerCard from "@/components/atividades/SellerCard";
 import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import { subDays } from "date-fns";
-import { getCategory } from "@/lib/eventUtils";
+import { getCategory, isCallAttempt } from "@/lib/eventUtils";
 
 // Retorna início/fim do dia em SP (em timestamps UTC)
 function startOfDaySP(date = new Date()) {
