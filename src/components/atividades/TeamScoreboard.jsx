@@ -68,10 +68,10 @@ export default function TeamScoreboard({ events }) {
       icon: Phone,
     },
     {
-      value: wavoipTotal,
+      value: whatsappTotal,
       label: "Ligações WhatsApp",
-      meta: wavoipTotal > 0 ? `${wavoipAnswered} atendidas (${wavoipRate}%)` : "Nenhuma ligação",
-      status: wavoipTotal === 0 ? "atencao" : semaphore(wavoipRate, 50, 25),
+      meta: whatsappTotal > 0 ? `${whatsappAnswered} atendidas (${whatsappRate}%)` : "Nenhuma ligação",
+      status: whatsappTotal === 0 ? "atencao" : semaphore(whatsappRate, 50, 25),
       icon: Smartphone,
     },
     {
