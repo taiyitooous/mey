@@ -1,7 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-// Webhook recebido da DataCrazy quando um lead é criado ou atualizado
-// Payload esperado baseado na API DataCrazy: { id, name, phone, rawPhone, email, source, attendant: { name, email }, ... }
+// Webhook recebido da DataCrazy para leads, pedidos, pagamentos e eventos
+// Payload esperado: { type: 'lead'|'order'|'payment'|'event', data: {...} }
+// ou para leads: { id, name, phone, rawPhone, email, source, attendant: { name, email }, ... }
 
 Deno.serve(async (req) => {
   // Responde GET com status (usado pela DataCrazy para verificar o endpoint)
@@ -27,89 +28,152 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    // A DataCrazy pode enviar o lead diretamente ou dentro de um wrapper
-    // Tenta ambos os formatos: { lead: {...} } ou direto { id, name, phone, ... }
-    const leadData = body.lead || body.data || body;
+    // Detecta tipo de dados (lead como padrão se não especificado)
+    const dataType = body.type || 'lead';
+    const data = body.lead || body.data || body;
 
-    console.log('[DataCrazy] Lead recebido:', JSON.stringify(leadData).substring(0, 300));
+    console.log('[DataCrazy] Tipo:', dataType, 'Data:', JSON.stringify(data).substring(0, 300));
 
-    const datacrazyId = leadData.id;
-    const name = leadData.name || 'Sem nome';
-    const phone = leadData.rawPhone || leadData.phone || '';
-    const source = leadData.source || 'datacrazy';
-    const sourceCampaign = leadData.sourceReferral?.sourceId || leadData.campaignName || '';
+    let result;
 
-    // Vendedor/atendente da DataCrazy
-    const sellerName = leadData.attendant?.name || leadData.seller?.name || '';
-    const sellerEmail = leadData.attendant?.email || leadData.seller?.email || '';
+    if (dataType === 'lead') {
+      // ===== PROCESSAMENTO DE LEADS =====
+      const datacrazyId = data.id;
+      const name = data.name || 'Sem nome';
+      const phone = data.rawPhone || data.phone || '';
+      const source = data.source || 'datacrazy';
+      const sourceCampaign = data.sourceReferral?.sourceId || data.campaignName || '';
+      const sellerName = data.attendant?.name || data.seller?.name || '';
+      const sellerEmail = data.attendant?.email || data.seller?.email || '';
 
-    if (!name && !phone) {
-      console.warn('[DataCrazy] Lead sem nome e sem telefone, ignorando');
-      return Response.json({ success: true, ignored: true, reason: 'no_name_or_phone' });
-    }
+      if (!name && !phone) {
+        console.warn('[DataCrazy] Lead sem nome e sem telefone, ignorando');
+        return Response.json({ success: true, ignored: true, reason: 'no_name_or_phone' });
+      }
 
-    // Verifica se já existe um lead com esse ID DataCrazy para evitar duplicatas
-    let existingLeads = [];
-    if (datacrazyId) {
-      existingLeads = await base44.asServiceRole.entities.Lead.filter({ lead_id: datacrazyId });
-    }
+      let existingLeads = [];
+      if (datacrazyId) {
+        existingLeads = await base44.asServiceRole.entities.Lead.filter({ lead_id: datacrazyId });
+      }
 
-    let lead;
-    if (existingLeads.length > 0) {
-      // Atualiza o lead existente
-      lead = existingLeads[0];
-      await base44.asServiceRole.entities.Lead.update(lead.id, {
+      if (existingLeads.length > 0) {
+        result = existingLeads[0];
+        await base44.asServiceRole.entities.Lead.update(result.id, {
+          name,
+          phone,
+          source: 'datacrazy',
+          source_campaign: sourceCampaign,
+          seller_name: sellerName || result.seller_name,
+        });
+        console.log('[DataCrazy] Lead atualizado:', result.id, name);
+
+        await base44.asServiceRole.entities.Event.create({
+          entity_type: 'lead',
+          entity_id: result.id,
+          event_type: 'lead.updated',
+          user_name: sellerName || 'DataCrazy',
+          user_email: sellerEmail || '',
+          source: 'datacrazy',
+          payload: JSON.stringify({ datacrazyId, source, phone }),
+        });
+      } else {
+        result = await base44.asServiceRole.entities.Lead.create({
+          lead_id: datacrazyId || '',
+          name,
+          phone,
+          source: 'datacrazy',
+          source_campaign: sourceCampaign,
+          seller_name: sellerName,
+          stage: 1,
+          status: 'open',
+        });
+        console.log('[DataCrazy] Lead criado:', result.id, name);
+
+        await base44.asServiceRole.entities.Event.create({
+          entity_type: 'lead',
+          entity_id: result.id,
+          event_type: 'lead.created',
+          user_name: sellerName || 'DataCrazy',
+          user_email: sellerEmail || '',
+          source: 'datacrazy',
+          payload: JSON.stringify({ datacrazyId, source, phone }),
+        });
+      }
+
+      return Response.json({
+        success: true,
+        action: existingLeads.length > 0 ? 'updated' : 'created',
+        lead_id: result.id,
         name,
-        phone,
-        source: 'datacrazy',
-        source_campaign: sourceCampaign,
-        seller_name: sellerName || lead.seller_name,
       });
-      console.log('[DataCrazy] Lead atualizado:', lead.id, name);
 
-      // Registra evento de atualização
-      await base44.asServiceRole.entities.Event.create({
-        entity_type: 'lead',
-        entity_id: lead.id,
-        event_type: 'lead.updated',
-        user_name: sellerName || 'DataCrazy',
-        user_email: sellerEmail || '',
-        source: 'datacrazy',
-        payload: JSON.stringify({ datacrazyId, source, phone }),
+    } else if (dataType === 'order') {
+      // ===== PROCESSAMENTO DE PEDIDOS =====
+      result = await base44.asServiceRole.entities.Order.create({
+        order_id: data.order_id || data.id,
+        lead_id: data.lead_id,
+        customer_name: data.customer_name || data.name,
+        customer_phone: data.customer_phone || data.phone,
+        amount: data.amount,
+        logistics_status: data.logistics_status || 'created',
+        payment_status: data.payment_status || 'pending',
+        payment_method: data.payment_method,
+        city: data.city,
+        state: data.state,
       });
+      console.log('[DataCrazy] Pedido criado:', result.id);
+
+      await base44.asServiceRole.entities.Event.create({
+        entity_type: 'order',
+        entity_id: result.id,
+        event_type: 'order.created',
+        user_name: data.seller_name || 'DataCrazy',
+        user_email: data.seller_email || '',
+        source: 'datacrazy',
+        payload: JSON.stringify(data),
+      });
+
+      return Response.json({ success: true, order_id: result.id });
+
+    } else if (dataType === 'payment') {
+      // ===== PROCESSAMENTO DE PAGAMENTOS =====
+      await base44.asServiceRole.entities.Order.update(data.order_id, {
+        payment_status: data.payment_status || 'paid',
+        payment_method: data.payment_method,
+        paid_at: new Date().toISOString(),
+      });
+      console.log('[DataCrazy] Pagamento processado:', data.order_id);
+
+      await base44.asServiceRole.entities.Event.create({
+        entity_type: 'payment',
+        entity_id: data.order_id,
+        event_type: 'payment.paid',
+        user_name: data.seller_name || 'DataCrazy',
+        user_email: data.seller_email || '',
+        source: 'datacrazy',
+        payload: JSON.stringify(data),
+      });
+
+      return Response.json({ success: true, order_id: data.order_id });
+
+    } else if (dataType === 'event') {
+      // ===== PROCESSAMENTO DE EVENTOS =====
+      result = await base44.asServiceRole.entities.Event.create({
+        entity_type: data.entity_type,
+        entity_id: data.entity_id,
+        event_type: data.event_type,
+        user_name: data.user_name || 'DataCrazy',
+        user_email: data.user_email || '',
+        source: 'datacrazy',
+        payload: JSON.stringify(data.payload || data),
+      });
+      console.log('[DataCrazy] Evento criado:', result.id);
+
+      return Response.json({ success: true, event_id: result.id });
 
     } else {
-      // Cria novo lead
-      lead = await base44.asServiceRole.entities.Lead.create({
-        lead_id: datacrazyId || '',
-        name,
-        phone,
-        source: 'datacrazy',
-        source_campaign: sourceCampaign,
-        seller_name: sellerName,
-        stage: 1,
-        status: 'open',
-      });
-      console.log('[DataCrazy] Lead criado:', lead.id, name);
-
-      // Registra evento de criação
-      await base44.asServiceRole.entities.Event.create({
-        entity_type: 'lead',
-        entity_id: lead.id,
-        event_type: 'lead.created',
-        user_name: sellerName || 'DataCrazy',
-        user_email: sellerEmail || '',
-        source: 'datacrazy',
-        payload: JSON.stringify({ datacrazyId, source, phone }),
-      });
+      return Response.json({ error: `Tipo desconhecido: ${dataType}` }, { status: 400 });
     }
-
-    return Response.json({
-      success: true,
-      action: existingLeads.length > 0 ? 'updated' : 'created',
-      lead_id: lead.id,
-      name,
-    });
 
   } catch (error) {
     console.error('[DataCrazy] Erro:', error.message);
