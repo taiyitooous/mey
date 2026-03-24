@@ -59,11 +59,10 @@ export default function Atividades() {
     };
   };
 
-  const { startDate, endDate } = getDateRange();
-
   const { data: events = [] } = useQuery({
-    queryKey: ["events_hoje"],
+    queryKey: ["events_atividades", timeRange],
     queryFn: async () => {
+      const { startDate, endDate } = getDateRange();
       const all = await base44.entities.Event.list("-created_date", 2000);
       return all.filter((e) => {
         const eventDateSP = new Date(e.created_date).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
