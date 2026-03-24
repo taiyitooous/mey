@@ -165,56 +165,50 @@ export default function Atividades() {
        map[key].events.push(event);
      });
 
-     // Consolidar por email primeiro, depois por firstName
-     const consolidatedByEmail = {};
-     Object.entries(map).forEach(([key, seller]) => {
-       const emailKey = seller.email?.toLowerCase().trim() || key;
-       
-       if (!consolidatedByEmail[emailKey]) {
-         consolidatedByEmail[emailKey] = { ...seller };
-       } else {
-         // Merge events e prefira nome mais completo
-         consolidatedByEmail[emailKey].events.push(...seller.events);
-         if (seller.name.length > consolidatedByEmail[emailKey].name.length) {
-           consolidatedByEmail[emailKey].name = seller.name;
-         }
-       }
-     });
-
-     // Consolidar por firstName (para emails diferentes mas mesma pessoa)
+     // Consolidar por firstName, preferindo quem tem foto
      const consolidated = {};
      const processed = new Set();
 
-     Object.entries(consolidatedByEmail).forEach(([key, seller]) => {
+     Object.entries(map).forEach(([key, seller]) => {
        if (processed.has(key)) return;
 
        const sellerFirstName = seller.name.split(" ")[0].toLowerCase().trim();
        let mergedSeller = { ...seller };
+       
+       // Verificar se tem foto
+       const hasAvatar = userAvatarMap[seller.name] || sellerConfigMap[sellerFirstName]?.avatar_url;
 
-       Object.entries(consolidatedByEmail).forEach(([otherKey, otherSeller]) => {
+       // Procura por outros com mesmo firstName
+       Object.entries(map).forEach(([otherKey, otherSeller]) => {
          if (otherKey === key || processed.has(otherKey)) return;
 
          const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
+         
          if (sellerFirstName === otherFirstName) {
+           const otherHasAvatar = userAvatarMap[otherSeller.name] || sellerConfigMap[otherFirstName]?.avatar_url;
+           
            // Mescla os eventos
            mergedSeller.events.push(...otherSeller.events);
            
-           // Preferir o com foto
-           const mergedHasAvatar = userAvatarMap[mergedSeller.name] || sellerConfigMap[sellerFirstName]?.avatar_url;
-           const otherHasAvatar = userAvatarMap[otherSeller.name] || sellerConfigMap[otherFirstName]?.avatar_url;
-           
-           if (otherHasAvatar && !mergedHasAvatar) {
+           // Se o outro tem foto e merged não, usa o outro como base
+           if (otherHasAvatar && !hasAvatar) {
              mergedSeller = { ...otherSeller };
-             mergedSeller.events = [...otherSeller.events, ...seller.events];
-           } else if (otherSeller.name.length > mergedSeller.name.length) {
+             mergedSeller.events.push(...seller.events);
+           } else if (otherSeller.name.length > mergedSeller.name.length && hasAvatar) {
+             // Se merged tem foto, atualiza só o nome se o outro é mais completo
              mergedSeller.name = otherSeller.name;
+           }
+           
+           // Unificar email
+           if (!mergedSeller.email && otherSeller.email) {
+             mergedSeller.email = otherSeller.email;
            }
            
            processed.add(otherKey);
          }
        });
 
-       consolidated[key] = mergedSeller;
+       consolidated[sellerFirstName] = mergedSeller;
        processed.add(key);
      });
 
