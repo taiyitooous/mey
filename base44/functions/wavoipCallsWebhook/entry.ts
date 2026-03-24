@@ -1,12 +1,12 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClient } from 'npm:@base44/sdk@0.8.23';
+
+const base44 = createClient({ appId: Deno.env.get("BASE44_APP_ID"), serviceRoleKey: "service_role" });
 
 Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
-
-    const base44 = createClientFromRequest(req);
 
     // Logar body bruto para debug
     const rawBody = await req.text();
