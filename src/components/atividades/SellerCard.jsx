@@ -1,13 +1,14 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAnswered, getCallQualification } from "@/lib/eventUtils";
-import { useQueryClient } from "@tanstack/react-query";
 import SellerAvatarEditor from "./SellerAvatarEditor";
 
 function buildSparkline(events) {
@@ -24,6 +25,8 @@ function buildSparkline(events) {
 
 export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, selectedChannel }) {
   const { name, email, events } = seller;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const queryClient = useQueryClient();
   const displayName = sellerConfig?.display_name || name;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const lastEvent = sorted[0];
@@ -113,6 +116,13 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
 
+  const handleDelete = async () => {
+    if (!sellerConfig?.id) return;
+    await base44.entities.SellerConfig.delete(sellerConfig.id);
+    queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
+    setShowDeleteConfirm(false);
+  };
+
   return (
     <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor} border`} onClick={onClick}>
       {/* Header with status */}
@@ -186,9 +196,27 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0">
-          Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
-        </Button>
+        <div className="flex gap-1">
+          {showDeleteConfirm ? (
+            <>
+              <Button variant="destructive" size="sm" className="text-xs h-6 px-2" onClick={handleDelete}>
+                Confirma?
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setShowDeleteConfirm(false)}>
+                Cancelar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={() => setShowDeleteConfirm(true)}>
+                <Trash2 className="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0">
+                Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </Card>);
 
