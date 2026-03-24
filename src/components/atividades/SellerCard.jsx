@@ -147,6 +147,11 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
     }
   };
 
+  // Não renderizar se config foi deletado
+  if (config === null && sellerConfig !== null) {
+    return null;
+  }
+
   return (
     <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor} border`} onClick={onClick}>
       {/* Header with status */}
