@@ -136,6 +136,13 @@ export default function Atividades() {
   }, [events, selectedChannel, resultOnly]);
 
   const sellers = useMemo(() => {
+     // Vendedores com 3C em TODO o período (não apenas filteredEvents)
+     const sellersWith3C = new Set(
+       events
+         .filter(isCallAttempt)
+         .map((e) => e.user_name?.split(" ")[0].toLowerCase().trim())
+     );
+
      const map = {};
 
      filteredEvents.forEach((event) => {
@@ -188,20 +195,13 @@ export default function Atividades() {
        processed.add(key);
      });
 
-     // Vendedores com 3C no período
-     const sellersWith3C = new Set(
-       filteredEvents
-         .filter(isCallAttempt)
-         .map((e) => e.user_name?.split(" ")[0].toLowerCase().trim())
-     );
-
      return Object.values(consolidated)
        .filter((seller) => {
          const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
          return sellersWith3C.has(sellerKey);
        })
        .sort((a, b) => b.events.length - a.events.length);
-   }, [filteredEvents]);
+   }, [filteredEvents, events]);
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
