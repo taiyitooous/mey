@@ -235,9 +235,10 @@ export default function Atividades() {
       })
       .map((seller) => ({
         ...seller,
-        events: seller.events.filter((e) => filteredEvents.some((fe) => fe.id === e.id))
+        // Mostrar eventos filtrados para exibição no card, mas manter contagem total
+        displayEvents: seller.events.filter((e) => filteredEvents.some((fe) => fe.id === e.id))
       }))
-      .filter((seller) => seller.events.length > 0)
+      .filter((seller) => seller.displayEvents.length > 0)
       .sort((a, b) => b.events.length - a.events.length);
   }, [filteredEvents, events, wavoipUserNames, userAvatarMap, sellerConfigMap]);
 
@@ -336,7 +337,7 @@ export default function Atividades() {
               return (
                 <SellerCard
                   key={seller.email || seller.name}
-                  seller={seller}
+                  seller={{ ...seller, events: seller.displayEvents }}
                   avatarUrl={userAvatarMap[seller.email] || userAvatarMap[seller.name]}
                   sellerConfig={sellerConfigMap[normalizedKey]}
                   onConfigUpdated={refetchConfigs}
