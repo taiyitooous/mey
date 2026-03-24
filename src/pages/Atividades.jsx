@@ -179,7 +179,7 @@ export default function Atividades() {
       map[key].events.push(event);
     });
 
-    // Consolidar por firstName
+    // Consolidar por firstName — encontra correspondências por substring
     const consolidated = {};
     const processed = new Set();
 
@@ -187,28 +187,28 @@ export default function Atividades() {
       if (processed.has(key)) return;
 
       const sellerFirstName = seller.name.split(" ")[0].toLowerCase().trim();
-      let mergedSeller = { ...seller, events: [] };
+      let mergedSeller = { ...seller, events: [...seller.events] };
       
       // Verificar se tem Wavoip
       const hasWavoip = wavoipUserNames.has(sellerFirstName);
 
-      // Procura por outros com mesmo firstName e mescla
+      // Procura por outros com primeiro nome similar (substring ou exato)
       Object.entries(map).forEach(([otherKey, otherSeller]) => {
-        if (otherKey === key && !processed.has(otherKey)) {
-          mergedSeller.events.push(...seller.events);
-          processed.add(key);
-          return;
-        }
+        if (otherKey === key || processed.has(otherKey)) return;
 
         const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
+        const otherHasWavoip = wavoipUserNames.has(otherFirstName);
         
-        if (sellerFirstName === otherFirstName && otherKey !== key && !processed.has(otherKey)) {
-          const otherHasWavoip = wavoipUserNames.has(otherFirstName);
-          
+        // Match se forem iguais ou um contiver o outro (substring)
+        const isMatch = sellerFirstName === otherFirstName || 
+                       sellerFirstName.includes(otherFirstName) || 
+                       otherFirstName.includes(sellerFirstName);
+        
+        if (isMatch) {
           // Mescla eventos
           mergedSeller.events.push(...otherSeller.events);
           
-          // Preferir quem tem Wavoip para nome/email
+          // Preferir nome mais longo (mais completo) ou quem tem Wavoip
           if (otherHasWavoip && !hasWavoip) {
             mergedSeller.name = otherSeller.name;
             mergedSeller.email = otherSeller.email;
@@ -223,11 +223,7 @@ export default function Atividades() {
         }
       });
 
-      if (!processed.has(key)) {
-        mergedSeller.events.push(...seller.events);
-        processed.add(key);
-      }
-
+      processed.add(key);
       consolidated[sellerFirstName] = mergedSeller;
     });
 
