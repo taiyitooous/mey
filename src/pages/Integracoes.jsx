@@ -341,6 +341,8 @@ function CopyableUrl({ url }) {
   );
 }
 
+const DATACRAZY_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/dataCrazyWebhook`;
+
 export default function Integracoes() {
   const queryClient = useQueryClient();
   const [showNew3C, setShowNew3C] = useState(false);
