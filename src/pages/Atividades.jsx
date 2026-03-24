@@ -215,10 +215,7 @@ export default function Atividades() {
      return Object.values(consolidated)
        .filter((seller) => {
          const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
-         // Se filtro é WhatsApp, mostra mesmo sem 3C. Caso contrário, precisa ter 3C
-         if (selectedChannel === "whatsapp") {
-           return seller.events.length > 0;
-         }
+         // Sempre precisa ter 3C para aparecer
          return sellersWith3C.has(sellerKey);
        })
        .sort((a, b) => b.events.length - a.events.length);
