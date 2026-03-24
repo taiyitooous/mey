@@ -183,11 +183,17 @@ export default function Atividades() {
        processed.add(key);
      });
 
+     // Vendedores com 3C no período
+     const sellersWith3C = new Set(
+       filteredEvents
+         .filter(isCallAttempt)
+         .map((e) => e.user_name?.toLowerCase().trim())
+     );
+
      return Object.values(consolidated)
        .filter((seller) => {
-         // Filtro: apenas vendedores com pelo menos 1 ligação 3C
-         const has3C = seller.events.some(isCallAttempt);
-         return has3C;
+         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
+         return sellersWith3C.has(sellerKey) || sellersWith3C.has(seller.email?.toLowerCase().trim());
        })
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents]);
