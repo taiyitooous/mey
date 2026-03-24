@@ -180,12 +180,17 @@ export default function Atividades() {
          if (otherKey === key || processed.has(otherKey)) return;
 
          const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
-         if (sellerFirstName === otherFirstName) {
+         // Consolida se mesmo firstName OU mesmo email
+         if (sellerFirstName === otherFirstName || (seller.email && otherSeller.email && seller.email === otherSeller.email)) {
            // Mescla os eventos
            mergedSeller.events.push(...otherSeller.events);
            // Preferir nome mais completo
            if (otherSeller.name.length > mergedSeller.name.length) {
              mergedSeller.name = otherSeller.name;
+           }
+           // Preservar email
+           if (!mergedSeller.email && otherSeller.email) {
+             mergedSeller.email = otherSeller.email;
            }
            processed.add(otherKey);
          }
