@@ -127,7 +127,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{displayName}</p>
-            <p className="text-xs text-muted-foreground truncate">{calls} ligações reais</p>
+            <p className="text-xs text-muted-foreground truncate">{calls + whatsappCalls} ligações totais</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
