@@ -452,6 +452,42 @@ export default function Integracoes() {
         </div>
       </Card>
 
+      {/* DataCrazy Card */}
+      <Card className="p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <Database className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold">DataCrazy CRM — Webhook de Leads</h2>
+              <p className="text-xs text-muted-foreground">Recebe leads automaticamente do CRM DataCrazy</p>
+            </div>
+          </div>
+          <Badge className="bg-success/10 text-success border-0">Ativo</Badge>
+        </div>
+
+        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-2">
+          <p className="font-semibold text-foreground">🔗 Como configurar no DataCrazy:</p>
+          <p>1. Acesse o DataCrazy CRM → <strong>Integrações</strong> → <strong>Webhooks</strong></p>
+          <p>2. Adicione um novo webhook com a URL abaixo</p>
+          <p>3. Selecione o evento <strong>Lead Criado</strong> (e opcionalmente <strong>Lead Atualizado</strong>)</p>
+          <p>4. Salve — os leads novos chegarão automaticamente no MEY</p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URL do Webhook</p>
+          <CopyableUrl url="https://api.base44.com/api/apps/68fbb6f1a06149abf6635095/functions/dataCrazyWebhook" />
+        </div>
+
+        <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-semibold text-foreground">📋 O que é sincronizado:</p>
+          <p>• Lead criado → aparece automaticamente no Funil (Etapa 1)</p>
+          <p>• Lead atualizado → dados de nome, telefone e campanha são atualizados</p>
+          <p>• Evento <code className="bg-muted px-1 rounded">lead.created</code> registrado na timeline de Atividades</p>
+        </div>
+      </Card>
+
       {/* Wavoip Card */}
       <Card className="p-6 space-y-5">
         <div className="flex items-center justify-between">
