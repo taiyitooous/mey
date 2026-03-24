@@ -131,37 +131,56 @@ export default function Atividades() {
   }, [events, selectedChannel, resultOnly]);
 
   const sellers = useMemo(() => {
-     const map = {};
+     const emailMap = {}; // email → seller
+     const firstNameMap = {}; // firstName → email (para consolidar duplicatas)
 
      filteredEvents.forEach((event) => {
        const email = event.user_email?.toLowerCase().trim();
        const name = event.user_name?.trim();
-
-       // Normaliza nome: pega apenas a primeira palavra (ex: "Vanessa Rodrigues Pereira" → "vanessa")
        const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
 
-       // Usa email como chave primária; se não tiver, usa primeira palavra do nome
-       const key = email || firstName || "Sistema";
-
-       if (!map[key]) {
-         map[key] = { email: email || "", name: name || key, events: [] };
+       // Se temos email, usa como chave principal
+       if (email) {
+         if (!emailMap[email]) {
+           emailMap[email] = { email, name: name || email, events: [] };
+         }
+         // Sempre prefere nome mais completo
+         if (name && name.length > emailMap[email].name.length) {
+           emailMap[email].name = name;
+         }
+         emailMap[email].events.push(event);
+         // Mapeia firstName para esse email (para consolidar depois)
+         if (firstName) firstNameMap[firstName] = email;
+       } else if (firstName) {
+         // Se não tem email, agrupa por firstName
+         const mappedEmail = firstNameMap[firstName];
+         if (mappedEmail && emailMap[mappedEmail]) {
+           // Já tem entrada com email, adiciona aqui
+           if (name && name.length > emailMap[mappedEmail].name.length) {
+             emailMap[mappedEmail].name = name;
+           }
+           emailMap[mappedEmail].events.push(event);
+         } else if (!emailMap[firstName]) {
+           // Cria novo com firstName como fallback
+           emailMap[firstName] = { email: "", name: name || firstName, events: [event] };
+         } else {
+           // Já tem entrada por firstName
+           if (name && name.length > emailMap[firstName].name.length) {
+             emailMap[firstName].name = name;
+           }
+           emailMap[firstName].events.push(event);
+         }
        } else {
-         // Se já existe e temos um nome mais completo, atualiza
-         if (name && name.length > map[key].name.length) {
-           map[key].name = name;
+         // Sem email e sem nome, agrupa como "Sistema"
+         if (!emailMap["sistema"]) {
+           emailMap["sistema"] = { email: "", name: "Sistema", events: [] };
          }
-         if (email) {
-           map[key].email = email;
-         }
+         emailMap["sistema"].events.push(event);
        }
-
-       map[key].events.push(event);
      });
-     return Object.values(map)
-       .filter((seller) => {
-         // Se tem eventos filtrados, mostra (já foram filtrados por canal)
-         return seller.events.length > 0;
-       })
+
+     return Object.values(emailMap)
+       .filter((seller) => seller.events.length > 0)
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents]);
 
