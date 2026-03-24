@@ -6,7 +6,7 @@ import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from 
 import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAttempt, isWavoipCallAnswered } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAnswered } from "@/lib/eventUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import SellerAvatarEditor from "./SellerAvatarEditor";
 
