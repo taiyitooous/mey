@@ -42,13 +42,28 @@ export function useWavoipListener(devices = []) {
           console.log(`[Wavoip] device:contact | ${deviceLabel} | call_type: ${call_type} | contact:`, contact);
 
           if (contact && contact.phone) {
-            // Chamada iniciada — salvar referência
+            // Chamada iniciada — salvar referência e registrar início
+            const startedAt = Date.now();
             activeCallsRef.current[token] = {
               phone: contact.phone,
               call_type,
-              startedAt: Date.now(),
+              startedAt,
             };
             console.log(`[Wavoip] Chamada iniciada: ${contact.phone} (${call_type})`);
+
+            const call_id = `${token}_${contact.phone}_${startedAt}`;
+            base44.functions.invoke("registerWavoipCall", {
+              device_token: token,
+              phone: contact.phone,
+              type: "start",
+              call_type,
+              call_id,
+              duration_seconds: 0,
+            }).then((res) => {
+              console.log(`[Wavoip] Início registrado:`, res.data);
+            }).catch((err) => {
+              console.error(`[Wavoip] Erro ao registrar início:`, err.message);
+            });
 
           } else {
             // Chamada encerrada (contact = null)
@@ -60,18 +75,18 @@ export function useWavoipListener(devices = []) {
 
             console.log(`[Wavoip] Chamada encerrada: ${activeCall.phone} | duração: ${duration}s`);
 
-            // Registrar via backend
+            // Registrar fim da chamada (independente da duração)
             base44.functions.invoke("registerWavoipCall", {
               device_token: token,
               phone: activeCall.phone,
-              type: duration > 3 ? "end" : "missed",
+              type: "end",
               call_type: activeCall.call_type,
               call_id,
               duration_seconds: duration,
             }).then((res) => {
-              console.log(`[Wavoip] Evento registrado:`, res.data);
+              console.log(`[Wavoip] Fim registrado:`, res.data);
             }).catch((err) => {
-              console.error(`[Wavoip] Erro ao registrar:`, err.message);
+              console.error(`[Wavoip] Erro ao registrar fim:`, err.message);
             });
 
             delete activeCallsRef.current[token];
