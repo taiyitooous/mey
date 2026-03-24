@@ -10,6 +10,14 @@ import { useWavoipListener } from "@/hooks/useWavoipListener";
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
 
+  const { data: wavoipDevices = [] } = useQuery({
+    queryKey: ["wavoipDevices"],
+    queryFn: () => base44.entities.WavoipConfig.filter({ active: true }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useWavoipListener(wavoipDevices);
+
   return (
     <GlobalFiltersProvider>
       <div className="min-h-screen bg-background">
