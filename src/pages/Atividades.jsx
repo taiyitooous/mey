@@ -334,12 +334,13 @@ export default function Atividades() {
             {sellers.map((seller) => {
               // Chave normalizada para buscar config (primeiro nome em minúsculas)
               const normalizedKey = seller.name ? seller.name.split(" ")[0].toLowerCase().trim() : "";
+              const config = sellerConfigMap[normalizedKey];
               return (
                 <SellerCard
                   key={seller.email || seller.name}
                   seller={{ ...seller, events: seller.displayEvents }}
                   avatarUrl={userAvatarMap[seller.email] || userAvatarMap[seller.name]}
-                  sellerConfig={sellerConfigMap[normalizedKey]}
+                  sellerConfig={config}
                   onConfigUpdated={refetchConfigs}
                   onClick={() => setSelectedSeller(seller)}
                   selectedChannel={selectedChannel}

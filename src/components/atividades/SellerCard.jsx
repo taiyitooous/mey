@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,23 @@ function buildSparkline(events) {
 export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, selectedChannel }) {
   const { name, email, events } = seller;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [config, setConfig] = useState(sellerConfig);
   const queryClient = useQueryClient();
-  const displayName = sellerConfig?.display_name || name;
+  const normalizedSellerKey = name ? name.split(" ")[0].toLowerCase().trim() : email?.toLowerCase().trim() || "sistema";
+  const displayName = config?.display_name || name;
+  
+  // Auto-create config se não existir
+  React.useEffect(() => {
+    if (!config && name) {
+      const createConfig = async () => {
+        const newConfig = await base44.entities.SellerConfig.create({
+          seller_key: normalizedSellerKey
+        });
+        setConfig(newConfig);
+      };
+      createConfig();
+    }
+  }, [config, name, normalizedSellerKey]);
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const lastEvent = sorted[0];
   const lastDate = lastEvent ? new Date(lastEvent.created_date) : null;
@@ -110,21 +125,21 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
   const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   
-  // Normaliza a chave do vendedor da mesma forma que em Atividades (primeiro nome em minúsculas)
-  const normalizedSellerKey = name ? name.split(" ")[0].toLowerCase().trim() : email?.toLowerCase().trim() || "sistema";
+
 
   const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
 
   const handleDelete = async () => {
-    if (!sellerConfig?.id) {
-      console.log("Sem ID do seller config:", sellerConfig);
+    if (!config?.id) {
+      console.log("Sem ID do seller config:", config);
       return;
     }
     try {
-      console.log("Deletando seller config ID:", sellerConfig.id);
-      await base44.entities.SellerConfig.delete(sellerConfig.id);
+      console.log("Deletando seller config ID:", config.id);
+      await base44.entities.SellerConfig.delete(config.id);
       queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
+      setConfig(null);
       setShowDeleteConfirm(false);
       console.log("Deletado com sucesso!");
     } catch (err) {
@@ -139,8 +154,8 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <SellerAvatarEditor
             sellerKey={normalizedSellerKey}
-            displayName={sellerConfig?.display_name}
-            avatarUrl={sellerConfig?.avatar_url || avatarUrl}
+            displayName={config?.display_name}
+            avatarUrl={config?.avatar_url || avatarUrl}
             onUpdated={onConfigUpdated}
             size="sm" />
           
@@ -220,7 +235,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
               <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
                 <Trash2 className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0" onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...sellerConfig}); }}>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0" onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...config}); }}>
                 Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
             </>
