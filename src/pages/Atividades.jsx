@@ -184,7 +184,11 @@ export default function Atividades() {
      });
 
      return Object.values(consolidated)
-       .filter((seller) => seller.events.length > 0)
+       .filter((seller) => {
+         // Filtro: apenas vendedores com pelo menos 1 ligação 3C
+         const has3C = seller.events.some(isCallAttempt);
+         return has3C;
+       })
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents]);
 
