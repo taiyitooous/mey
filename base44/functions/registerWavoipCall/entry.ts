@@ -35,20 +35,20 @@ Deno.serve(async (req) => {
   const uniqueId = call_id || `${device_token}_${phone}_${Date.now()}`;
   const entity_id = `wavoip_ws_${uniqueId}`;
 
-  // Verificar duplicata (apenas para type=end para evitar duplicar)
-  if (type === 'end' || type === 'answered') {
-    const existing = await db.Event.filter({ source: 'whatsapp', entity_id });
-    if (existing.length > 0) {
-      return Response.json({ success: true, duplicate: true });
-    }
+  // Verificar duplicata pelo entity_id
+  const existing = await db.Event.filter({ source: 'whatsapp', entity_id });
+  if (existing.length > 0) {
+    return Response.json({ success: true, duplicate: true });
   }
 
   // Mapear tipo do evento
   let event_type = 'whatsapp_call_received';
-  if (type === 'missed' || type === 'start_no_answer') {
+  if (type === 'start') {
+    event_type = 'whatsapp_call_started';
+  } else if (type === 'end') {
+    event_type = 'whatsapp_call_received'; // chamada encerrada (atendida ou não)
+  } else if (type === 'missed') {
     event_type = 'whatsapp_call_missed';
-  } else if (type === 'start') {
-    event_type = 'whatsapp_call_received'; // chamada em andamento
   }
 
   await db.Event.create({
