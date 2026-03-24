@@ -134,23 +134,27 @@ export default function Atividades() {
 
   const sellers = useMemo(() => {
     const map = {};
-    const nameByEmail = {}; // Mapeia email → nome mais recente
     
     filteredEvents.forEach((event) => {
-      const email = event.user_email;
-      const name = event.user_name;
+      const email = event.user_email?.toLowerCase().trim();
+      const name = event.user_name?.trim();
       
-      // Se temos email, usa como chave primária
-      const key = email || name?.toLowerCase().trim() || "Sistema";
+      // Normaliza nome: pega as 2 primeiras palavras (ex: "Vanessa Rodrigues Pereira" → "vanessa rodrigues")
+      const normalizedName = name ? name.split(" ").slice(0, 2).join(" ").toLowerCase().trim() : null;
+      
+      // Usa email como chave primária; se não tiver, usa nome normalizado
+      const key = email || normalizedName || "Sistema";
       
       if (!map[key]) {
         map[key] = { email: email || "", name: name || key, events: [] };
-      }
-      
-      // Atualiza nome se temos email e nome disponível
-      if (email && name) {
-        nameByEmail[email] = name;
-        map[key].name = name;
+      } else {
+        // Se já existe e temos um nome mais completo, atualiza
+        if (name && name.length > map[key].name.length) {
+          map[key].name = name;
+        }
+        if (email) {
+          map[key].email = email;
+        }
       }
       
       map[key].events.push(event);
