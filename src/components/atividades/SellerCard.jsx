@@ -93,6 +93,9 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const sparkData = buildSparkline(events);
 
   const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  
+  // Normaliza a chave do vendedor da mesma forma que em Atividades (primeiro nome em minúsculas)
+  const normalizedSellerKey = name ? name.split(" ")[0].toLowerCase().trim() : email?.toLowerCase().trim() || "sistema";
 
   const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
@@ -103,7 +106,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       <div className="flex items-start justify-between gap-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <SellerAvatarEditor
-            sellerKey={email}
+            sellerKey={normalizedSellerKey}
             displayName={sellerConfig?.display_name}
             avatarUrl={sellerConfig?.avatar_url || avatarUrl}
             onUpdated={onConfigUpdated}
