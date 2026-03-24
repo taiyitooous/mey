@@ -1,7 +1,7 @@
 export function getCategory(eventType) {
   if (!eventType) return "other";
-  if (eventType.includes("call")) return "call";
   if (eventType.includes("whatsapp")) return "whatsapp";
+  if (eventType.includes("call")) return "call";
   if (eventType.includes("stage_changed")) return "stage";
   if (eventType === "lead.won") return "won";
   if (eventType === "lead.lost") return "lost";
