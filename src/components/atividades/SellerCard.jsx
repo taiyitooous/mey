@@ -33,12 +33,11 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const isActive = minsAgo !== null && minsAgo < 15;
   const isIdle = minsAgo !== null && minsAgo >= 60;
 
-  const dedupedCalls = deduplicateCallEvents(events);
-  const calls = dedupedCalls.length;
+  const calls = events.filter(isCallAttempt).length;
   const whas = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
-  const effective = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
+  const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
 
   // Calculate status and time
