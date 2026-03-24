@@ -140,7 +140,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       <div className="grid grid-cols-4 gap-1.5">
         {[
         { icon: Phone, value: calls, label: "3C" },
-        { icon: Trophy, value: wins, label: "Ganhos" },
+        { icon: MessageCircle, value: whatsappCalls, label: "WhatsApp" },
         { label: "WA Atendidas", value: `${whatsappAnswered}/${whatsappCalls}`, plain: true },
         { label: "Contato", value: `${contactRate}%`, plain: true }].
         map(({ icon: Icon, value, label, plain }) =>
