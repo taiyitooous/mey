@@ -140,8 +140,7 @@ export function buildHourlyData(events) {
       hourly[h].calls++;
       if (isEffectiveContact(e)) hourly[h].callsAnswered++;
     }
-    // WhatsApp Wavoip: apenas eventos com source === "whatsapp"
-    if (e.source === "whatsapp" && getCategory(e.event_type) === "whatsapp") hourly[h].whatsapp++;
+    if (getCategory(e.event_type) === "whatsapp") hourly[h].whatsapp++;
     if (getCategory(e.event_type) === "stage") hourly[h].stage++;
     if (e.event_type === "lead.won") hourly[h].ganhos++;
     if (e.event_type === "lead.lost") hourly[h].perdidos++;
