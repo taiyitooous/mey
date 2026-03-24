@@ -480,7 +480,7 @@ export default function Integracoes() {
 
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URL do Webhook</p>
-          <CopyableUrl url="https://api.base44.com/api/apps/68fbb6f1a06149abf6635095/functions/dataCrazyWebhook" />
+          <CopyableUrl url={DATACRAZY_WEBHOOK_URL} />
         </div>
 
         <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
