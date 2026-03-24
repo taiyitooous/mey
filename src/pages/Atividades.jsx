@@ -230,10 +230,10 @@ export default function Atividades() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sellers.map((seller) => (
               <SellerCard
-                key={seller.email}
+                key={seller.name}
                 seller={seller}
                 avatarUrl={userAvatarMap[seller.name]}
-                sellerConfig={sellerConfigMap[seller.email]}
+                sellerConfig={sellerConfigMap[seller.name]}
                 onConfigUpdated={refetchConfigs}
                 onClick={() => setSelectedSeller(seller)}
               />
