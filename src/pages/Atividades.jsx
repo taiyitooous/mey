@@ -254,16 +254,20 @@ export default function Atividades() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sellers.map((seller) => (
-              <SellerCard
-                key={seller.email || seller.name}
-                seller={seller}
-                avatarUrl={userAvatarMap[seller.email] || userAvatarMap[seller.name]}
-                sellerConfig={sellerConfigMap[seller.email] || sellerConfigMap[seller.name]}
-                onConfigUpdated={refetchConfigs}
-                onClick={() => setSelectedSeller(seller)}
-              />
-            ))}
+            {sellers.map((seller) => {
+              // Chave normalizada para buscar config (primeiro nome em minúsculas)
+              const normalizedKey = seller.name ? seller.name.split(" ")[0].toLowerCase().trim() : "";
+              return (
+                <SellerCard
+                  key={seller.email || seller.name}
+                  seller={seller}
+                  avatarUrl={userAvatarMap[seller.email] || userAvatarMap[seller.name]}
+                  sellerConfig={sellerConfigMap[normalizedKey]}
+                  onConfigUpdated={refetchConfigs}
+                  onClick={() => setSelectedSeller(seller)}
+                />
+              );
+            })}
           </div>
         )}
       </div>
