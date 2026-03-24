@@ -159,7 +159,12 @@ export default function Atividades() {
       
       map[key].events.push(event);
     });
-    return Object.values(map).sort((a, b) => b.events.length - a.events.length);
+    return Object.values(map)
+      .filter((seller) => {
+        const callAttempts = seller.events.filter(isCallAttempt).length;
+        return callAttempts > 0; // Mostra apenas vendedores com ligações
+      })
+      .sort((a, b) => b.events.length - a.events.length);
   }, [filteredEvents]);
 
   // If a seller profile is open, show full-page view
