@@ -126,8 +126,8 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       <div className="grid grid-cols-4 gap-1.5">
         {[
         { icon: Phone, value: calls, label: "3C" },
-        { icon: MessageCircle, value: whas, label: "WA" },
         { icon: Trophy, value: wins, label: "Ganhos" },
+        { label: "WA", value: wavoipTotal > 0 ? `${wavoipAnswered}/${wavoipTotal}` : "—", plain: true },
         { label: "Contato", value: `${contactRate}%`, plain: true }].
         map(({ icon: Icon, value, label, plain }) =>
         <div key={label} className="text-center bg-muted/50 rounded-lg py-2">
