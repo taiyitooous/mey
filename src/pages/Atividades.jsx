@@ -184,10 +184,20 @@ export default function Atividades() {
          if (sellerFirstName === otherFirstName || (seller.email && otherSeller.email && seller.email === otherSeller.email)) {
            // Mescla os eventos
            mergedSeller.events.push(...otherSeller.events);
-           // Preferir nome mais completo
-           if (otherSeller.name.length > mergedSeller.name.length) {
+           
+           // Preferir o com foto (sellerConfig com avatar_url)
+           const mergedHasAvatar = sellerConfigMap[sellerFirstName]?.avatar_url;
+           const otherHasAvatar = sellerConfigMap[otherFirstName]?.avatar_url;
+           
+           if (otherHasAvatar && !mergedHasAvatar) {
+             // Se o outro tem foto e o merged não, usa o outro como base
+             mergedSeller = { ...otherSeller };
+             mergedSeller.events = [...otherSeller.events, ...seller.events];
+           } else if (otherSeller.name.length > mergedSeller.name.length) {
+             // Preferir nome mais completo se ambos têm ou não têm foto
              mergedSeller.name = otherSeller.name;
            }
+           
            // Preservar email
            if (!mergedSeller.email && otherSeller.email) {
              mergedSeller.email = otherSeller.email;
