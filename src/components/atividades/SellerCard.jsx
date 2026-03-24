@@ -117,10 +117,19 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
 
   const handleDelete = async () => {
-    if (!sellerConfig?.id) return;
-    await base44.entities.SellerConfig.delete(sellerConfig.id);
-    queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
-    setShowDeleteConfirm(false);
+    if (!sellerConfig?.id) {
+      console.log("Sem ID do seller config:", sellerConfig);
+      return;
+    }
+    try {
+      console.log("Deletando seller config ID:", sellerConfig.id);
+      await base44.entities.SellerConfig.delete(sellerConfig.id);
+      queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
+      setShowDeleteConfirm(false);
+      console.log("Deletado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao deletar:", err);
+    }
   };
 
   return (
