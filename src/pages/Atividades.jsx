@@ -79,11 +79,16 @@ export default function Atividades() {
   // Real-time subscription
   useEffect(() => {
     const unsubscribe = base44.entities.Event.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["events_atividades"] });
+      queryClient.invalidateQueries({ queryKey: ["events_atividades"], exact: false });
     });
 
     return unsubscribe;
   }, [queryClient]);
+
+  // Force refetch quando timeRange muda
+  useEffect(() => {
+    queryClient.refetchQueries({ queryKey: ["events_atividades"] });
+  }, [timeRange, queryClient]);
 
   const { data: users = [] } = useQuery({
     queryKey: ["users_all"],
