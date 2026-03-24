@@ -22,6 +22,8 @@ export function isEffectiveContact(event) {
   // Para WhatsApp: conta interações de resposta
   if (event.event_type === "whatsapp_replied" || event.event_type === "lead.whatsapp_replied") return true;
   if (event.event_type === "whatsapp_call_received") return true;
+  // Wavoip: ligação atendida ou encerrada com duração
+  if (event.event_type === "whatsapp_call_answered" || event.event_type === "whatsapp_call_ended") return true;
   return false;
 }
 
