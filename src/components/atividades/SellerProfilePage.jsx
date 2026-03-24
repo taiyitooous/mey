@@ -121,13 +121,17 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const resolvedAvatarUrl = sellerConfig?.avatar_url || avatarUrl;
 
   const handleDeleteProfile = async () => {
-    if (!sellerConfig?.id) return;
+    if (!sellerConfig?.id) {
+      onClose();
+      return;
+    }
     try {
       await base44.entities.SellerConfig.delete(sellerConfig.id);
       queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
       onClose();
     } catch (err) {
       console.error("Erro ao deletar perfil:", err);
+      onClose();
     }
   };
 
