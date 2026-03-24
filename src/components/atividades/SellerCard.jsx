@@ -113,9 +113,6 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={`px-2 py-0.5 rounded-full text-white text-[10px] font-medium whitespace-nowrap ${statusInfo.color}`}>
-            {statusInfo.status}
-          </span>
           <span className="text-[10px] text-muted-foreground">{statusInfo.time}</span>
 
         </div>
