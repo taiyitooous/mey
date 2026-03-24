@@ -41,18 +41,17 @@ function ScoreCard({ value, label, meta, status, icon: Icon }) {
 }
 
 export default function TeamScoreboard({ allEvents = [], filteredEvents = [] }) {
-  // Use allEvents para calcular 3C total, mas use filteredEvents para WhatsApp
-  const dedupedCalls = deduplicateCallEvents(allEvents);
-  const total = allEvents.length;
-  const sellers = new Set(allEvents.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
+  const dedupedCalls = deduplicateCallEvents(filteredEvents);
+  const total = filteredEvents.length;
+  const sellers = new Set(filteredEvents.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
   const calls = dedupedCalls.length;
   const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
 
   // Vendedores com pelo menos 1 ligação 3C (em todo período)
-  const sellersWith3C = new Set(dedupedCalls.map((e) => e.user_name?.toLowerCase().trim()));
+  const sellersWith3C = new Set(deduplicateCallEvents(allEvents).map((e) => e.user_name?.toLowerCase().trim()));
   
-  // WhatsApp: apenas de vendedores que fizeram ligações 3C (mas do período filtrado)
+  // WhatsApp: apenas de vendedores que fizeram ligações 3C (do período filtrado)
   const whatsappEvents = filteredEvents.filter((e) => {
     if (getCategory(e.event_type) !== "whatsapp") return false;
     const userName = e.user_name?.toLowerCase().trim();
