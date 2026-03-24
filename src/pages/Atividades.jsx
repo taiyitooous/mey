@@ -131,39 +131,39 @@ export default function Atividades() {
   }, [events, selectedChannel, resultOnly]);
 
   const sellers = useMemo(() => {
-    const map = {};
-    
-    filteredEvents.forEach((event) => {
-      const email = event.user_email?.toLowerCase().trim();
-      const name = event.user_name?.trim();
-      
-      // Normaliza nome: pega apenas a primeira palavra (ex: "Vanessa Rodrigues Pereira" → "vanessa")
-      const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
-      
-      // Usa email como chave primária; se não tiver, usa primeira palavra do nome
-      const key = email || firstName || "Sistema";
-      
-      if (!map[key]) {
-        map[key] = { email: email || "", name: name || key, events: [] };
-      } else {
-        // Se já existe e temos um nome mais completo, atualiza
-        if (name && name.length > map[key].name.length) {
-          map[key].name = name;
-        }
-        if (email) {
-          map[key].email = email;
-        }
-      }
-      
-      map[key].events.push(event);
-    });
-    return Object.values(map)
-      .filter((seller) => {
-        const callAttempts = seller.events.filter(isCallAttempt).length;
-        return callAttempts > 0; // Mostra apenas vendedores com ligações
-      })
-      .sort((a, b) => b.events.length - a.events.length);
-  }, [filteredEvents]);
+     const map = {};
+
+     filteredEvents.forEach((event) => {
+       const email = event.user_email?.toLowerCase().trim();
+       const name = event.user_name?.trim();
+
+       // Normaliza nome: pega apenas a primeira palavra (ex: "Vanessa Rodrigues Pereira" → "vanessa")
+       const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
+
+       // Usa email como chave primária; se não tiver, usa primeira palavra do nome
+       const key = email || firstName || "Sistema";
+
+       if (!map[key]) {
+         map[key] = { email: email || "", name: name || key, events: [] };
+       } else {
+         // Se já existe e temos um nome mais completo, atualiza
+         if (name && name.length > map[key].name.length) {
+           map[key].name = name;
+         }
+         if (email) {
+           map[key].email = email;
+         }
+       }
+
+       map[key].events.push(event);
+     });
+     return Object.values(map)
+       .filter((seller) => {
+         // Se tem eventos filtrados, mostra (já foram filtrados por canal)
+         return seller.events.length > 0;
+       })
+       .sort((a, b) => b.events.length - a.events.length);
+   }, [filteredEvents]);
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
