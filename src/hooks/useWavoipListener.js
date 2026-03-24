@@ -75,11 +75,12 @@ export function useWavoipListener(devices = []) {
 
             console.log(`[Wavoip] Chamada encerrada: ${activeCall.phone} | duração: ${duration}s`);
 
-            // Registrar fim da chamada (independente da duração)
+            // Registrar fim da chamada — "answered" se durou mais de 5s, senão "missed"
+            const endType = duration > 5 ? "answered" : "missed";
             base44.functions.invoke("registerWavoipCall", {
               device_token: token,
               phone: activeCall.phone,
-              type: "end",
+              type: endType,
               call_type: activeCall.call_type,
               call_id,
               duration_seconds: duration,
