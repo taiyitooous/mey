@@ -196,22 +196,22 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             </Badge>
           )}
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           {showDeleteConfirm ? (
             <>
-              <Button variant="destructive" size="sm" className="text-xs h-6 px-2" onClick={handleDelete}>
+              <Button variant="destructive" size="sm" className="text-xs h-6 px-2" onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
                 Confirma?
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setShowDeleteConfirm(false)}>
+              <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }}>
                 Cancelar
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={() => setShowDeleteConfirm(true)}>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
                 <Trash2 className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0">
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0" onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...sellerConfig}); }}>
                 Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
             </>
