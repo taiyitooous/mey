@@ -149,7 +149,7 @@ export default function Atividades() {
       <SellerProfilePage
         seller={selectedSeller}
         avatarUrl={userAvatarMap[selectedSeller?.name]}
-        sellerConfig={sellerConfigMap[selectedSeller?.name]}
+        sellerConfig={sellerConfigMap[selectedSeller?.email]}
         onClose={() => setSelectedSeller(null)}
       />
     );
