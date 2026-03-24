@@ -26,9 +26,9 @@ export function isEffectiveContact(event) {
 }
 
 export function isCallAttempt(event) {
-  // Conta apenas chamadas finalizadas 3C
+  // Conta chamadas 3C finalizadas (todos os tipos possíveis)
   if (event.source !== "3c") return false;
-  const types = ["call.ended", "call-history-was-created"];
+  const types = ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt"];
   return types.includes(event.event_type);
 }
 
