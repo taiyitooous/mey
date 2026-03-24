@@ -78,7 +78,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const stages = events.filter((e) => getCategory(e.event_type) === "stage").length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
-  const effective = events.filter(isEffectiveContact).length;
+  const effective = dedupedCalls.filter(isEffectiveContact).length;
   const closed = wins + losses;
   const closeRate = closed > 0 ? Math.round((wins / closed) * 100) : 0;
   // Taxa de contato = ligações atendidas / total de ligações
