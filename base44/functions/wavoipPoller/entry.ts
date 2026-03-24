@@ -31,8 +31,10 @@ Deno.serve(async (req) => {
       }
 
       const data = await res.json();
-      const callInfo = data?.result?.call;
+      console.log(`[Wavoip] ${device.device_name || token.slice(-8)} raw:`, JSON.stringify(data).slice(0, 500));
 
+      // A API pode retornar em data.call ou data.result.call ou direto em data
+      const callInfo = data?.call ?? data?.result?.call ?? null;
       console.log(`[Wavoip] ${device.device_name || token.slice(-8)} call:`, JSON.stringify(callInfo));
 
       if (!callInfo || !callInfo.call_id) {
