@@ -149,100 +149,101 @@ export default function Atividades() {
   }, [events, selectedChannel, resultOnly]);
 
   const sellers = useMemo(() => {
-     // Vendedores com 3C em TODO o período (não apenas filteredEvents)
-     const sellersWith3C = new Set(
-       events
-         .filter(isCallAttempt)
-         .map((e) => e.user_name?.split(" ")[0].toLowerCase().trim())
-     );
+    // Vendedores com 3C em TODO o período
+    const sellersWith3C = new Set(
+      events
+        .filter(isCallAttempt)
+        .map((e) => e.user_name?.split(" ")[0].toLowerCase().trim())
+    );
 
-     const map = {};
+    // Construir mapa com TODOS os eventos (não apenas filteredEvents)
+    const map = {};
 
-     filteredEvents.forEach((event) => {
-       const email = event.user_email?.toLowerCase().trim();
-       const name = event.user_name?.trim();
-       const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
+    events.forEach((event) => {
+      const email = event.user_email?.toLowerCase().trim();
+      const name = event.user_name?.trim();
+      const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
 
-       const key = email || firstName || "sistema";
+      const key = email || firstName || "sistema";
 
-       if (!map[key]) {
-         map[key] = { email: email || "", name: name || key, events: [] };
-       } else {
-         // Preferir nome mais completo
-         if (name && name.length > map[key].name.length) {
-           map[key].name = name;
-         }
-         if (email) map[key].email = email;
-       }
+      if (!map[key]) {
+        map[key] = { email: email || "", name: name || key, events: [] };
+      } else {
+        // Preferir nome mais completo
+        if (name && name.length > map[key].name.length) {
+          map[key].name = name;
+        }
+        if (email) map[key].email = email;
+      }
 
-       map[key].events.push(event);
-     });
+      map[key].events.push(event);
+    });
 
-     // Consolidar por firstName, mantendo quem NÃO tem foto
-     const consolidated = {};
-     const processed = new Set();
+    // Consolidar por firstName
+    const consolidated = {};
+    const processed = new Set();
 
-     Object.entries(map).forEach(([key, seller]) => {
-       if (processed.has(key)) return;
+    Object.entries(map).forEach(([key, seller]) => {
+      if (processed.has(key)) return;
 
-       const sellerFirstName = seller.name.split(" ")[0].toLowerCase().trim();
-       let mergedSeller = { ...seller };
-       
-       // Verificar se tem foto
-       const hasAvatar = userAvatarMap[seller.name] || sellerConfigMap[sellerFirstName]?.avatar_url;
-       // Verificar se tem Wavoip
-       const hasWavoip = wavoipUserNames.has(sellerFirstName);
+      const sellerFirstName = seller.name.split(" ")[0].toLowerCase().trim();
+      let mergedSeller = { ...seller, events: [] };
+      
+      // Verificar se tem Wavoip
+      const hasWavoip = wavoipUserNames.has(sellerFirstName);
 
-       // Procura por outros com mesmo firstName
-       Object.entries(map).forEach(([otherKey, otherSeller]) => {
-         if (otherKey === key || processed.has(otherKey)) return;
+      // Procura por outros com mesmo firstName e mescla
+      Object.entries(map).forEach(([otherKey, otherSeller]) => {
+        if (otherKey === key && !processed.has(otherKey)) {
+          mergedSeller.events.push(...seller.events);
+          processed.add(key);
+          return;
+        }
 
-         const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
-         
-         if (sellerFirstName === otherFirstName) {
-           const otherHasAvatar = userAvatarMap[otherSeller.name] || sellerConfigMap[otherFirstName]?.avatar_url;
-           const otherHasWavoip = wavoipUserNames.has(otherFirstName);
-           
-           // Mescla todos os eventos
-           mergedSeller.events.push(...otherSeller.events);
-           
-           // Se o outro NÃO tem Wavoip mas merged tem, merged mantém a prioridade
-           if (!otherHasWavoip && hasWavoip) {
-             // Mantém merged (que tem Wavoip)
-           } else if (otherHasWavoip && !hasWavoip) {
-             // Se outro tem Wavoip e merged não, usa o outro como base
-             mergedSeller = { ...otherSeller };
-             mergedSeller.events.push(...seller.events);
-           } else if (!otherHasAvatar && hasAvatar) {
-             // Se ambos têm ou não Wavoip, preferir quem NÃO tem foto
-             mergedSeller = { ...otherSeller };
-             mergedSeller.events.push(...seller.events);
-           } else if (otherSeller.name.length > mergedSeller.name.length) {
-             // Preferir nome mais completo
-             mergedSeller.name = otherSeller.name;
-           }
-           
-           // Unificar email
-           if (!mergedSeller.email && otherSeller.email) {
-             mergedSeller.email = otherSeller.email;
-           }
-           
-           processed.add(otherKey);
-         }
-       });
+        const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
+        
+        if (sellerFirstName === otherFirstName && otherKey !== key && !processed.has(otherKey)) {
+          const otherHasWavoip = wavoipUserNames.has(otherFirstName);
+          
+          // Mescla eventos
+          mergedSeller.events.push(...otherSeller.events);
+          
+          // Preferir quem tem Wavoip para nome/email
+          if (otherHasWavoip && !hasWavoip) {
+            mergedSeller.name = otherSeller.name;
+            mergedSeller.email = otherSeller.email;
+          } else if (otherSeller.name.length > mergedSeller.name.length) {
+            mergedSeller.name = otherSeller.name;
+          }
+          if (!mergedSeller.email && otherSeller.email) {
+            mergedSeller.email = otherSeller.email;
+          }
+          
+          processed.add(otherKey);
+        }
+      });
 
-       consolidated[sellerFirstName] = mergedSeller;
-       processed.add(key);
-     });
+      if (!processed.has(key)) {
+        mergedSeller.events.push(...seller.events);
+        processed.add(key);
+      }
 
-     return Object.values(consolidated)
-       .filter((seller) => {
-         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
-         // Sempre precisa ter 3C para aparecer
-         return sellersWith3C.has(sellerKey);
-       })
-       .sort((a, b) => b.events.length - a.events.length);
-   }, [filteredEvents, events]);
+      consolidated[sellerFirstName] = mergedSeller;
+    });
+
+    // Filtrar eventos consolidados por filteredEvents e retornar
+    return Object.values(consolidated)
+      .filter((seller) => {
+        const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
+        return sellersWith3C.has(sellerKey);
+      })
+      .map((seller) => ({
+        ...seller,
+        events: seller.events.filter((e) => filteredEvents.some((fe) => fe.id === e.id))
+      }))
+      .filter((seller) => seller.events.length > 0)
+      .sort((a, b) => b.events.length - a.events.length);
+  }, [filteredEvents, events, wavoipUserNames]);
 
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
