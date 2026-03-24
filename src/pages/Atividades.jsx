@@ -108,7 +108,11 @@ export default function Atividades() {
 
   const sellerConfigMap = useMemo(() => {
     const map = {};
-    sellerConfigs.forEach((c) => { map[c.seller_key] = c; });
+    sellerConfigs.forEach((c) => { 
+      map[c.seller_key] = c;
+      // Também indexa por seller_key normalizado (lowercase) para evitar duplicação
+      map[c.seller_key.toLowerCase().trim()] = c;
+    });
     return map;
   }, [sellerConfigs]);
 
