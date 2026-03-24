@@ -21,7 +21,8 @@ Deno.serve(async (req) => {
 
   delete body.token;
 
-  console.log("[3C] event:", Object.keys(body).join(", "));
+  console.log("[3C] event keys:", Object.keys(body).join(", "));
+  console.log("[3C] raw payload:", JSON.stringify(body).slice(0, 2000));
 
   const base44 = createClientFromRequest(req);
   await base44.asServiceRole.functions.invoke("threecWebhookProcessor", { body });
