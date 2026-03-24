@@ -119,7 +119,14 @@ export default function Atividades() {
     
     // Filtro de canal
     if (selectedChannel !== "all") {
-      filtered = filtered.filter((e) => getCategory(e.event_type) === selectedChannel);
+      filtered = filtered.filter((e) => {
+        const category = getCategory(e.event_type);
+        // WhatsApp Wavoip: apenas com source === "whatsapp"
+        if (selectedChannel === "whatsapp" && category === "whatsapp") {
+          return e.source === "whatsapp";
+        }
+        return category === selectedChannel;
+      });
     }
     
     // Filtro de resultado apenas
