@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import LeadCard from "@/components/vendas/LeadCard";
@@ -9,6 +9,7 @@ import { Plus, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 const STAGES = [
   { value: 1, label: "Etapa 1" },
@@ -23,20 +24,49 @@ export default function Vendas() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data: leads = [], isLoading } = useQuery({
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ["leads"],
     queryFn: () => base44.entities.Lead.list("-created_date", 500),
   });
 
-  const openLeads = leads.filter((l) => l.status === "open");
-  const filtered = search
-    ? openLeads.filter(
-        (l) =>
-          l.name?.toLowerCase().includes(search.toLowerCase()) ||
-          l.phone?.includes(search) ||
-          l.seller_name?.toLowerCase().includes(search.toLowerCase())
-      )
-    : openLeads;
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ["events_vendas"],
+    queryFn: () => base44.entities.Event.list("-created_date", 1000),
+  });
+
+  const isLoading = leadsLoading || eventsLoading;
+
+  // Leads abertos + leads criados via DataCrazy
+  const openLeads = useMemo(() => {
+    const leads_open = leads.filter((l) => l.status === "open");
+    
+    // Contar leads criados via DataCrazy por evento
+    const dataCrazyLeads = new Set(
+      events
+        .filter((e) => e.source === "datacrazy" && e.entity_type === "lead" && e.event_type === "lead.created")
+        .map((e) => e.entity_id)
+    );
+    
+    // Adicionar contagem de eventos DataCrazy aos leads
+    return leads_open.map((lead) => ({
+      ...lead,
+      dataCrazyEventCount: events.filter(
+        (e) => e.source === "datacrazy" && e.entity_id === lead.id
+      ).length,
+      isFromDataCrazy: dataCrazyLeads.has(lead.id),
+    }));
+  }, [leads, events]);
+
+  const filtered = useMemo(() => {
+    return search
+      ? openLeads.filter(
+          (l) =>
+            l.name?.toLowerCase().includes(search.toLowerCase()) ||
+            l.phone?.includes(search) ||
+            l.seller_name?.toLowerCase().includes(search.toLowerCase())
+        )
+      : openLeads;
+  }, [search, openLeads]);
 
   return (
     <div className="space-y-6">

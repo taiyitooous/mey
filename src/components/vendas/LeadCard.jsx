@@ -16,12 +16,20 @@ export default function LeadCard({ lead, onClick }) {
       onClick={() => onClick(lead)}
     >
       <div className="space-y-2.5">
-        <div className="flex items-start justify-between">
-          <h4 className="text-sm font-semibold text-foreground truncate flex-1 group-hover:text-primary transition-colors">
-            {lead.name || "Sem nome"}
-          </h4>
-          {lead.status === "won" && <Badge className="bg-success/10 text-success border-0 text-xs">Ganho</Badge>}
-          {lead.status === "lost" && <Badge className="bg-destructive/10 text-destructive border-0 text-xs">Perdido</Badge>}
+        <div className="space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <h4 className="text-sm font-semibold text-foreground truncate flex-1 group-hover:text-primary transition-colors">
+              {lead.name || "Sem nome"}
+            </h4>
+            <div className="flex gap-1">
+              {lead.isFromDataCrazy && <Badge className="bg-blue-500/10 text-blue-600 border-0 text-xs shrink-0">DataCrazy</Badge>}
+              {lead.status === "won" && <Badge className="bg-success/10 text-success border-0 text-xs shrink-0">Ganho</Badge>}
+              {lead.status === "lost" && <Badge className="bg-destructive/10 text-destructive border-0 text-xs shrink-0">Perdido</Badge>}
+            </div>
+          </div>
+          {lead.dataCrazyEventCount > 0 && (
+            <p className="text-xs text-blue-600 font-medium">{lead.dataCrazyEventCount} evento(s) DataCrazy</p>
+          )}
         </div>
 
         {lead.phone && (
