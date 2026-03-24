@@ -221,6 +221,23 @@ export default function Atividades() {
          }
          return sellersWith3C.has(sellerKey);
        })
+       .filter((seller) => {
+         // Remove duplicatas sem foto (mantém só quem tem foto ou é único)
+         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
+         const hasAvatar = userAvatarMap[seller.name] || userAvatarMap[seller.email] || sellerConfigMap[sellerKey]?.avatar_url;
+         
+         // Verifica quantos sellers têm o mesmo firstName
+         const sellersWithSameFirstName = Object.values(consolidated).filter(
+           s => s.name.split(" ")[0].toLowerCase().trim() === sellerKey
+         );
+         
+         // Se tem vários com mesmo firstName e este não tem foto, remove
+         if (sellersWithSameFirstName.length > 1 && !hasAvatar) {
+           return false;
+         }
+         
+         return true;
+       })
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents, events]);
 
