@@ -79,7 +79,7 @@ export default function Atividades() {
   // Real-time subscription
   useEffect(() => {
     const unsubscribe = base44.entities.Event.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["events_hoje"] });
+      queryClient.invalidateQueries({ queryKey: ["events_atividades"] });
     });
 
     return unsubscribe;
