@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import {
   Phone, MessageCircle, Trophy, XCircle, ArrowRight, Clock, DollarSign,
-  X, Zap, Target, Users,
+  X, Zap, Target, Users, Trash2,
 } from "lucide-react";
 import { format, getHours, differenceInMinutes, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -54,7 +54,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerConfig }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [timelineFilter, setTimelineFilter] = useState("all");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: sellerLeads = [] } = useQuery({
     queryKey: ["leads_seller", seller?.name],
@@ -118,6 +120,17 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const resolvedAvatarUrl = sellerConfig?.avatar_url || avatarUrl;
 
+  const handleDeleteProfile = async () => {
+    if (!sellerConfig?.id) return;
+    try {
+      await base44.entities.SellerConfig.delete(sellerConfig.id);
+      queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
+      onClose();
+    } catch (err) {
+      console.error("Erro ao deletar perfil:", err);
+    }
+  };
+
   const kpiCards = [
     { label: "Ligações 3C", value: calls, icon: Phone },
     { label: "WhatsApp Wavoip", value: whas, icon: MessageCircle },
@@ -157,9 +170,27 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex gap-2">
+           {showDeleteConfirm ? (
+             <>
+               <Button variant="destructive" size="sm" onClick={handleDeleteProfile}>
+                 Confirma?
+               </Button>
+               <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                 Cancelar
+               </Button>
+             </>
+           ) : (
+             <>
+               <Button variant="ghost" size="icon" onClick={() => setShowDeleteConfirm(true)}>
+                 <Trash2 className="w-5 h-5" />
+               </Button>
+               <Button variant="ghost" size="icon" onClick={onClose}>
+                 <X className="w-5 h-5" />
+               </Button>
+             </>
+           )}
+          </div>
         </div>
 
         <Tabs defaultValue="performance">
