@@ -137,16 +137,30 @@ Deno.serve(async (req) => {
 
     } else if (dataType === 'payment') {
       // ===== PROCESSAMENTO DE PAGAMENTOS =====
-      await base44.asServiceRole.entities.Order.update(data.order_id, {
+      // Busca o pedido pelo order_id (pode ser ID customizado ou interno)
+      let order = null;
+      const orders = await base44.asServiceRole.entities.Order.filter({ order_id: data.order_id });
+      if (orders.length > 0) {
+        order = orders[0];
+      } else {
+        // Se não encontrar, tenta usar o ID como chave primária
+        try {
+          order = await base44.asServiceRole.entities.Order.get(data.order_id);
+        } catch {
+          return Response.json({ error: `Pedido não encontrado: ${data.order_id}` }, { status: 404 });
+        }
+      }
+
+      await base44.asServiceRole.entities.Order.update(order.id, {
         payment_status: data.payment_status || 'paid',
         payment_method: data.payment_method,
         paid_at: new Date().toISOString(),
       });
-      console.log('[DataCrazy] Pagamento processado:', data.order_id);
+      console.log('[DataCrazy] Pagamento processado:', order.id);
 
       await base44.asServiceRole.entities.Event.create({
         entity_type: 'payment',
-        entity_id: data.order_id,
+        entity_id: order.id,
         event_type: 'payment.paid',
         user_name: data.seller_name || 'DataCrazy',
         user_email: data.seller_email || '',
@@ -154,7 +168,7 @@ Deno.serve(async (req) => {
         payload: JSON.stringify(data),
       });
 
-      return Response.json({ success: true, order_id: data.order_id });
+      return Response.json({ success: true, order_id: order.id });
 
     } else if (dataType === 'event') {
       // ===== PROCESSAMENTO DE EVENTOS =====
