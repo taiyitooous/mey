@@ -184,10 +184,7 @@ export default function Atividades() {
      });
 
      return Object.values(consolidated)
-       .filter((seller) => {
-         const calls = seller.events.filter(isCallAttempt).length;
-         return calls > 0;
-       })
+       .filter((seller) => seller.events.length > 0)
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents]);
 
