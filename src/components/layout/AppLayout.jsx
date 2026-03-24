@@ -3,6 +3,9 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import GlobalHeader from "./GlobalHeader";
 import { GlobalFiltersProvider } from "@/lib/GlobalFilters";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useWavoipListener } from "@/hooks/useWavoipListener";
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
