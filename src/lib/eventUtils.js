@@ -154,24 +154,34 @@ export function buildHourlyData(events) {
     hourly[h] = { hour: `${h}h`, calls: 0, callsAnswered: 0, whatsapp: 0, stage: 0, ganhos: 0, perdidos: 0 };
   }
   
+  // Deduplicar ligações 3C para consistência com o scorecard
+  const dedupedCalls = deduplicateCallEvents(events);
+  
   // Vendedores com pelo menos 1 ligação 3C
   const sellersWith3C = new Set(
-    events
-      .filter(isCallAttempt)
+    dedupedCalls
       .map((e) => e.user_name?.toLowerCase().trim())
   );
   
+  // Processar ligações 3C dedupadas
+  dedupedCalls.forEach((e) => {
+    const raw = e.created_date;
+    const iso = raw && !raw.endsWith("Z") && !raw.includes("+") ? raw + "Z" : raw;
+    const d = new Date(iso);
+    const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
+    if (!hourly[h]) return;
+    hourly[h].calls++;
+    if (isEffectiveContact(e)) hourly[h].callsAnswered++;
+  });
+  
+  // Processar outros eventos
   events.forEach((e) => {
     const raw = e.created_date;
     const iso = raw && !raw.endsWith("Z") && !raw.includes("+") ? raw + "Z" : raw;
     const d = new Date(iso);
-    // Hora em SP (UTC-3)
     const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (!hourly[h]) return;
-    if (isCallAttempt(e)) {
-      hourly[h].calls++;
-      if (isEffectiveContact(e)) hourly[h].callsAnswered++;
-    }
+    
     // WhatsApp: apenas de vendedores que fizeram ligações 3C
     const userName = e.user_name?.toLowerCase().trim();
     if (getCategory(e.event_type) === "whatsapp" && sellersWith3C.has(userName)) {
