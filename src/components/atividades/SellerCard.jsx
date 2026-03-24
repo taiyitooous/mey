@@ -113,7 +113,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className="text-[10px] text-muted-foreground">{statusInfo.time}</span>
+
 
         </div>
       </div>
