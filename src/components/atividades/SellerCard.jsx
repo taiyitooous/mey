@@ -105,7 +105,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       <div className="flex items-start justify-between gap-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <SellerAvatarEditor
-            sellerKey={name}
+            sellerKey={email}
             displayName={sellerConfig?.display_name}
             avatarUrl={sellerConfig?.avatar_url || avatarUrl}
             onUpdated={onConfigUpdated}
