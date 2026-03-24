@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Save, Zap, CheckCircle2, Circle, Smartphone } from "lucide-react";
+import { Plus, Trash2, Save, Zap, CheckCircle2, Circle, Smartphone, Database, Copy, Check } from "lucide-react";
 
 function AgentRow({ agent, users, onSave, onDelete }) {
   const [editing, setEditing] = useState(false);
