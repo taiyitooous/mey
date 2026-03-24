@@ -34,11 +34,16 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const isIdle = minsAgo !== null && minsAgo >= 60;
 
   const calls = events.filter(isCallAttempt).length;
-  const whas = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
+
+  // Wavoip: conta apenas eventos de fim (não "started")
+  const wavoipAttempts = events.filter(isWavoipCallAttempt).filter((e) => e.event_type !== "whatsapp_call_started");
+  const wavoipAnswered = wavoipAttempts.filter(isWavoipCallAnswered).length;
+  const wavoipTotal = wavoipAttempts.length;
+  const wavoipRate = wavoipTotal > 0 ? Math.round((wavoipAnswered / wavoipTotal) * 100) : 0;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {
