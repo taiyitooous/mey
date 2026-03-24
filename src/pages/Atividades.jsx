@@ -307,6 +307,7 @@ export default function Atividades() {
                   sellerConfig={sellerConfigMap[normalizedKey]}
                   onConfigUpdated={refetchConfigs}
                   onClick={() => setSelectedSeller(seller)}
+                  selectedChannel={selectedChannel}
                 />
               );
             })}

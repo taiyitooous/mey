@@ -22,7 +22,7 @@ function buildSparkline(events) {
 
 
 
-export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated }) {
+export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, selectedChannel }) {
   const { name, email, events } = seller;
   const displayName = sellerConfig?.display_name || name;
   const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
@@ -39,9 +39,13 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
 
-  // WhatsApp Wavoip: apenas se tiver pelo menos 1 ligação 3C
-  const whatsappCalls = calls > 0 ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length : 0;
-  const whatsappAnswered = calls > 0 ? events.filter((e) => e.event_type === "whatsapp_call_received").length : 0;
+  // WhatsApp Wavoip: mostrar sempre se filtro é WhatsApp, caso contrário apenas se tem 3C
+  const whatsappCalls = selectedChannel === "whatsapp" 
+    ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length
+    : calls > 0 ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length : 0;
+  const whatsappAnswered = selectedChannel === "whatsapp"
+    ? events.filter((e) => e.event_type === "whatsapp_call_received").length
+    : calls > 0 ? events.filter((e) => e.event_type === "whatsapp_call_received").length : 0;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {
