@@ -131,14 +131,12 @@ export default function Atividades() {
   const sellers = useMemo(() => {
     const map = {};
     filteredEvents.forEach((event) => {
-      // Agrupa por email (chave única)
-      const emailKey = event.user_email || event.user_name || event.created_by || "Sistema";
-      if (!map[emailKey]) {
-        // Usa o nome mais completo disponível: user_name > created_by
-        const displayName = event.user_name || event.created_by || emailKey;
-        map[emailKey] = { email: emailKey, name: displayName, events: [] };
+      // Agrupa por user_name (mais consistente que email)
+      const key = event.user_name || event.created_by || "Sistema";
+      if (!map[key]) {
+        map[key] = { email: event.user_email || "", name: key, events: [] };
       }
-      map[emailKey].events.push(event);
+      map[key].events.push(event);
     });
     return Object.values(map).sort((a, b) => b.events.length - a.events.length);
   }, [filteredEvents]);
