@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     // Criar evento
     const eventData = {
-      entity_type: 'call',
+      entity_type: 'lead',
       entity_id: `wavoip_${device_token}_${timestamp}`,
       event_type,
       user_name,
