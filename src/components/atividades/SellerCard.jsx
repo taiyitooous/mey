@@ -150,7 +150,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           {wins > 0 && <Badge className="bg-success/10 text-success border-0 text-xs">{wins} ganhos</Badge>}
           {losses > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-xs">{losses} perdidos</Badge>}
           {minsAgo !== null && (
-            <Badge className={`border-0 text-xs ${isActive ? "bg-success/10 text-success" : isIdle ? "bg-destructive/10 text-destructive" : "bg-orange-100 text-orange-700"}`}>
+            <Badge className={`border-0 text-xs ${isActive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
               {isActive ? "ativo agora" : minsAgo >= 60 ? `${Math.floor(minsAgo / 60)}h${minsAgo % 60 > 0 ? `${minsAgo % 60}min` : ""} sem ação` : `${minsAgo}min sem ação`}
             </Badge>
           )}
