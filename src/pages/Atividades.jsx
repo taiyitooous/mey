@@ -318,7 +318,7 @@ export default function Atividades() {
       </div>
 
       {/* Row 1: Scoreboard */}
-      <TeamScoreboard events={events} />
+      <TeamScoreboard events={filteredEvents} />
 
       {/* Row 2: Activity chart */}
       <TeamActivityChart events={filteredEvents} />
