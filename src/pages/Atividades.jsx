@@ -131,7 +131,8 @@ export default function Atividades() {
   const sellers = useMemo(() => {
     const map = {};
     filteredEvents.forEach((event) => {
-      const key = event.user_name || event.created_by || "Sistema";
+      // Prioriza user_email (mais específico), depois user_name, depois created_by
+      const key = event.user_email || event.user_name || event.created_by || "Sistema";
       if (!map[key]) map[key] = { name: key, events: [] };
       map[key].events.push(event);
     });
