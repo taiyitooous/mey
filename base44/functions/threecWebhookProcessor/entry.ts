@@ -38,7 +38,7 @@ async function resolveAgent(db, agentId, agentName) {
 }
 
 Deno.serve(async (req) => {
-  const base44 = createClientFromRequest(req);
+  const base44 = createClientFromRequest(req, { useServiceRole: true });
   const db = base44.asServiceRole.entities;
 
   const { body } = await req.json();
