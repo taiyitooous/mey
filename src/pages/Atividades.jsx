@@ -149,10 +149,10 @@ export default function Atividades() {
   }, [events, selectedChannel, resultOnly]);
 
   const sellers = useMemo(() => {
-    // Vendedores com 3C em TODO o período
-    const sellersWith3C = new Set(
+    // Vendedores com qualquer atividade em TODO o período (3C, WhatsApp, etc)
+    const sellersWithActivity = new Set(
       events
-        .filter(isCallAttempt)
+        .filter((e) => e.user_name && e.user_name !== "Sistema")
         .map((e) => e.user_name?.split(" ")[0].toLowerCase().trim())
     );
 
@@ -231,11 +231,11 @@ export default function Atividades() {
       consolidated[sellerFirstName] = mergedSeller;
     });
 
-    // Retornar apenas os que têm 3C
+    // Retornar qualquer um com atividade
     return Object.values(consolidated)
       .filter((seller) => {
         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
-        return sellersWith3C.has(sellerKey);
+        return sellersWithActivity.has(sellerKey);
       })
       .map((seller) => ({
         ...seller,
