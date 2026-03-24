@@ -2,13 +2,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 // Polling da REST API da Wavoip para capturar chamadas recentes
 // GET https://devices.wavoip.com/{token}/whatsapp/all_info
-// Retorna: { call: { call_id, peer_made_call, accepted_peer, call_direction, call_active_date, call_duration_in_seconds } }
+// Retorna: { result: { calls: [{ id, caller, receiver, direction, duration_seconds, statistics: { call_accepted, transport_open } }] } }
+// direction: "OUTGOING" = feita pelo vendedor, "INCOMING" = recebida
+// call_accepted em statistics = chamada foi atendida (se não existe = não atendida)
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const db = base44.asServiceRole.entities;
 
-  // Buscar todos os dispositivos ativos
   const devices = await db.WavoipConfig.filter({ active: true });
 
   if (!devices.length) {
@@ -22,75 +23,69 @@ Deno.serve(async (req) => {
     const token = device.device_token;
     const user_name = device.user_name;
     const user_email = device.user_email || '';
+    const deviceLabel = device.device_name || token.slice(-8);
 
     try {
       const res = await fetch(`https://devices.wavoip.com/${token}/whatsapp/all_info`);
       if (!res.ok) {
-        errors.push({ device: device.device_name || token.slice(-8), error: `HTTP ${res.status}` });
+        errors.push({ device: deviceLabel, error: `HTTP ${res.status}` });
         continue;
       }
 
       const data = await res.json();
-      console.log(`[Wavoip] ${device.device_name || token.slice(-8)} raw:`, JSON.stringify(data).slice(0, 500));
+      const calls = data?.result?.calls || [];
 
-      // A API pode retornar em data.call ou data.result.call ou direto em data
-      const callInfo = data?.call ?? data?.result?.call ?? null;
-      console.log(`[Wavoip] ${device.device_name || token.slice(-8)} call:`, JSON.stringify(callInfo));
+      console.log(`[Wavoip] ${deviceLabel}: ${calls.length} chamada(s) no buffer`);
 
-      if (!callInfo || !callInfo.call_id) {
-        console.log(`[Wavoip] ${device.device_name} sem chamada ativa`);
-        continue;
+      for (const call of calls) {
+        const callId = call.id;
+        if (!callId) continue;
+
+        // Verificar se já registramos esse call_id para esse usuário
+        const existing = await db.Event.filter({
+          source: 'whatsapp',
+          entity_id: `wavoip_${callId}`,
+        });
+
+        if (existing.length > 0) {
+          console.log(`[Wavoip] call_id ${callId} já registrado`);
+          continue;
+        }
+
+        const direction = call.direction === 'OUTGOING' ? 'outgoing' : 'incoming';
+        const phone = direction === 'outgoing' ? (call.receiver || '') : (call.caller || '');
+        const duration = call.duration_seconds || 0;
+        // call_accepted em statistics indica que a chamada foi atendida
+        const answered = !!(call.statistics?.call_accepted);
+        const callDate = call.statistics?.transport_open || call.statistics?.call_accepted || new Date().toISOString();
+
+        const event_type = answered ? 'whatsapp_call_received' : 'whatsapp_call_missed';
+
+        await db.Event.create({
+          entity_type: 'lead',
+          entity_id: `wavoip_${callId}`,
+          event_type,
+          user_name,
+          user_email,
+          source: 'whatsapp',
+          payload: JSON.stringify({
+            phone,
+            call_id: callId,
+            direction,
+            answered,
+            duration_seconds: duration,
+            call_active_date: callDate,
+            device_name: device.device_name || '',
+          }),
+        });
+
+        console.log(`[Wavoip] Evento criado: ${event_type} | user: ${user_name} | phone: ${phone} | duration: ${duration}s`);
+        results.push({ device: deviceLabel, event_type, phone, user_name, duration });
       }
-
-      const callId = String(callInfo.call_id);
-      const callDate = callInfo.call_active_date || new Date().toISOString();
-      const duration = callInfo.call_duration_in_seconds || 0;
-      // peer_made_call=true = chamada recebida (contato ligou para nós)
-      // peer_made_call=false = chamada feita por nós
-      const direction = callInfo.peer_made_call ? 'incoming' : 'outgoing';
-      // accepted_peer: número do contato que atendeu (ou que ligou)
-      const phone = callInfo.accepted_peer ? String(callInfo.accepted_peer) : '';
-      // Se accepted_peer existe → chamada foi atendida; se null e call_id existe → recusada/sem resposta
-      const answered = !!callInfo.accepted_peer;
-
-      // Verificar se já registramos esse call_id para esse dispositivo
-      const existing = await db.Event.filter({
-        source: 'whatsapp',
-        entity_id: `wavoip_${callId}`,
-        user_name,
-      });
-
-      if (existing.length > 0) {
-        console.log(`[Wavoip] call_id ${callId} já registrado para ${user_name}`);
-        continue;
-      }
-
-      const event_type = answered ? 'whatsapp_call_received' : 'whatsapp_call_missed';
-
-      await db.Event.create({
-        entity_type: 'lead',
-        entity_id: `wavoip_${callId}`,
-        event_type,
-        user_name,
-        user_email,
-        source: 'whatsapp',
-        payload: JSON.stringify({
-          phone,
-          call_id: callId,
-          direction,
-          answered,
-          duration_seconds: duration,
-          call_active_date: callDate,
-          device_name: device.device_name || '',
-        }),
-      });
-
-      console.log(`[Wavoip] Evento criado: ${event_type} | user: ${user_name} | phone: ${phone}`);
-      results.push({ device: device.device_name, event_type, phone, user_name });
 
     } catch (err) {
-      console.error(`[Wavoip] Erro no dispositivo ${device.device_name}:`, err.message);
-      errors.push({ device: device.device_name || token.slice(-8), error: err.message });
+      console.error(`[Wavoip] Erro no dispositivo ${deviceLabel}:`, err.message);
+      errors.push({ device: deviceLabel, error: err.message });
     }
   }
 
