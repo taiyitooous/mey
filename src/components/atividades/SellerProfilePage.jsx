@@ -128,6 +128,7 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
     try {
       await base44.entities.SellerConfig.delete(sellerConfig.id);
       queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
+      queryClient.invalidateQueries({ queryKey: ["events_atividades"] });
       onClose();
     } catch (err) {
       console.error("Erro ao deletar perfil:", err);
