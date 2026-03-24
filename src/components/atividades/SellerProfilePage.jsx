@@ -71,8 +71,9 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
   const isIdle = minsAgo !== null && minsAgo >= 60;
 
   // KPIs
-  const calls = events.filter(isCallAttempt).length;
-  const callsAnswered = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
+  const dedupedCalls = deduplicateCallEvents(events);
+  const calls = dedupedCalls.length;
+  const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   const whas = events.filter((e) => getCategory(e.event_type) === "whatsapp").length;
   const stages = events.filter((e) => getCategory(e.event_type) === "stage").length;
   const wins = events.filter((e) => e.event_type === "lead.won").length;
