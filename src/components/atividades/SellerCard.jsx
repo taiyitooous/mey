@@ -6,7 +6,7 @@ import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from 
 import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAnswered } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAnswered, getCallQualification } from "@/lib/eventUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import SellerAvatarEditor from "./SellerAvatarEditor";
 
@@ -38,6 +38,15 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
   const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
+  
+  // Qualificações das ligações 3C
+  const qualifications = {};
+  events.filter(isCallAttempt).forEach((e) => {
+    const q = getCallQualification(e);
+    if (q) {
+      qualifications[q] = (qualifications[q] || 0) + 1;
+    }
+  });
 
   // WhatsApp Wavoip: mostrar sempre se filtro é WhatsApp, caso contrário apenas se tem 3C
   const whatsappCalls = selectedChannel === "whatsapp" 
@@ -153,6 +162,18 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           </ResponsiveContainer>
         </div>
       }
+
+      {/* Qualificações */}
+      {Object.keys(qualifications).length > 0 && (
+        <div className="text-xs space-y-1 pt-1 border-t border-border">
+          {Object.entries(qualifications).map(([q, count]) => (
+            <div key={q} className="flex justify-between">
+              <span className="text-muted-foreground capitalize">{q}:</span>
+              <span className="font-semibold">{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1">

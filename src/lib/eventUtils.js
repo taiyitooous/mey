@@ -36,6 +36,30 @@ export function isWavoipCallAnswered(event) {
   return event.source === "whatsapp" && event.event_type === "whatsapp_call_received";
 }
 
+export function getCallQualification(event) {
+  if (!isCallAttempt(event) || !event.payload) return null;
+  try {
+    const payload = typeof event.payload === "string" ? JSON.parse(event.payload) : event.payload;
+    return payload.qualification || payload.result || null;
+  } catch {
+    return null;
+  }
+}
+
+export function getQualificationLabel(qualification) {
+  const labels = {
+    answered: "Atendida",
+    no_answer: "Sem resposta",
+    no_interest: "Sem interesse",
+    interested: "Interessado",
+    callback: "Retorno",
+    voicemail: "Caixa postal",
+    busy: "Ocupado",
+    error: "Erro",
+  };
+  return labels[qualification] || qualification;
+}
+
 export function isCallAttempt(event) {
   // Conta apenas chamadas 3C
   if (event.source !== "3c") return false;
