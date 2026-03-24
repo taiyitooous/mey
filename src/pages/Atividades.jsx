@@ -165,43 +165,51 @@ export default function Atividades() {
        map[key].events.push(event);
      });
 
-     // Consolidar duplicatas por similaridade de nome (case-insensitive)
+     // Consolidar por email primeiro, depois por firstName
+     const consolidatedByEmail = {};
+     Object.entries(map).forEach(([key, seller]) => {
+       const emailKey = seller.email?.toLowerCase().trim() || key;
+       
+       if (!consolidatedByEmail[emailKey]) {
+         consolidatedByEmail[emailKey] = { ...seller };
+       } else {
+         // Merge events e prefira nome mais completo
+         consolidatedByEmail[emailKey].events.push(...seller.events);
+         if (seller.name.length > consolidatedByEmail[emailKey].name.length) {
+           consolidatedByEmail[emailKey].name = seller.name;
+         }
+       }
+     });
+
+     // Consolidar por firstName (para emails diferentes mas mesma pessoa)
      const consolidated = {};
      const processed = new Set();
 
-     Object.entries(map).forEach(([key, seller]) => {
+     Object.entries(consolidatedByEmail).forEach(([key, seller]) => {
        if (processed.has(key)) return;
 
        const sellerFirstName = seller.name.split(" ")[0].toLowerCase().trim();
        let mergedSeller = { ...seller };
 
-       // Procura por outros sellers com o mesmo firstName (case-insensitive)
-       Object.entries(map).forEach(([otherKey, otherSeller]) => {
+       Object.entries(consolidatedByEmail).forEach(([otherKey, otherSeller]) => {
          if (otherKey === key || processed.has(otherKey)) return;
 
          const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
-         // Consolida se mesmo firstName OU mesmo email
-         if (sellerFirstName === otherFirstName || (seller.email && otherSeller.email && seller.email === otherSeller.email)) {
+         if (sellerFirstName === otherFirstName) {
            // Mescla os eventos
            mergedSeller.events.push(...otherSeller.events);
            
-           // Preferir o com foto (sellerConfig com avatar_url)
-           const mergedHasAvatar = sellerConfigMap[sellerFirstName]?.avatar_url;
-           const otherHasAvatar = sellerConfigMap[otherFirstName]?.avatar_url;
+           // Preferir o com foto
+           const mergedHasAvatar = userAvatarMap[mergedSeller.name] || sellerConfigMap[sellerFirstName]?.avatar_url;
+           const otherHasAvatar = userAvatarMap[otherSeller.name] || sellerConfigMap[otherFirstName]?.avatar_url;
            
            if (otherHasAvatar && !mergedHasAvatar) {
-             // Se o outro tem foto e o merged não, usa o outro como base
              mergedSeller = { ...otherSeller };
              mergedSeller.events = [...otherSeller.events, ...seller.events];
            } else if (otherSeller.name.length > mergedSeller.name.length) {
-             // Preferir nome mais completo se ambos têm ou não têm foto
              mergedSeller.name = otherSeller.name;
            }
            
-           // Preservar email
-           if (!mergedSeller.email && otherSeller.email) {
-             mergedSeller.email = otherSeller.email;
-           }
            processed.add(otherKey);
          }
        });
