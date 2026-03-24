@@ -1,7 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
-  // Aceitar GET para teste de conectividade
   if (req.method === 'GET') {
     return Response.json({ status: 'ok', message: 'Wavoip webhook endpoint active' });
   }
@@ -14,70 +13,82 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     const rawBody = await req.text();
-    console.log('[Wavoip] Raw body recebido:', rawBody);
-    console.log('[Wavoip] Content-Type:', req.headers.get('content-type'));
+    console.log('[Wavoip] Raw body:', rawBody);
 
     let body;
     try {
       body = JSON.parse(rawBody);
     } catch {
-      console.error('[Wavoip] Body não é JSON:', rawBody);
-      return Response.json({ error: 'Invalid JSON', received: rawBody }, { status: 400 });
+      console.error('[Wavoip] Body não é JSON válido:', rawBody);
+      return Response.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    console.log('[Wavoip] Parsed body:', JSON.stringify(body));
+    // Formato Evolution API:
+    // { "event": "CALL", "instance": "nome_instancia", "data": { "from": "55...", "id": "...", "status": "offer|accepted|rejected|timeout" }, "apikey": "..." }
+    // O Wavoip usa o campo apikey como device_token
+    console.log('[Wavoip] Event:', body.event, '| Instance:', body.instance);
+    console.log('[Wavoip] Data:', JSON.stringify(body.data));
 
-    // Extrair device_token de qualquer campo possível
-    const device_token = body.device_token || body.deviceToken || body.token || body.device?.token || body.apiKey;
-    const event = body.event || body.event_type || body.type || body.call_event || body.action;
-    const phone = body.phone || body.number || body.caller || body.callee || body.contact?.phone || body.to || body.from;
-    const contact_name = body.contact_name || body.contactName || body.name || body.contact?.name;
-    const duration = body.duration || body.call_duration || 0;
-    const timestamp = body.timestamp || new Date().toISOString();
+    const event = body.event; // ex: "CALL", "MESSAGES_UPSERT", etc.
+    const instance = body.instance;
+    const apikey = body.apikey || body.api_key;
+    const data = body.data || {};
 
-    console.log(`[Wavoip] Extraído - device_token: ${device_token}, event: ${event}, phone: ${phone}`);
-
-    if (!device_token) {
-      console.error('[Wavoip] device_token ausente. Chaves recebidas:', Object.keys(body));
-      return Response.json({ error: 'Missing device_token', received_keys: Object.keys(body), body }, { status: 400 });
+    // Buscar config pelo device_token (apikey) ou instance name
+    let configs = [];
+    if (apikey) {
+      configs = await base44.asServiceRole.entities.WavoipConfig.filter({ device_token: apikey });
+    }
+    if (configs.length === 0 && instance) {
+      configs = await base44.asServiceRole.entities.WavoipConfig.filter({ device_name: instance });
     }
 
-    if (!event) {
-      console.error('[Wavoip] event ausente. Chaves recebidas:', Object.keys(body));
-      return Response.json({ error: 'Missing event', received_keys: Object.keys(body), body }, { status: 400 });
-    }
-
-    // Buscar configuração do dispositivo
-    const configs = await base44.asServiceRole.entities.WavoipConfig.filter({ device_token });
     if (configs.length === 0) {
-      console.error('[Wavoip] Dispositivo não encontrado para token:', device_token);
-      // Criar evento mesmo sem config para não perder dados
-      return Response.json({ error: 'Device not configured', device_token }, { status: 404 });
+      console.error('[Wavoip] Dispositivo não encontrado. apikey:', apikey, '| instance:', instance);
+      // Logar mesmo sem config para debug
+      return Response.json({ error: 'Device not configured', apikey, instance }, { status: 404 });
     }
 
     const config = configs[0];
     const user_name = config.user_name;
     const user_email = config.user_email;
+    const device_token = config.device_token;
 
-    // Mapear tipo de evento
-    const eventLower = String(event).toLowerCase();
+    // Processar apenas eventos de CALL
+    if (event !== 'CALL') {
+      console.log('[Wavoip] Evento ignorado (não é CALL):', event);
+      return Response.json({ success: true, ignored: true, event });
+    }
+
+    // status da chamada: "offer" = iniciada, "accepted" = atendida, "rejected"/"timeout" = encerrada
+    const callStatus = data.status || '';
     let event_type = 'whatsapp_call_initiated';
-    if (eventLower.includes('answer')) event_type = 'whatsapp_call_answered';
-    if (eventLower.includes('end') || eventLower.includes('finish') || eventLower.includes('hangup')) event_type = 'whatsapp_call_ended';
+    if (callStatus === 'accepted') event_type = 'whatsapp_call_answered';
+    if (callStatus === 'rejected' || callStatus === 'timeout') event_type = 'whatsapp_call_ended';
 
-    console.log(`[Wavoip] Criando evento ${event_type} para ${user_name}`);
+    const phone = data.from || data.to || '';
+    const callId = data.id || `${device_token}_${Date.now()}`;
+
+    console.log(`[Wavoip] Criando evento: ${event_type} | phone: ${phone} | user: ${user_name}`);
 
     await base44.asServiceRole.entities.Event.create({
       entity_type: 'lead',
-      entity_id: `wavoip_${device_token}_${timestamp}`,
+      entity_id: `wavoip_${callId}`,
       event_type,
       user_name,
       user_email,
       source: 'whatsapp',
-      payload: JSON.stringify({ phone, contact_name, duration, timestamp, device_token, raw_event: event }),
+      payload: JSON.stringify({
+        phone,
+        call_id: callId,
+        call_status: callStatus,
+        duration: data.duration || 0,
+        instance,
+        device_token,
+      }),
     });
 
-    console.log('[Wavoip] Evento criado com sucesso');
+    console.log('[Wavoip] Evento criado com sucesso:', event_type);
     return Response.json({ success: true, event_type, user_name });
 
   } catch (error) {
