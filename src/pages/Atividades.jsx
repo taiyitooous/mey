@@ -100,6 +100,11 @@ export default function Atividades() {
     queryFn: () => base44.entities.SellerConfig.list(),
   });
 
+  const { data: wavoipConfigs = [] } = useQuery({
+    queryKey: ["wavoip_configs"],
+    queryFn: () => base44.entities.WavoipConfig.list(),
+  });
+
   const userAvatarMap = useMemo(() => {
     const map = {};
     users.forEach((u) => {
@@ -118,6 +123,14 @@ export default function Atividades() {
     });
     return map;
   }, [sellerConfigs]);
+
+  const wavoipUserNames = useMemo(() => {
+    const names = new Set();
+    wavoipConfigs.forEach((c) => {
+      if (c.user_name) names.add(c.user_name.split(" ")[0].toLowerCase().trim());
+    });
+    return names;
+  }, [wavoipConfigs]);
 
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
@@ -177,6 +190,8 @@ export default function Atividades() {
        
        // Verificar se tem foto
        const hasAvatar = userAvatarMap[seller.name] || sellerConfigMap[sellerFirstName]?.avatar_url;
+       // Verificar se tem Wavoip
+       const hasWavoip = wavoipUserNames.has(sellerFirstName);
 
        // Procura por outros com mesmo firstName
        Object.entries(map).forEach(([otherKey, otherSeller]) => {
@@ -186,12 +201,20 @@ export default function Atividades() {
          
          if (sellerFirstName === otherFirstName) {
            const otherHasAvatar = userAvatarMap[otherSeller.name] || sellerConfigMap[otherFirstName]?.avatar_url;
+           const otherHasWavoip = wavoipUserNames.has(otherFirstName);
            
            // Mescla todos os eventos
            mergedSeller.events.push(...otherSeller.events);
            
-           // Se o outro NÃO tem foto e merged tem, usa o outro (sem foto) como base
-           if (!otherHasAvatar && hasAvatar) {
+           // Se o outro NÃO tem Wavoip mas merged tem, merged mantém a prioridade
+           if (!otherHasWavoip && hasWavoip) {
+             // Mantém merged (que tem Wavoip)
+           } else if (otherHasWavoip && !hasWavoip) {
+             // Se outro tem Wavoip e merged não, usa o outro como base
+             mergedSeller = { ...otherSeller };
+             mergedSeller.events.push(...seller.events);
+           } else if (!otherHasAvatar && hasAvatar) {
+             // Se ambos têm ou não Wavoip, preferir quem NÃO tem foto
              mergedSeller = { ...otherSeller };
              mergedSeller.events.push(...seller.events);
            } else if (otherSeller.name.length > mergedSeller.name.length) {
