@@ -131,55 +131,59 @@ export default function Atividades() {
   }, [events, selectedChannel, resultOnly]);
 
   const sellers = useMemo(() => {
-     const emailMap = {}; // email → seller
-     const firstNameMap = {}; // firstName → email (para consolidar duplicatas)
+     const map = {};
 
      filteredEvents.forEach((event) => {
        const email = event.user_email?.toLowerCase().trim();
        const name = event.user_name?.trim();
        const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
 
-       // Se temos email, usa como chave principal
-       if (email) {
-         if (!emailMap[email]) {
-           emailMap[email] = { email, name: name || email, events: [] };
-         }
-         // Sempre prefere nome mais completo
-         if (name && name.length > emailMap[email].name.length) {
-           emailMap[email].name = name;
-         }
-         emailMap[email].events.push(event);
-         // Mapeia firstName para esse email (para consolidar depois)
-         if (firstName) firstNameMap[firstName] = email;
-       } else if (firstName) {
-         // Se não tem email, agrupa por firstName
-         const mappedEmail = firstNameMap[firstName];
-         if (mappedEmail && emailMap[mappedEmail]) {
-           // Já tem entrada com email, adiciona aqui
-           if (name && name.length > emailMap[mappedEmail].name.length) {
-             emailMap[mappedEmail].name = name;
-           }
-           emailMap[mappedEmail].events.push(event);
-         } else if (!emailMap[firstName]) {
-           // Cria novo com firstName como fallback
-           emailMap[firstName] = { email: "", name: name || firstName, events: [event] };
-         } else {
-           // Já tem entrada por firstName
-           if (name && name.length > emailMap[firstName].name.length) {
-             emailMap[firstName].name = name;
-           }
-           emailMap[firstName].events.push(event);
-         }
+       const key = email || firstName || "sistema";
+
+       if (!map[key]) {
+         map[key] = { email: email || "", name: name || key, events: [] };
        } else {
-         // Sem email e sem nome, agrupa como "Sistema"
-         if (!emailMap["sistema"]) {
-           emailMap["sistema"] = { email: "", name: "Sistema", events: [] };
+         // Preferir nome mais completo
+         if (name && name.length > map[key].name.length) {
+           map[key].name = name;
          }
-         emailMap["sistema"].events.push(event);
+         if (email) map[key].email = email;
        }
+
+       map[key].events.push(event);
      });
 
-     return Object.values(emailMap)
+     // Consolidar duplicatas por similaridade de nome (case-insensitive)
+     const consolidated = {};
+     const processed = new Set();
+
+     Object.entries(map).forEach(([key, seller]) => {
+       if (processed.has(key)) return;
+
+       const sellerFirstName = seller.name.split(" ")[0].toLowerCase().trim();
+       let mergedSeller = { ...seller };
+
+       // Procura por outros sellers com o mesmo firstName (case-insensitive)
+       Object.entries(map).forEach(([otherKey, otherSeller]) => {
+         if (otherKey === key || processed.has(otherKey)) return;
+
+         const otherFirstName = otherSeller.name.split(" ")[0].toLowerCase().trim();
+         if (sellerFirstName === otherFirstName) {
+           // Mescla os eventos
+           mergedSeller.events.push(...otherSeller.events);
+           // Preferir nome mais completo
+           if (otherSeller.name.length > mergedSeller.name.length) {
+             mergedSeller.name = otherSeller.name;
+           }
+           processed.add(otherKey);
+         }
+       });
+
+       consolidated[key] = mergedSeller;
+       processed.add(key);
+     });
+
+     return Object.values(consolidated)
        .filter((seller) => seller.events.length > 0)
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents]);
