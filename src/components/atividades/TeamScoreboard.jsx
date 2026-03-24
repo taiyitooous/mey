@@ -40,19 +40,20 @@ function ScoreCard({ value, label, meta, status, icon: Icon }) {
   );
 }
 
-export default function TeamScoreboard({ events }) {
-  const dedupedCalls = deduplicateCallEvents(events);
-  const total = events.length;
-  const sellers = new Set(events.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
+export default function TeamScoreboard({ allEvents = [], filteredEvents = [] }) {
+  // Use allEvents para calcular 3C total, mas use filteredEvents para WhatsApp
+  const dedupedCalls = deduplicateCallEvents(allEvents);
+  const total = allEvents.length;
+  const sellers = new Set(allEvents.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
   const calls = dedupedCalls.length;
   const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
 
-  // Vendedores com pelo menos 1 ligação 3C
+  // Vendedores com pelo menos 1 ligação 3C (em todo período)
   const sellersWith3C = new Set(dedupedCalls.map((e) => e.user_name?.toLowerCase().trim()));
   
-  // WhatsApp: apenas de vendedores que fizeram ligações 3C
-  const whatsappEvents = events.filter((e) => {
+  // WhatsApp: apenas de vendedores que fizeram ligações 3C (mas do período filtrado)
+  const whatsappEvents = filteredEvents.filter((e) => {
     if (getCategory(e.event_type) !== "whatsapp") return false;
     const userName = e.user_name?.toLowerCase().trim();
     return sellersWith3C.has(userName);
@@ -61,8 +62,8 @@ export default function TeamScoreboard({ events }) {
   const whatsappTotal = whatsappEvents.length;
   const whatsappRate = whatsappTotal > 0 ? Math.round((whatsappAnswered / whatsappTotal) * 100) : 0;
 
-  const wins = events.filter((e) => e.event_type === "lead.won").length;
-  const losses = events.filter((e) => e.event_type === "lead.lost").length;
+  const wins = filteredEvents.filter((e) => e.event_type === "lead.won").length;
+  const losses = filteredEvents.filter((e) => e.event_type === "lead.lost").length;
   const closed = wins + losses;
   const closeRate = closed > 0 ? Math.round((wins / closed) * 100) : 0;
 
