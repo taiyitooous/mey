@@ -129,6 +129,14 @@ export function buildHourlyData(events) {
   for (let h = 7; h <= 20; h++) {
     hourly[h] = { hour: `${h}h`, calls: 0, callsAnswered: 0, whatsapp: 0, stage: 0, ganhos: 0, perdidos: 0 };
   }
+  
+  // Vendedores com pelo menos 1 ligação 3C
+  const sellersWith3C = new Set(
+    events
+      .filter(isCallAttempt)
+      .map((e) => e.user_name?.toLowerCase().trim())
+  );
+  
   events.forEach((e) => {
     const raw = e.created_date;
     const iso = raw && !raw.endsWith("Z") && !raw.includes("+") ? raw + "Z" : raw;
@@ -140,7 +148,11 @@ export function buildHourlyData(events) {
       hourly[h].calls++;
       if (isEffectiveContact(e)) hourly[h].callsAnswered++;
     }
-    if (getCategory(e.event_type) === "whatsapp") hourly[h].whatsapp++;
+    // WhatsApp: apenas de vendedores que fizeram ligações 3C
+    const userName = e.user_name?.toLowerCase().trim();
+    if (getCategory(e.event_type) === "whatsapp" && sellersWith3C.has(userName)) {
+      hourly[h].whatsapp++;
+    }
     if (getCategory(e.event_type) === "stage") hourly[h].stage++;
     if (e.event_type === "lead.won") hourly[h].ganhos++;
     if (e.event_type === "lead.lost") hourly[h].perdidos++;
