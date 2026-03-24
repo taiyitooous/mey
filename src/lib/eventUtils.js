@@ -179,9 +179,8 @@ export function buildHourlyData(events) {
     const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (!hourly[h]) return;
 
-    // WhatsApp: apenas de vendedores que fizeram ligações 3C (inclui whatsapp_call_started, whatsapp_call_received, whatsapp_call_missed)
-    const userName = e.user_name?.toLowerCase().trim();
-    if (getCategory(e.event_type) === "whatsapp" && sellersWith3C.has(userName)) {
+    // WhatsApp: contar todos (inclui whatsapp_call_started, whatsapp_call_received, whatsapp_call_missed)
+    if (getCategory(e.event_type) === "whatsapp") {
       hourly[h].whatsapp++;
     }
     if (getCategory(e.event_type) === "stage") hourly[h].stage++;
