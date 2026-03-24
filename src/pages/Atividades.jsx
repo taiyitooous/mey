@@ -165,7 +165,7 @@ export default function Atividades() {
        map[key].events.push(event);
      });
 
-     // Consolidar por firstName, preferindo quem tem foto
+     // Consolidar por firstName, mantendo quem NÃO tem foto
      const consolidated = {};
      const processed = new Set();
 
@@ -187,15 +187,15 @@ export default function Atividades() {
          if (sellerFirstName === otherFirstName) {
            const otherHasAvatar = userAvatarMap[otherSeller.name] || sellerConfigMap[otherFirstName]?.avatar_url;
            
-           // Mescla os eventos
+           // Mescla todos os eventos
            mergedSeller.events.push(...otherSeller.events);
            
-           // Se o outro tem foto e merged não, usa o outro como base
-           if (otherHasAvatar && !hasAvatar) {
+           // Se o outro NÃO tem foto e merged tem, usa o outro (sem foto) como base
+           if (!otherHasAvatar && hasAvatar) {
              mergedSeller = { ...otherSeller };
              mergedSeller.events.push(...seller.events);
-           } else if (otherSeller.name.length > mergedSeller.name.length && hasAvatar) {
-             // Se merged tem foto, atualiza só o nome se o outro é mais completo
+           } else if (otherSeller.name.length > mergedSeller.name.length) {
+             // Preferir nome mais completo
              mergedSeller.name = otherSeller.name;
            }
            
@@ -220,23 +220,6 @@ export default function Atividades() {
            return seller.events.length > 0;
          }
          return sellersWith3C.has(sellerKey);
-       })
-       .filter((seller) => {
-         // Remove duplicatas sem foto (mantém só quem tem foto ou é único)
-         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
-         const hasAvatar = userAvatarMap[seller.name] || userAvatarMap[seller.email] || sellerConfigMap[sellerKey]?.avatar_url;
-         
-         // Verifica quantos sellers têm o mesmo firstName
-         const sellersWithSameFirstName = Object.values(consolidated).filter(
-           s => s.name.split(" ")[0].toLowerCase().trim() === sellerKey
-         );
-         
-         // Se tem vários com mesmo firstName e este não tem foto, remove
-         if (sellersWithSameFirstName.length > 1 && !hasAvatar) {
-           return false;
-         }
-         
-         return true;
        })
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents, events]);
