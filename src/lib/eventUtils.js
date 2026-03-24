@@ -26,10 +26,17 @@ export function isEffectiveContact(event) {
 }
 
 export function isCallAttempt(event) {
-  // Conta chamadas 3C finalizadas (todos os tipos possíveis)
-  if (event.source !== "3c") return false;
-  const types = ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt"];
-  return types.includes(event.event_type);
+  // Chamadas 3C
+  if (event.source === "3c") {
+    const types = ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt"];
+    return types.includes(event.event_type);
+  }
+  // Chamadas Wavoip (WhatsApp call)
+  if (event.source === "whatsapp") {
+    const types = ["whatsapp_call_initiated", "whatsapp_call_answered", "whatsapp_call_ended"];
+    return types.includes(event.event_type);
+  }
+  return false;
 }
 
 export function deduplicateCallEvents(events) {
