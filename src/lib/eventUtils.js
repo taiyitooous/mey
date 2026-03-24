@@ -26,10 +26,7 @@ export function isEffectiveContact(event) {
 }
 
 export function isWavoipCallAttempt(event) {
-  return (
-    event.source === "whatsapp" &&
-    ["whatsapp_call_started", "whatsapp_call_received", "whatsapp_call_missed"].includes(event.event_type)
-  );
+  return ["whatsapp_call_started", "whatsapp_call_received", "whatsapp_call_missed"].includes(event.event_type);
 }
 
 export function isWavoipCallAnswered(event) {
@@ -153,16 +150,16 @@ export function buildHourlyData(events) {
   for (let h = 7; h <= 20; h++) {
     hourly[h] = { hour: `${h}h`, calls: 0, callsAnswered: 0, whatsapp: 0, stage: 0, ganhos: 0, perdidos: 0 };
   }
-  
+
   // Deduplicar ligações 3C para consistência com o scorecard
   const dedupedCalls = deduplicateCallEvents(events);
-  
+
   // Vendedores com pelo menos 1 ligação 3C
   const sellersWith3C = new Set(
     dedupedCalls
       .map((e) => e.user_name?.toLowerCase().trim())
   );
-  
+
   // Processar ligações 3C dedupadas
   dedupedCalls.forEach((e) => {
     const raw = e.created_date;
@@ -173,7 +170,7 @@ export function buildHourlyData(events) {
     hourly[h].calls++;
     if (isEffectiveContact(e)) hourly[h].callsAnswered++;
   });
-  
+
   // Processar outros eventos
   events.forEach((e) => {
     const raw = e.created_date;
@@ -181,8 +178,8 @@ export function buildHourlyData(events) {
     const d = new Date(iso);
     const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (!hourly[h]) return;
-    
-    // WhatsApp: apenas de vendedores que fizeram ligações 3C
+
+    // WhatsApp: apenas de vendedores que fizeram ligações 3C (inclui whatsapp_call_started, whatsapp_call_received, whatsapp_call_missed)
     const userName = e.user_name?.toLowerCase().trim();
     if (getCategory(e.event_type) === "whatsapp" && sellersWith3C.has(userName)) {
       hourly[h].whatsapp++;
