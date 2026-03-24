@@ -48,11 +48,11 @@ export default function TeamScoreboard({ events }) {
   const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
 
-  // Wavoip: conta apenas eventos de "fim" (received = atendida, missed = não atendida)
-  const wavoipAttempts = events.filter(isWavoipCallAttempt).filter((e) => e.event_type !== "whatsapp_call_started");
-  const wavoipAnswered = wavoipAttempts.filter(isWavoipCallAnswered).length;
-  const wavoipTotal = wavoipAttempts.length;
-  const wavoipRate = wavoipTotal > 0 ? Math.round((wavoipAnswered / wavoipTotal) * 100) : 0;
+  // WhatsApp: conta todos os eventos whatsapp
+  const whatsappEvents = events.filter((e) => getCategory(e.event_type) === "whatsapp");
+  const whatsappAnswered = whatsappEvents.filter((e) => isEffectiveContact(e)).length;
+  const whatsappTotal = whatsappEvents.length;
+  const whatsappRate = whatsappTotal > 0 ? Math.round((whatsappAnswered / whatsappTotal) * 100) : 0;
 
   const wins = events.filter((e) => e.event_type === "lead.won").length;
   const losses = events.filter((e) => e.event_type === "lead.lost").length;
