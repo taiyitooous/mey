@@ -48,8 +48,15 @@ export default function TeamScoreboard({ events }) {
   const callsAnswered = dedupedCalls.filter((e) => isEffectiveContact(e)).length;
   const contactRate = calls > 0 ? Math.round((callsAnswered / calls) * 100) : 0;
 
-  // WhatsApp: conta todos os eventos whatsapp
-  const whatsappEvents = events.filter((e) => getCategory(e.event_type) === "whatsapp");
+  // Vendedores com pelo menos 1 ligação 3C
+  const sellersWith3C = new Set(dedupedCalls.map((e) => e.user_name?.toLowerCase().trim()));
+  
+  // WhatsApp: apenas de vendedores que fizeram ligações 3C
+  const whatsappEvents = events.filter((e) => {
+    if (getCategory(e.event_type) !== "whatsapp") return false;
+    const userName = e.user_name?.toLowerCase().trim();
+    return sellersWith3C.has(userName);
+  });
   const whatsappAnswered = whatsappEvents.filter((e) => isEffectiveContact(e)).length;
   const whatsappTotal = whatsappEvents.length;
   const whatsappRate = whatsappTotal > 0 ? Math.round((whatsappAnswered / whatsappTotal) * 100) : 0;
