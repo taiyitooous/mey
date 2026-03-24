@@ -192,13 +192,13 @@ export default function Atividades() {
      const sellersWith3C = new Set(
        filteredEvents
          .filter(isCallAttempt)
-         .map((e) => e.user_name?.toLowerCase().trim())
+         .map((e) => e.user_name?.split(" ")[0].toLowerCase().trim())
      );
 
      return Object.values(consolidated)
        .filter((seller) => {
          const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
-         return sellersWith3C.has(sellerKey) || sellersWith3C.has(seller.email?.toLowerCase().trim());
+         return sellersWith3C.has(sellerKey);
        })
        .sort((a, b) => b.events.length - a.events.length);
    }, [filteredEvents]);
