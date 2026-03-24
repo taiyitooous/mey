@@ -19,10 +19,21 @@ export function isEffectiveContact(event) {
       return p.result === "answered";
     } catch { return false; }
   }
-  // Para WhatsApp: conta interações de resposta
+  // Para WhatsApp: conta interações de resposta e chamadas Wavoip atendidas
   if (event.event_type === "whatsapp_replied" || event.event_type === "lead.whatsapp_replied") return true;
-  if (event.event_type === "whatsapp_call_received") return true;
+  if (event.event_type === "whatsapp_call_received") return true; // atendida (duração > 5s)
   return false;
+}
+
+export function isWavoipCallAttempt(event) {
+  return (
+    event.source === "whatsapp" &&
+    ["whatsapp_call_started", "whatsapp_call_received", "whatsapp_call_missed"].includes(event.event_type)
+  );
+}
+
+export function isWavoipCallAnswered(event) {
+  return event.source === "whatsapp" && event.event_type === "whatsapp_call_received";
 }
 
 export function isCallAttempt(event) {
