@@ -139,11 +139,11 @@ export default function Atividades() {
       const email = event.user_email?.toLowerCase().trim();
       const name = event.user_name?.trim();
       
-      // Normaliza nome: pega as 2 primeiras palavras (ex: "Vanessa Rodrigues Pereira" → "vanessa rodrigues")
-      const normalizedName = name ? name.split(" ").slice(0, 2).join(" ").toLowerCase().trim() : null;
+      // Normaliza nome: pega apenas a primeira palavra (ex: "Vanessa Rodrigues Pereira" → "vanessa")
+      const firstName = name ? name.split(" ")[0].toLowerCase().trim() : null;
       
-      // Usa email como chave primária; se não tiver, usa nome normalizado
-      const key = email || normalizedName || "Sistema";
+      // Usa email como chave primária; se não tiver, usa primeira palavra do nome
+      const key = email || firstName || "Sistema";
       
       if (!map[key]) {
         map[key] = { email: email || "", name: name || key, events: [] };
