@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.24';
 
 // Webhook recebido da DataCrazy para leads, pedidos, pagamentos e eventos
 // Payload esperado: { type: 'lead'|'order'|'payment'|'event', data: {...} }

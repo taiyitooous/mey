@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.24';
 
 const WIN_QUALIFICATIONS = [
   "venda", "vendido", "pedido realizado", "pedido feito", "fechou", "ganho", "convertido",

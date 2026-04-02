@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.24';
 
 // Endpoint chamado pelo frontend quando detecta evento device:contact via WebSocket da Wavoip
 // Payload: { device_token, phone, type, call_type }
