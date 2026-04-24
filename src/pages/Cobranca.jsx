@@ -1,12 +1,10 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, MessageSquare, Clock, CheckCircle, FileText } from 'lucide-react'
+import { Phone, Plus, CheckCircle, FileText } from 'lucide-react'
 import { Modal } from '../components/ui/Modal'
-import { Button } from '../components/ui/Button'
-import { Input, Select, Textarea } from '../components/ui/Input'
-import { Avatar } from '../components/ui/Avatar'
+import { Input } from '../components/ui/Input'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { COLLECTIONS, SELLERS } from '../lib/mockData'
+import { useCollections } from '../lib/store'
 import { formatCurrency, formatDate, timeAgo } from '../lib/utils'
 
 const STATUS_CONFIG = {
@@ -18,223 +16,235 @@ const STATUS_CONFIG = {
   failed:    { label: 'Falhou',     color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)'    },
 }
 
-function CollectionCard({ collection, onClick, delay }) {
-  const cfg = STATUS_CONFIG[collection.status]
-  const seller = SELLERS.find(s => s.seller_key === collection.seller_key)
+const ALL_STATUSES = Object.keys(STATUS_CONFIG)
 
+function CollectionCard({ item, onClick, delay }) {
+  const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.new
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
       transition={{ delay, duration: 0.3 }}
-      onClick={() => onClick(collection)}
+      onClick={() => onClick(item)}
       className="rounded-xl p-4 cursor-pointer hover-glow"
-      style={{ background: 'rgba(14,14,14,0.9)', border: `1px solid rgba(255,255,255,0.07)` }}
+      style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
       whileHover={{ y: -2 }}
     >
-      {/* Status top bar */}
-      <div className="h-[2px] rounded-full mb-4 -mt-4 -mx-4 rounded-t-xl"
+      <div className="h-[1.5px] -mt-4 -mx-4 mb-4 rounded-t-xl"
         style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}40, transparent)` }} />
-
       <div className="flex items-start justify-between gap-2 mb-3">
         <div>
-          <p className="text-sm font-semibold text-white">{collection.customer_name}</p>
-          <p className="text-xs text-faint mt-0.5">{collection.phone}</p>
+          <p className="text-sm font-semibold text-white">{item.customer_name}</p>
+          <p className="text-xs text-faint mt-0.5">{item.phone || '—'}</p>
         </div>
-        <span className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap"
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
           style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}>
           {cfg.label}
         </span>
       </div>
-
-      <p className="text-2xl font-bold text-white mb-3 tabular-nums">
-        {formatCurrency(collection.amount)}
-      </p>
-
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5" style={{ color: '#555' }}>
-          <Phone size={10} />
-          {collection.attempts} tentativas
-        </div>
-        {collection.promise_date && (
-          <div className="flex items-center gap-1" style={{ color: '#f59e0b' }}>
-            <Clock size={10} />
-            {formatDate(collection.promise_date)}
-          </div>
-        )}
+      <p className="text-2xl font-bold text-white mb-3 tabular-nums">{formatCurrency(item.amount || 0)}</p>
+      <div className="flex items-center justify-between text-xs text-faint">
+        <span>{item.attempts || 0} tentativas</span>
+        {item.last_contact && <span>{timeAgo(item.last_contact)}</span>}
       </div>
-
-      {seller && (
-        <div className="flex items-center gap-1.5 mt-3 pt-3"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Avatar name={seller.name} size="sm" />
-          <span className="text-xs text-faint">{seller.name.split(' ')[0]}</span>
-          {collection.last_contact && (
-            <span className="text-xs ml-auto" style={{ color: '#333' }}>
-              {timeAgo(collection.last_contact)}
-            </span>
-          )}
-        </div>
-      )}
     </motion.div>
   )
 }
 
-function CollectionModal({ collection, onClose, onUpdate }) {
-  const [status, setStatus] = useState(collection?.status || 'pending')
-  const [notes, setNotes] = useState(collection?.notes || '')
-  const [promiseDate, setPromiseDate] = useState(collection?.promise_date?.split('T')[0] || '')
-
-  if (!collection) return null
-  const cfg = STATUS_CONFIG[status]
-
+function CollectionModal({ item, onClose, onUpdate, onDelete }) {
+  const [notes, setNotes] = useState(item?.notes || '')
+  if (!item) return null
+  const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.new
   return (
-    <Modal open={!!collection} onClose={onClose} title={`Cobrança — ${collection.customer_name}`}>
+    <Modal open={!!item} onClose={onClose} title={item.customer_name} className="max-w-md mx-4">
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 p-4 rounded-xl"
+        <div className="grid grid-cols-2 gap-3 p-3 rounded-lg"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <div>
-            <p className="text-xs text-faint mb-1">Valor em aberto</p>
-            <p className="text-2xl font-bold text-white">{formatCurrency(collection.amount)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-faint mb-1">Tentativas</p>
-            <p className="text-2xl font-bold text-white">{collection.attempts}</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#ddd' }}>
-            <Phone size={13} /> Ligar
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#ddd' }}>
-            <MessageSquare size={13} /> WhatsApp
-          </button>
+          <div><p className="text-[10px] text-faint mb-1">Valor</p><p className="text-lg font-bold text-white">{formatCurrency(item.amount || 0)}</p></div>
+          <div><p className="text-[10px] text-faint mb-1">Status</p><span className="tag">{cfg.label}</span></div>
+          <div><p className="text-[10px] text-faint mb-1">Telefone</p><p className="text-sm text-text">{item.phone || '—'}</p></div>
+          <div><p className="text-[10px] text-faint mb-1">Tentativas</p><p className="text-sm text-text">{item.attempts || 0}</p></div>
         </div>
 
         <div>
-          <p className="text-xs text-faint mb-2">Status</p>
-          <div className="grid grid-cols-3 gap-2">
-            {Object.entries(STATUS_CONFIG).map(([val, c]) => (
-              <button key={val} onClick={() => setStatus(val)}
-                className="py-2 rounded-lg text-xs font-medium transition-all"
-                style={status === val
-                  ? { background: c.bg, border: `1px solid ${c.border}`, color: c.color }
-                  : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#555' }}>
-                {c.label}
-              </button>
-            ))}
+          <p className="text-[10px] text-faint uppercase tracking-wider mb-2">Atualizar status</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {ALL_STATUSES.filter(s => s !== item.status).map(s => {
+              const c = STATUS_CONFIG[s]
+              return (
+                <button key={s} onClick={() => onUpdate(item.id, { status: s, last_contact: new Date().toISOString(), attempts: (item.attempts || 0) + 1 })}
+                  className="px-3 py-1.5 text-xs rounded-lg"
+                  style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
+                  {c.label}
+                </button>
+              )
+            })}
           </div>
         </div>
-
-        {['agreement', 'pending'].includes(status) && (
-          <div>
-            <p className="text-xs text-faint mb-1">Data da promessa</p>
-            <Input type="date" value={promiseDate} onChange={e => setPromiseDate(e.target.value)} />
-          </div>
-        )}
 
         <div>
-          <p className="text-xs text-faint mb-1">Observações</p>
-          <Textarea value={notes} onChange={e => setNotes(e.target.value)}
-            placeholder="Detalhes do acordo..." rows={3} />
+          <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">Observações</p>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 text-sm rounded text-text resize-none"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+            placeholder="Promessas, acordos, observações…"
+          />
+          <button onClick={() => onUpdate(item.id, { notes })}
+            className="mt-2 px-3 py-1.5 text-xs rounded-lg"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa' }}>
+            Salvar nota
+          </button>
         </div>
 
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" onClick={() => { onUpdate({ ...collection, status, notes, promise_date: promiseDate || null }); onClose() }}>
-            Salvar
-          </Button>
-        </div>
+        <button onClick={() => { onDelete(item.id); onClose() }}
+          className="w-full py-2 rounded-xl text-xs text-faint transition-colors hover:text-destructive"
+          style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'transparent' }}>
+          Excluir cobrança
+        </button>
       </div>
     </Modal>
   )
 }
 
+function AddModal({ open, onClose, onAdd }) {
+  const [form, setForm] = useState({ customer_name: '', phone: '', amount: '', status: 'new' })
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!form.customer_name.trim()) return
+    onAdd({ ...form, amount: Number(form.amount) || 0, attempts: 0 })
+    setForm({ customer_name: '', phone: '', amount: '', status: 'new' })
+    onClose()
+  }
+  return (
+    <Modal open={open} onClose={onClose} title="Nova cobrança" className="max-w-sm mx-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {[
+          { key: 'customer_name', label: 'Cliente', placeholder: 'Nome', required: true },
+          { key: 'phone', label: 'Telefone', placeholder: '(11) 99999-9999' },
+          { key: 'amount', label: 'Valor (R$)', placeholder: '0', type: 'number' },
+        ].map(({ key, label, placeholder, type, required }) => (
+          <div key={key}>
+            <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">{label}</p>
+            <Input type={type || 'text'} placeholder={placeholder} required={required}
+              value={form[key]} onChange={e => set(key, e.target.value)} />
+          </div>
+        ))}
+        <button type="submit"
+          className="w-full py-2.5 rounded-xl text-sm font-medium mt-2"
+          style={{ background: 'white', color: 'black' }}>
+          Criar cobrança
+        </button>
+      </form>
+    </Modal>
+  )
+}
+
 export default function Cobranca() {
-  const [collections, setCollections] = useState(COLLECTIONS)
+  const { items, add, update, remove } = useCollections()
   const [selected, setSelected] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [search, setSearch] = useState('')
 
-  const filtered = useMemo(() => collections.filter(c => {
-    const matchSearch = !search || c.customer_name.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || c.status === statusFilter
-    return matchSearch && matchStatus
-  }), [collections, search, statusFilter])
+  const filtered = useMemo(() =>
+    statusFilter === 'all' ? items : items.filter(i => i.status === statusFilter)
+  , [items, statusFilter])
 
-  const summary = useMemo(() => {
-    const open = collections.filter(c => ['new', 'pending', 'contacted'].includes(c.status))
-    return {
-      total: collections.length,
-      open: open.length,
-      amount: open.reduce((s, c) => s + c.amount, 0),
-      agreements: collections.filter(c => c.status === 'agreement').length,
-      paid: collections.filter(c => c.status === 'paid').length,
-    }
-  }, [collections])
+  const totalValue = items.reduce((s, i) => s + Number(i.amount || 0), 0)
+  const paidValue = items.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0)
 
   return (
-    <div className="p-6 space-y-5">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-white">Cobrança</h1>
-        <p className="text-sm text-faint mt-0.5">Gestão de inadimplência</p>
+    <div className="p-6 space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+        className="flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Cobrança</h1>
+          <p className="text-xs text-faint mt-0.5">{items.length} cobranças · {formatCurrency(totalValue)} em aberto</p>
+        </div>
+        <button onClick={() => setAddOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
+          style={{ background: 'white', color: 'black' }}>
+          <Plus size={14} />
+          Nova cobrança
+        </button>
       </motion.div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Em aberto', value: summary.open, color: '#f59e0b', delay: 0 },
-          { label: 'Valor total', value: formatCurrency(summary.amount), color: '#f0f0f0', isText: true, delay: 0.07 },
-          { label: 'Acordos', value: summary.agreements, color: '#60a5fa', delay: 0.14 },
-          { label: 'Pagos hoje', value: summary.paid, color: '#22c55e', delay: 0.21 },
-        ].map(({ label, value, color, isText, delay }) => (
+          { label: 'Total inadimplência', value: formatCurrency(totalValue), big: true },
+          { label: 'Recuperado', value: formatCurrency(paidValue), color: '#22c55e' },
+          { label: 'Pendentes', value: items.filter(i => i.status === 'pending').length, color: '#f59e0b' },
+        ].map(({ label, value, color, big }, i) => (
           <motion.div key={label}
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay }}
+            transition={{ delay: i * 0.07, ease: [0.23, 1, 0.32, 1] }}
             className="rounded-xl p-4 hover-glow"
-            style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <p className="text-xs text-faint mb-1.5">{label}</p>
-            <p className="text-2xl font-bold tabular-nums" style={{ color }}>
-              {isText ? value : <AnimatedNumber value={value} />}
+            style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <p className="text-[10px] text-faint uppercase tracking-wider mb-2">{label}</p>
+            <p className={`font-bold tabular-nums ${big ? 'text-xl' : 'text-2xl'}`} style={{ color: color || '#f0f0f0' }}>
+              {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
             </p>
           </motion.div>
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Status filter */}
       <div className="flex gap-2 flex-wrap">
-        <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="w-48" />
-        <div className="flex gap-1.5 flex-wrap">
-          {[['all', 'Todos'], ...Object.entries(STATUS_CONFIG).map(([v, c]) => [v, c.label])].map(([val, lbl]) => (
-            <button key={val} onClick={() => setStatusFilter(val)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-              style={statusFilter === val
-                ? { background: 'white', color: 'black' }
-                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#666' }}>
-              {lbl}
-            </button>
-          ))}
+        {[['all', 'Todas'], ...ALL_STATUSES.map(s => [s, STATUS_CONFIG[s].label])].map(([val, lbl]) => (
+          <button key={val} onClick={() => setStatusFilter(val)}
+            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+            style={statusFilter === val
+              ? { background: 'white', color: 'black' }
+              : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#555' }}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+
+      {/* Empty */}
+      {items.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-24 gap-4"
+        >
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <FileText size={20} className="text-faint" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-white mb-1">Nenhuma cobrança cadastrada</p>
+            <p className="text-xs text-faint">Cadastre cobranças manualmente para gestão de inadimplência.</p>
+          </div>
+          <button onClick={() => setAddOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+            style={{ background: 'white', color: 'black' }}>
+            <Plus size={13} />
+            Cadastrar cobrança
+          </button>
+        </motion.div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          <AnimatePresence mode="sync">
+            {filtered.map((item, i) => (
+              <CollectionCard key={item.id} item={item} onClick={setSelected} delay={i * 0.04} />
+            ))}
+          </AnimatePresence>
         </div>
-      </div>
+      )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <AnimatePresence>
-          {filtered.map((c, i) => (
-            <CollectionCard key={c.id} collection={c} onClick={setSelected} delay={i * 0.06} />
-          ))}
-        </AnimatePresence>
-        {filtered.length === 0 && (
-          <div className="col-span-3 py-16 text-center text-faint">Nenhuma cobrança encontrada</div>
-        )}
-      </div>
-
-      <CollectionModal collection={selected} onClose={() => setSelected(null)}
-        onUpdate={u => setCollections(p => p.map(c => c.id === u.id ? u : c))} />
+      <CollectionModal item={selected} onClose={() => setSelected(null)} onUpdate={update} onDelete={remove} />
+      <AddModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={add} />
     </div>
   )
 }

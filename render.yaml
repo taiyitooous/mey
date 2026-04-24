@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mey
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_3C_TOKEN
+        value: R02FvFejFgDpLxz4iIJn7s14EveNi9vDJt6c8tptGt6vYJjdcqwXHrzAPuDB
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

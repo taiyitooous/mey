@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter as BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Layout } from './components/layout/Layout'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import Dashboard from './pages/Dashboard'
 import Atividades from './pages/Atividades'
 import Vendas from './pages/Vendas'
@@ -12,8 +13,9 @@ import Integracoes from './pages/Integracoes'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5000,
-      refetchInterval: 5000,
+      staleTime: 10_000,
+      refetchInterval: false,
+      retry: 1,
     },
   },
 })
@@ -24,13 +26,13 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/atividades" element={<Atividades />} />
-            <Route path="/vendas" element={<Vendas />} />
-            <Route path="/logistica" element={<Logistica />} />
-            <Route path="/cobranca" element={<Cobranca />} />
-            <Route path="/hoje" element={<Hoje />} />
-            <Route path="/integracoes" element={<Integracoes />} />
+            <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+            <Route path="/atividades" element={<ErrorBoundary><Atividades /></ErrorBoundary>} />
+            <Route path="/vendas" element={<ErrorBoundary><Vendas /></ErrorBoundary>} />
+            <Route path="/logistica" element={<ErrorBoundary><Logistica /></ErrorBoundary>} />
+            <Route path="/cobranca" element={<ErrorBoundary><Cobranca /></ErrorBoundary>} />
+            <Route path="/hoje" element={<ErrorBoundary><Hoje /></ErrorBoundary>} />
+            <Route path="/integracoes" element={<ErrorBoundary><Integracoes /></ErrorBoundary>} />
           </Route>
         </Routes>
       </BrowserRouter>

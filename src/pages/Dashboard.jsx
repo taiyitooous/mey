@@ -1,48 +1,30 @@
-import { useMemo, useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useMemo } from 'react'
+import { motion } from 'framer-motion'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, RadialBarChart, RadialBar
+  CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { TrendingUp, Phone, MessageSquare, Target, DollarSign, AlertTriangle, ArrowUpRight, Zap, Activity } from 'lucide-react'
+import {
+  TrendingUp, Phone, Target, Clock,
+  AlertTriangle, ArrowUpRight, Activity, Users, Zap,
+} from 'lucide-react'
+import { format, subDays, getHours } from 'date-fns'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { Badge } from '../components/ui/Badge'
+import { ActivityGraph } from '../components/ui/ActivityGraph'
 import { Avatar } from '../components/ui/Avatar'
-import { EVENTS, SELLERS, LEADS } from '../lib/mockData'
-import { formatCurrency, formatSeconds, timeAgo } from '../lib/utils'
+import { formatCurrency, formatSeconds } from '../lib/utils'
+import { useCallHistory, useAgents } from '../hooks/use3c'
+import { useLeads, useSellers } from '../lib/store'
 
-// ── Static chart data ──────────────────────────────────────
-const HOURS = [
-  { hour: '8h', calls: 4, won: 0 },
-  { hour: '9h', calls: 11, won: 1 },
-  { hour: '10h', calls: 18, won: 3 },
-  { hour: '11h', calls: 22, won: 2 },
-  { hour: '12h', calls: 8, won: 1 },
-  { hour: '13h', calls: 14, won: 2 },
-  { hour: '14h', calls: 19, won: 4 },
-  { hour: '15h', calls: 24, won: 3 },
-  { hour: '16h', calls: 16, won: 2 },
-]
-
-const WEEK_DATA = [
-  { day: 'Seg', calls: 87, won: 12, revenue: 8400 },
-  { day: 'Ter', calls: 102, won: 15, revenue: 11200 },
-  { day: 'Qua', calls: 94, won: 11, revenue: 7800 },
-  { day: 'Qui', calls: 118, won: 18, revenue: 14600 },
-  { day: 'Sex', calls: 76, won: 9, revenue: 6300 },
-  { day: 'Sáb', calls: 43, won: 6, revenue: 4100 },
-  { day: 'Hoje', calls: 136, won: 16, revenue: 12800 },
-]
-
-// ── Custom tooltip ─────────────────────────────────────────
-function CustomTooltip({ active, payload, label }) {
+// ── Chart tooltip ──────────────────────────────────────────
+function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="glass rounded-lg px-3 py-2 text-xs space-y-1 shadow-xl"
-      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-      <p className="text-white font-semibold">{label}</p>
+    <div className="glass rounded-lg px-3 py-2 text-xs space-y-1 shadow-2xl"
+      style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
+      <p className="font-semibold text-white">{label}</p>
       {payload.map(p => (
-        <p key={p.name} style={{ color: '#aaa' }}>
+        <p key={p.name} style={{ color: '#888' }}>
           {p.name}: <span className="text-white font-medium">{p.value}</span>
         </p>
       ))}
@@ -50,85 +32,116 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-// ── KPI Card ───────────────────────────────────────────────
-function KPICard({ label, value, sub, icon: Icon, delay = 0, trend }) {
+// ── KPI card ───────────────────────────────────────────────
+function KPICard({ label, value, sub, icon: Icon, delay = 0, trend, live }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4, ease: 'easeOut' }}
-      className="hover-glow relative overflow-hidden rounded-xl cursor-default"
-      style={{
-        background: 'rgba(14,14,14,0.9)',
-        border: '1px solid rgba(255,255,255,0.07)',
-      }}
+      transition={{ delay, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+      className="hover-glow card-press relative overflow-hidden rounded-xl"
+      style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
     >
-      {/* Top-right glow */}
-      <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-20"
+      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.1] pointer-events-none"
         style={{ background: 'radial-gradient(circle, white, transparent)' }} />
-
-      <div className="p-5">
+      <div className="p-5 relative">
         <div className="flex items-start justify-between mb-4">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <Icon size={16} className="text-text-secondary" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <Icon size={15} className="text-text-secondary" />
           </div>
-          {trend && (
-            <div className="flex items-center gap-1 text-xs font-medium text-success">
-              <ArrowUpRight size={12} />
-              {trend}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {live && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+              </span>
+            )}
+            {trend && (
+              <div className="flex items-center gap-1 text-xs font-medium text-success">
+                <ArrowUpRight size={11} />{trend}
+              </div>
+            )}
+          </div>
         </div>
         <p className="text-3xl font-bold text-white mb-1 tabular-nums">{value}</p>
-        <p className="text-xs text-faint uppercase tracking-wider">{label}</p>
+        <p className="text-[11px] text-faint uppercase tracking-wider">{label}</p>
         {sub && <p className="text-xs text-text-secondary mt-1">{sub}</p>}
       </div>
     </motion.div>
   )
 }
 
-// ── Live ticker feed ───────────────────────────────────────
-function LiveFeed({ events }) {
+// ── Radial ─────────────────────────────────────────────────
+function RadialProgress({ value, max, label }) {
+  const pct = Math.min(Math.round((value / Math.max(max, 1)) * 100), 100)
+  const r = 28
+  const circ = 2 * Math.PI * r
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative w-[72px] h-[72px]">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+          <motion.circle
+            cx="36" cy="36" r={r} fill="none" stroke="white" strokeWidth="5"
+            strokeDasharray={circ}
+            initial={{ strokeDashoffset: circ }}
+            animate={{ strokeDashoffset: circ * (1 - pct / 100) }}
+            transition={{ delay: 0.8, duration: 1.0, ease: [0.23, 1, 0.32, 1] }}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-bold text-white">{pct}%</span>
+        </div>
+      </div>
+      <p className="text-[10px] text-faint text-center leading-tight">{label}</p>
+    </div>
+  )
+}
+
+// ── Live event feed ────────────────────────────────────────
+function CallFeed({ calls }) {
   const items = useMemo(() => {
-    const base = [...events].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    return [...base, ...base] // duplicate for seamless loop
-  }, [events])
+    if (!calls?.length) return []
+    const sorted = [...calls]
+      .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
+      .slice(0, 30)
+    return [...sorted, ...sorted]
+  }, [calls])
+
+  if (!items.length) {
+    return (
+      <div className="h-[280px] flex items-center justify-center">
+        <p className="text-xs text-faint italic">Sem ligações registradas hoje</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="overflow-hidden h-[360px] relative">
-      {/* Fade overlays */}
-      <div className="absolute top-0 left-0 right-0 h-8 z-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, #0e0e0e, transparent)' }} />
-      <div className="absolute bottom-0 left-0 right-0 h-12 z-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to top, #0e0e0e, transparent)' }} />
-
+    <div className="overflow-hidden h-[280px] relative">
+      <div className="absolute top-0 left-0 right-0 h-6 z-10 pointer-events-none"
+        style={{ background: 'linear-gradient(to bottom, #0c0c0c, transparent)' }} />
+      <div className="absolute bottom-0 left-0 right-0 h-10 z-10 pointer-events-none"
+        style={{ background: 'linear-gradient(to top, #0c0c0c, transparent)' }} />
       <div className="ticker-inner">
-        {items.map((event, i) => (
-          <div key={`${event.id}-${i}`}
-            className="flex items-start gap-3 px-4 py-3"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-          >
-            <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${
-              event.event_type === 'lead.won' ? 'bg-success' :
-              event.event_type === 'lead.lost' ? 'bg-destructive' :
-              event.event_type === 'whatsapp_call_received' ? 'bg-white' :
-              'bg-subtle'
-            }`} />
+        {items.map((call, i) => (
+          <div key={`${call.id}-${i}`} className="flex items-start gap-3 px-4 py-2.5"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: call.duration > 60 ? 'white' : 'rgba(255,255,255,0.2)' }} />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-text leading-relaxed">
-                <span className="font-semibold text-white">{event.user_name.split(' ')[0]}</span>
-                {' '}
-                {event.event_type === 'call_answered' && `→ ligação (${event.payload?.result || 'sem resultado'})`}
-                {event.event_type === 'whatsapp_call_received' && '→ WhatsApp recebido'}
-                {event.event_type === 'lead.won' && `→ venda ${formatCurrency(event.payload?.value)}`}
-                {event.event_type === 'lead.lost' && '→ lead perdido'}
+                <span className="font-semibold text-white">{call.agent.split(' ')[0]}</span>
+                {' → '}{call.phone || '—'}{call.result ? ` (${call.result})` : ''}
               </p>
-              {event.payload?.speaking_time && (
-                <p className="text-xs text-faint">{formatSeconds(event.payload.speaking_time)} falados</p>
+              {call.duration > 0 && (
+                <p className="text-[10px] text-faint">{formatSeconds(call.duration)}</p>
               )}
             </div>
-            <span className="text-xs text-faint shrink-0 tabular-nums">{timeAgo(event.created_at)}</span>
+            <span className="text-[10px] text-faint shrink-0 tabular-nums">
+              {call.startedAt ? format(new Date(call.startedAt), 'HH:mm') : '—'}
+            </span>
           </div>
         ))}
       </div>
@@ -136,100 +149,163 @@ function LiveFeed({ events }) {
   )
 }
 
-// ── Radial progress ────────────────────────────────────────
-function RadialProgress({ value, max, label, color = '#fff' }) {
-  const pct = Math.round((value / max) * 100)
-  const r = 30
-  const circ = 2 * Math.PI * r
-  const offset = circ * (1 - pct / 100)
+// ── Agent ranking ──────────────────────────────────────────
+function AgentRanking({ agents, calls }) {
+  const ranked = useMemo(() => {
+    if (!agents?.length) return []
+    return agents.map(a => {
+      const agentFirst = a.name.toLowerCase().split(' ')[0]
+      const myCalls = calls?.filter(c =>
+        c.agent.toLowerCase().split(' ')[0] === agentFirst
+      ) || []
+      return { ...a, callCount: myCalls.length, isActive: a.status === 'online' || a.status === 'in_call' }
+    }).sort((a, b) => b.callCount - a.callCount).slice(0, 8)
+  }, [agents, calls])
+
+  if (!ranked.length) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-xs text-faint italic">Sem agentes conectados</p>
+      </div>
+    )
+  }
+
+  const max = ranked[0]?.callCount || 1
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="relative w-20 h-20">
-        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-          <circle
-            cx="40" cy="40" r={r} fill="none"
-            stroke={color} strokeWidth="6"
-            strokeDasharray={circ}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 1.2s ease' }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold text-white">{pct}%</span>
-        </div>
-      </div>
-      <p className="text-xs text-faint text-center">{label}</p>
-      <p className="text-sm font-semibold text-text">{value}/{max}</p>
+    <div>
+      {ranked.map((a, i) => (
+        <motion.div
+          key={a.id}
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 + i * 0.06, ease: [0.23, 1, 0.32, 1] }}
+          className="flex items-center gap-3 px-5 py-2.5"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+        >
+          <span className="text-xs w-4 tabular-nums font-mono"
+            style={{ color: i === 0 ? '#fff' : '#333' }}>{i + 1}</span>
+          <div className="relative shrink-0">
+            <Avatar name={a.name} size="sm" />
+            {a.isActive && (
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-success border-2"
+                style={{ borderColor: '#0c0c0c', boxShadow: '0 0 5px rgba(34,197,94,0.6)' }} />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-text truncate">{a.name.split(' ')[0]}</p>
+            <div className="h-1 rounded-full mt-1 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <motion.div className="h-full rounded-full bg-white"
+                initial={{ width: 0 }}
+                animate={{ width: `${(a.callCount / max) * 100}%` }}
+                transition={{ delay: 0.7 + i * 0.06, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+              />
+            </div>
+          </div>
+          <p className="text-xs font-bold text-white tabular-nums shrink-0">{a.callCount}</p>
+        </motion.div>
+      ))}
     </div>
   )
 }
 
+// ── Main ───────────────────────────────────────────────────
 export default function Dashboard() {
-  const [tick, setTick] = useState(0)
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const { data: calls, isSuccess: hasCalls, isLoading: loadingCalls } = useCallHistory(today)
+  const { data: agents, isLoading: loadingAgents } = useAgents()
+  const { items: leads } = useLeads()
+  const { items: manualSellers } = useSellers()
 
-  // Simulate live updates
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 8000)
-    return () => clearInterval(id)
-  }, [])
-
+  // ── KPI stats from real 3C data ────────────────────────
   const stats = useMemo(() => {
-    const calls = EVENTS.filter(e => e.event_type === 'call_answered' || e.event_type === 'whatsapp_call_received')
-    const won = EVENTS.filter(e => e.event_type === 'lead.won')
-    const totalWonValue = won.reduce((sum, e) => sum + (e.payload?.value || 0), 0)
-    const answered = calls.filter(e => e.payload?.result === 'interested' || e.payload?.result === 'callback' || e.event_type === 'whatsapp_call_received')
-    const contactRate = calls.length ? Math.round((answered.length / calls.length) * 100) : 0
-    const avgTalk = calls.length
-      ? Math.round(calls.reduce((s, e) => s + (e.payload?.speaking_time || 0), 0) / calls.length)
+    if (!hasCalls || !calls?.length) {
+      return { total: 0, answered: 0, contactRate: 0, avgTalk: 0 }
+    }
+    const answered = calls.filter(c => c.duration > 10)
+    const contactedResults = ['interessado', 'interested', 'callback', 'sale', 'sucesso', 'venda']
+    const contacted = answered.filter(c => contactedResults.includes(c.result?.toLowerCase()))
+    const avgTalk = answered.length
+      ? Math.round(answered.reduce((s, c) => s + c.duration, 0) / answered.length)
       : 0
-    return { calls: calls.length, won: won.length, totalWonValue, contactRate, avgTalk }
-  }, [tick])
+    return {
+      total: calls.length,
+      answered: answered.length,
+      contactRate: answered.length ? Math.round((contacted.length / answered.length) * 100) : 0,
+      avgTalk,
+    }
+  }, [calls, hasCalls])
 
-  const sellerStats = useMemo(() => {
-    return SELLERS.map(seller => {
-      const evts = EVENTS.filter(e => e.user_name === seller.name)
-      const calls = evts.filter(e => e.event_type === 'call_answered' || e.event_type === 'whatsapp_call_received').length
-      const won = evts.filter(e => e.event_type === 'lead.won').length
-      const lastEvent = evts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
-      const isActive = lastEvent && (Date.now() - new Date(lastEvent.created_at)) < 30 * 60 * 1000
-      return { ...seller, calls, won, lastEvent, isActive }
-    }).sort((a, b) => b.calls - a.calls)
-  }, [tick])
+  // ── Online agents ──────────────────────────────────────
+  const activeAgents = useMemo(() =>
+    agents?.filter(a => a.status === 'online' || a.status === 'in_call').length || 0
+  , [agents])
 
-  const recentEvents = useMemo(() =>
-    [...EVENTS].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
-    [tick]
-  )
+  // ── Hourly chart from real calls ───────────────────────
+  const hourlyData = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, h) => ({
+      hour: `${String(h).padStart(2, '0')}h`,
+      calls: 0,
+    }))
+    if (calls?.length) {
+      calls.forEach(c => {
+        if (!c.startedAt) return
+        const h = getHours(new Date(c.startedAt))
+        if (h >= 0 && h < 24) hours[h].calls++
+      })
+    }
+    return hours.filter(h => {
+      const n = parseInt(h.hour)
+      return n >= 7 && n <= 21
+    })
+  }, [calls])
 
-  const activeCount = sellerStats.filter(s => s.isActive).length
+  // ── Activity graph — 16 weeks of estimated data ────────
+  const activityData = useMemo(() => {
+    const todayCount = stats.total
+    return Array.from({ length: 112 }, (_, i) => ({
+      date: format(subDays(new Date(), 111 - i), 'yyyy-MM-dd'),
+      count: i === 111 ? todayCount : 0,
+    }))
+  }, [stats.total])
+
+  // ── Won leads from store ───────────────────────────────
+  const wonLeads = leads.filter(l => l.stage === 5)
+  const wonValue = wonLeads.reduce((s, l) => s + Number(l.value || 0), 0)
+
+  const isLoading = loadingCalls || loadingAgents
 
   return (
     <div className="p-6 space-y-6">
 
       {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-sm text-faint mt-0.5">Visão geral da operação em tempo real</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
+          <p className="text-xs text-faint mt-0.5">
+            {hasCalls
+              ? <span>Dados reais da <span className="text-success">3C Plus</span> · {today}</span>
+              : isLoading ? 'Carregando dados da 3C Plus…' : 'Conecte a 3C Plus para ver dados reais'}
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-            style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', color: '#22c55e' }}>
+            style={{ background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e' }}>
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            {activeCount} ativos
+            {activeAgents} ativos
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs text-faint"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <Activity size={11} />
-            Ao vivo
-          </div>
+          {hasCalls && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#555' }}>
+              <Activity size={10} />
+              Ao vivo
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -237,104 +313,95 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Ligações hoje"
-          value={<AnimatedNumber value={stats.calls} />}
-          sub="3C Plus + WhatsApp"
-          icon={Phone}
-          delay={0}
-          trend="+12%"
+          value={isLoading ? '…' : <AnimatedNumber value={stats.total} />}
+          sub={hasCalls ? '3C Plus · dados reais' : 'aguardando 3C'}
+          icon={Phone} delay={0} live={hasCalls}
         />
         <KPICard
-          label="Vendas fechadas"
-          value={<AnimatedNumber value={stats.won} />}
-          sub={formatCurrency(stats.totalWonValue)}
-          icon={TrendingUp}
-          delay={0.08}
-          trend="+8%"
+          label="Vendas ganhas"
+          value={<AnimatedNumber value={wonLeads.length} />}
+          sub={wonValue > 0 ? formatCurrency(wonValue) : 'cadastre em Vendas'}
+          icon={TrendingUp} delay={0.08}
         />
         <KPICard
           label="Taxa de contato"
-          value={<AnimatedNumber value={stats.contactRate} suffix="%" />}
+          value={isLoading ? '…' : <AnimatedNumber value={stats.contactRate} suffix="%" />}
           sub="das ligações atendidas"
-          icon={Target}
-          delay={0.16}
+          icon={Target} delay={0.16}
         />
         <KPICard
           label="Tempo médio"
-          value={formatSeconds(stats.avgTalk)}
+          value={isLoading ? '…' : formatSeconds(stats.avgTalk)}
           sub="por ligação"
-          icon={DollarSign}
-          delay={0.24}
+          icon={Clock} delay={0.24}
         />
       </div>
 
-      {/* Charts row */}
+      {/* Hourly chart + health */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Area chart — calls */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
+          transition={{ delay: 0.3, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
           className="lg:col-span-2 rounded-xl overflow-hidden hover-glow"
-          style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
         >
           <div className="px-5 pt-4 pb-2 flex items-center justify-between">
             <div>
-              <p className="text-xs text-faint uppercase tracking-wider">Ligações por hora</p>
+              <p className="text-[10px] text-faint uppercase tracking-wider">Ligações por hora</p>
               <p className="text-xl font-bold text-white mt-0.5">
-                <AnimatedNumber value={HOURS.reduce((s, h) => s + h.calls, 0)} /> ligações
+                {hasCalls
+                  ? <><AnimatedNumber value={stats.total} /> ligações</>
+                  : <span className="text-text-secondary text-sm">Aguardando dados 3C…</span>}
               </p>
             </div>
-            <span className="tag">hoje</span>
+            <span className="tag">{hasCalls ? 'real' : 'sem dados'}</span>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={HOURS} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={170}>
+            <AreaChart data={hourlyData} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
               <defs>
-                <linearGradient id="callsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="rgba(255,255,255,0.15)" />
+                <linearGradient id="callsGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="rgba(255,255,255,0.18)" />
                   <stop offset="95%" stopColor="rgba(255,255,255,0)" />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" tick={{ fill: '#444', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#444', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone" dataKey="calls" name="Ligações"
-                stroke="rgba(255,255,255,0.7)" fill="url(#callsGradient)"
-                strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'white', stroke: 'none' }}
+              <XAxis dataKey="hour" tick={{ fill: '#3a3a3a', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#3a3a3a', fontSize: 10 }} axisLine={false} tickLine={false} width={26} />
+              <Tooltip content={<ChartTooltip />} />
+              <Area type="monotone" dataKey="calls" name="Ligações"
+                stroke="rgba(255,255,255,0.6)" fill="url(#callsGrad)"
+                strokeWidth={1.5} dot={false} activeDot={{ r: 4, fill: 'white', stroke: 'none' }}
               />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>
 
-        {/* Radial stats */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38, duration: 0.4 }}
+          transition={{ delay: 0.38, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
           className="rounded-xl p-5 hover-glow"
-          style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
         >
-          <p className="text-xs text-faint uppercase tracking-wider mb-5">Saúde da operação</p>
+          <p className="text-[10px] text-faint uppercase tracking-wider mb-4">Saúde da operação</p>
           <div className="flex flex-col gap-4 items-center">
-            <RadialProgress value={stats.contactRate} max={100} label="Taxa contato" color="#ffffff" />
+            <RadialProgress value={stats.contactRate} max={100} label="Taxa contato" />
             <div className="w-full space-y-3">
               {[
-                { label: 'Calls atendidas', value: 8, max: 12 },
-                { label: 'Meta vendas', value: stats.won, max: 20 },
+                { label: 'Agentes online', value: activeAgents, max: Math.max(agents?.length || 1, activeAgents) },
+                { label: 'Ligações atend.', value: stats.answered, max: Math.max(stats.total, 1) },
               ].map(({ label, value, max }) => (
                 <div key={label}>
-                  <div className="flex justify-between text-xs mb-1">
+                  <div className="flex justify-between text-[11px] mb-1.5">
                     <span className="text-faint">{label}</span>
-                    <span className="text-text-secondary">{value}/{max}</span>
+                    <span className="text-text-secondary tabular-nums">{value}/{max}</span>
                   </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                    <motion.div
-                      className="h-full rounded-full bg-white"
+                  <div className="data-bar">
+                    <motion.div className="data-bar-fill"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((value / max) * 100, 100)}%` }}
-                      transition={{ delay: 0.8, duration: 0.8, ease: 'easeOut' }}
+                      animate={{ width: `${Math.min((value / Math.max(max, 1)) * 100, 100)}%` }}
+                      transition={{ delay: 0.9, duration: 1.0, ease: [0.23, 1, 0.32, 1] }}
                     />
                   </div>
                 </div>
@@ -344,136 +411,97 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Week bar + feed + ranking */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Bar chart — week */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45, duration: 0.4 }}
-          className="rounded-xl overflow-hidden hover-glow"
-          style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <div className="px-5 pt-4 pb-2">
-            <p className="text-xs text-faint uppercase tracking-wider">Vendas da semana</p>
-            <p className="text-xl font-bold text-white mt-0.5">
-              {formatCurrency(WEEK_DATA.reduce((s, d) => s + d.revenue, 0))}
-            </p>
-          </div>
-          <ResponsiveContainer width="100%" height={170}>
-            <BarChart data={WEEK_DATA} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" tick={{ fill: '#444', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="won" name="Vendas" radius={[4, 4, 0, 0]}
-                fill="rgba(255,255,255,0.15)"
-                activeBar={{ fill: 'rgba(255,255,255,0.85)' }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
-
-        {/* Live feed */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.52, duration: 0.4 }}
-          className="rounded-xl overflow-hidden hover-glow"
-          style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <div className="px-5 pt-4 pb-3 flex items-center gap-2"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <div className="relative flex items-center justify-center w-2.5 h-2.5">
-              <span className="absolute w-2.5 h-2.5 rounded-full bg-success/20 animate-ping" />
-              <span className="w-1.5 h-1.5 rounded-full bg-success" />
-            </div>
-            <p className="text-xs text-faint uppercase tracking-wider">Feed ao vivo</p>
-          </div>
-          <LiveFeed events={recentEvents} />
-        </motion.div>
-
-        {/* Ranking */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.58, duration: 0.4 }}
-          className="rounded-xl overflow-hidden hover-glow"
-          style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <p className="text-xs text-faint uppercase tracking-wider">Ranking hoje</p>
-          </div>
-          <div>
-            {sellerStats.map((s, i) => (
-              <motion.div
-                key={s.id}
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + i * 0.07 }}
-                className="flex items-center gap-3 px-5 py-3"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-              >
-                <span className="text-xs w-4 tabular-nums"
-                  style={{ color: i === 0 ? '#fff' : '#444' }}>
-                  {i + 1}
-                </span>
-                <div className="relative">
-                  <Avatar name={s.name} size="sm" />
-                  {s.isActive && (
-                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-success border-2"
-                      style={{ borderColor: '#0e0e0e' }} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-text truncate">{s.name.split(' ')[0]}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="h-1 rounded-full flex-1 overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                      <div className="h-full bg-white rounded-full"
-                        style={{ width: `${(s.calls / (sellerStats[0]?.calls || 1)) * 100}%` }} />
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-white">{s.calls}</p>
-                  <p className="text-xs text-success">{s.won}✓</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Alerts */}
+      {/* Activity graph */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.4 }}
-        className="rounded-xl p-5 hover-glow"
-        style={{ background: 'rgba(14,14,14,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
+        transition={{ delay: 0.42, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+        className="rounded-xl p-5 hover-glow overflow-hidden"
+        style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle size={14} className="text-warning" />
-          <p className="text-xs text-faint uppercase tracking-wider">Alertas da operação</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[10px] text-faint uppercase tracking-wider">Atividade de ligações</p>
+            <p className="text-sm font-semibold text-white mt-0.5">
+              {hasCalls
+                ? <><AnimatedNumber value={stats.total} /> ligações hoje</>
+                : 'Histórico disponível após integração 3C'}
+            </p>
+          </div>
+          <span className="tag">16 semanas</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {[
-            { label: 'Leads parados > 24h', value: 3, color: 'text-warning', desc: 'sem atividade recente', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.15)' },
-            { label: 'Entregas atrasadas', value: 1, color: 'text-destructive', desc: 'aguardam há 7+ dias', bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.15)' },
-            { label: 'Cobranças vencendo', value: 2, color: 'text-text', desc: 'promessas em 3 dias', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.08)' },
-          ].map(({ label, value, color, desc, bg, border }) => (
-            <div key={label} className="rounded-lg p-4"
-              style={{ background: bg, border: `1px solid ${border}` }}>
-              <p className="text-xs text-faint mb-2">{label}</p>
-              <p className={`text-3xl font-bold ${color} tabular-nums`}>
-                <AnimatedNumber value={value} />
-              </p>
-              <p className="text-xs text-text-secondary mt-1">{desc}</p>
-            </div>
-          ))}
+        <div className="overflow-x-auto scroll-x">
+          <ActivityGraph data={activityData} />
         </div>
       </motion.div>
+
+      {/* Feed + Ranking */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+          className="rounded-xl overflow-hidden hover-glow"
+          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="px-5 pt-4 pb-3 flex items-center gap-2"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <span className="relative flex h-2 w-2">
+              {hasCalls && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-50" />}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${hasCalls ? 'bg-success' : 'bg-subtle'}`} />
+            </span>
+            <p className="text-[10px] text-faint uppercase tracking-wider">Feed de ligações · 3C</p>
+          </div>
+          <CallFeed calls={calls} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.58, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+          className="rounded-xl overflow-hidden hover-glow"
+          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <p className="text-[10px] text-faint uppercase tracking-wider">Ranking · ligações hoje</p>
+            <Users size={12} className="text-faint" />
+          </div>
+          <AgentRanking agents={agents} calls={calls} />
+        </motion.div>
+      </div>
+
+      {/* Summary — manual data alerts */}
+      {(leads.length > 0 || manualSellers.length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+          className="rounded-xl p-5 hover-glow"
+          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={13} className="text-white" />
+            <p className="text-[10px] text-faint uppercase tracking-wider">Dados cadastrados manualmente</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { label: 'Vendedores', value: manualSellers.length, desc: 'cadastrados' },
+              { label: 'Leads ativos', value: leads.filter(l => l.stage > 0 && l.stage < 5).length, desc: 'em andamento' },
+              { label: 'Vendas ganhas', value: wonLeads.length, desc: formatCurrency(wonValue) },
+            ].map(({ label, value, desc }) => (
+              <div key={label} className="rounded-xl p-4 hover-glow"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <p className="text-[10px] text-faint uppercase tracking-wider mb-2">{label}</p>
+                <p className="text-3xl font-bold text-white tabular-nums">
+                  <AnimatedNumber value={value} />
+                </p>
+                <p className="text-xs text-text-secondary mt-1">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }
