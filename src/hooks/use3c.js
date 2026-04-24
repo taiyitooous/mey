@@ -1,41 +1,66 @@
 import { useQuery } from '@tanstack/react-query'
 import { api3c } from '../lib/api3c'
 
+// Safely converts any API value to a plain string
+function toStr(v) {
+  if (v == null) return ''
+  if (typeof v === 'string') return v
+  if (typeof v === 'number') return String(v)
+  if (typeof v === 'object') {
+    return v.name || v.extension_number || v.label || v.value || String(v.id || '')
+  }
+  return String(v)
+}
+
+// Map 3C status strings to our internal keys
+function mapStatus(raw) {
+  const s = toStr(raw).toLowerCase()
+  if (s.includes('call') || s === 'oncall' || s === 'in_call') return 'in_call'
+  if (s === 'online' || s === 'ready' || s === 'available' || s === 'logged_in' || s === 'logado') return 'online'
+  if (s.includes('pause') || s.includes('pausa') || s === 'break') return 'paused'
+  if (s === 'offline' || s === 'logged_out' || s === '' || s === 'deslogado') return 'offline'
+  // fallback: if non-empty treat as online, otherwise offline
+  return s ? 'online' : 'offline'
+}
+
 function normalizeAgents(data) {
-  const items = Array.isArray(data) ? data : (data?.data || data?.agents || [])
+  const items = Array.isArray(data) ? data
+    : (data?.data || data?.agents || data?.items || [])
   return items.map(a => ({
     id: String(a.id || a.agent_id || Math.random()),
-    name: a.name || a.agent_name || a.username || 'Agente',
-    status: a.status || a.current_status || 'offline',
-    campaign: a.campaign || a.campaign_name || a.queue || '',
-    extension: a.extension || a.ramal || '',
+    name: toStr(a.name || a.agent_name || a.username) || 'Agente',
+    status: mapStatus(a.status || a.current_status || a.agent_status || ''),
+    campaign: toStr(a.campaign || a.campaign_name || a.queue || a.fila || ''),
+    extension: toStr(a.extension || a.ramal || a.extension_number || ''),
     loginAt: a.login_at || a.logged_at || null,
-    pauseReason: a.pause_reason || a.break_reason || null,
+    pauseReason: toStr(a.pause_reason || a.break_reason || a.motivo_pausa || '') || null,
   }))
 }
 
 function normalizeCampaigns(data) {
-  const items = Array.isArray(data) ? data : (data?.data || data?.campaigns || [])
+  const items = Array.isArray(data) ? data
+    : (data?.data || data?.campaigns || data?.items || [])
   return items.map(c => ({
-    id: c.id,
-    name: c.name || c.campaign_name,
-    type: c.type || c.campaign_type || 'preview',
+    id: String(c.id || ''),
+    name: toStr(c.name || c.campaign_name) || 'Campanha',
+    type: toStr(c.type || c.campaign_type) || 'preview',
     active: c.active ?? c.is_active ?? true,
-    agentCount: c.agent_count || c.agents_count || 0,
+    agentCount: Number(c.agent_count || c.agents_count || 0),
   }))
 }
 
 function normalizeCallHistory(data) {
-  const items = Array.isArray(data) ? data : (data?.data || data?.calls || data?.call_history || [])
+  const items = Array.isArray(data) ? data
+    : (data?.data || data?.calls || data?.call_history || data?.items || [])
   return items.map(c => ({
     id: String(c.id || c.call_id || Math.random()),
-    agent: c.agent_name || c.agent || c.username || '',
-    phone: c.phone || c.to || c.destination || c.called_number || '',
-    duration: Number(c.duration || c.speaking_time || c.talk_time || 0),
-    result: c.result || c.disposition || c.status || c.call_result || '',
-    startedAt: c.started_at || c.call_date || c.created_at || null,
-    campaign: c.campaign || c.campaign_name || '',
-    callId: c.call_id || c.id || '',
+    agent: toStr(c.agent_name || c.agent || c.username || c.operador || ''),
+    phone: toStr(c.phone || c.to || c.destination || c.called_number || c.numero || ''),
+    duration: Number(c.duration || c.speaking_time || c.talk_time || c.tempo_fala || 0),
+    result: toStr(c.result || c.disposition || c.status || c.call_result || c.resultado || ''),
+    startedAt: c.started_at || c.call_date || c.created_at || c.data_inicio || null,
+    campaign: toStr(c.campaign || c.campaign_name || c.campanha || ''),
+    callId: toStr(c.call_id || c.id || ''),
   }))
 }
 
