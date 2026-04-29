@@ -497,19 +497,18 @@ export default function Skale() {
             <div>
               <p className="text-sm font-semibold text-white mb-1">Nenhum pedido recebido ainda</p>
               <p className="text-xs text-faint leading-relaxed">
-                Configure o webhook da Skale apontando para a Edge Function do Supabase.<br />
-                Os pedidos aparecerão aqui em tempo real.
+                Configure o webhook da Skale apontando para este servidor.<br />
+                Os pedidos aparecerão aqui automaticamente.
               </p>
             </div>
             <div className="w-full p-4 rounded-xl text-left space-y-3"
               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-[10px] text-faint uppercase tracking-wider">Passos para ativar</p>
+              <p className="text-[10px] text-faint uppercase tracking-wider">Como ativar</p>
               {[
-                { n: '1', text: 'Crie um projeto em supabase.com e copie a URL e Anon Key' },
-                { n: '2', text: 'Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no Render → Environment' },
-                { n: '3', text: 'Execute o SQL em supabase/schema.sql no SQL Editor do Supabase' },
-                { n: '4', text: 'Faça deploy da Edge Function: supabase functions deploy skale-webhook' },
-                { n: '5', text: 'Configure a URL da função como webhook no painel da Skale' },
+                { n: '1', text: 'No painel da Skale, vá em Configurações → Webhooks' },
+                { n: '2', text: `Cole a URL: ${window.location.origin}/api/webhooks/skale` },
+                { n: '3', text: 'Selecione os eventos: order_created, payment_registered, tracking_updated e os demais' },
+                { n: '4', text: 'Salve e dispare um pedido de teste — ele aparecerá aqui em segundos' },
               ].map(s => (
                 <div key={s.n} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
