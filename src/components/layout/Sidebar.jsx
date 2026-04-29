@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Activity, TrendingUp, Package,
-  CreditCard, CalendarCheck, Settings, Zap, Radio
+  CreditCard, CalendarCheck, Settings, Zap, Radio, ShoppingCart
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { use3cStatus } from '../../hooks/use3c'
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/logistica', label: 'Logística', icon: Package },
   { to: '/cobranca', label: 'Cobrança', icon: CreditCard },
   { to: '/hoje', label: 'Hoje', icon: CalendarCheck },
+  { to: '/skale', label: 'Skale', icon: ShoppingCart },
 ]
 
 function StatusDot({ ok, loading }) {

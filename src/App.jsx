@@ -9,6 +9,7 @@ import Logistica from './pages/Logistica'
 import Cobranca from './pages/Cobranca'
 import Hoje from './pages/Hoje'
 import Integracoes from './pages/Integracoes'
+import Skale from './pages/Skale'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/cobranca" element={<ErrorBoundary><Cobranca /></ErrorBoundary>} />
             <Route path="/hoje" element={<ErrorBoundary><Hoje /></ErrorBoundary>} />
             <Route path="/integracoes" element={<ErrorBoundary><Integracoes /></ErrorBoundary>} />
+            <Route path="/skale" element={<ErrorBoundary><Skale /></ErrorBoundary>} />
           </Route>
         </Routes>
       </BrowserRouter>
