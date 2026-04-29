@@ -8,6 +8,7 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 // ── Health / diagnóstico ───────────────────────────────────
 
@@ -21,6 +22,30 @@ app.get('/api/health', async (req, res) => {
     node: process.version,
     env: process.env.NODE_ENV,
   })
+})
+
+// Teste manual de webhook 3C
+app.get('/api/3c/test-webhook', async (req, res) => {
+  const fake = {
+    event: 'call-history-was-created',
+    call_id: `test_${Date.now()}`,
+    agent_name: 'Agente Teste',
+    phone: '11999990000',
+    speaking_time: 120,
+    duration: 120,
+    result: 'interested',
+    campaign: 'Campanha Teste',
+    started_at: new Date().toISOString(),
+  }
+  await pool.query(
+    `INSERT INTO threec_events (event_type, agent_name, call_id, payload) VALUES ($1,$2,$3,$4)`,
+    [fake.event, fake.agent_name, fake.call_id, JSON.stringify(fake)]
+  )
+  await pool.query(`
+    INSERT INTO threec_calls (call_id, agent_name, phone, duration, result, campaign, started_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (call_id) DO NOTHING
+  `, [fake.call_id, fake.agent_name, fake.phone, fake.duration, fake.result, fake.campaign, fake.started_at])
+  res.json({ ok: true, inserted: fake })
 })
 
 // Ver últimos eventos 3C recebidos
