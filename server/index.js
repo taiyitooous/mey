@@ -9,6 +9,164 @@ const PORT = process.env.PORT || 3000
 
 app.use(express.json())
 
+// ── 3C Plus — proxy & webhook ──────────────────────────────
+
+const THREEC_TOKEN = process.env.THREEC_TOKEN || ''
+const THREEC_BASE  = 'https://app.3c.plus/api/v1'
+
+async function threecFetch(path, params = {}) {
+  const qs = new URLSearchParams({ api_token: THREEC_TOKEN, ...params })
+  const res = await fetch(`${THREEC_BASE}${path}?${qs}`, {
+    headers: { Accept: 'application/json' },
+  })
+  if (!res.ok) throw new Error(`3C API ${res.status} on ${path}`)
+  const text = await res.text()
+  return text ? JSON.parse(text) : []
+}
+
+// Proxy: agentes ao vivo
+app.get('/api/3c/agents', async (req, res) => {
+  try {
+    const data = await threecFetch('/agents', { per_page: 200 })
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Proxy: campanhas
+app.get('/api/3c/campaigns', async (req, res) => {
+  try {
+    const data = await threecFetch('/campaigns')
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Proxy: histórico de chamadas (salva no banco também)
+app.get('/api/3c/call-history', async (req, res) => {
+  try {
+    const params = {}
+    if (req.query.date)     params.date     = req.query.date
+    if (req.query.per_page) params.per_page = req.query.per_page || 200
+    const data = await threecFetch('/call-history', params)
+
+    // Persist no banco em background
+    const items = Array.isArray(data) ? data : (data?.data || data?.calls || [])
+    if (items.length > 0) {
+      for (const c of items) {
+        const callId = String(c.id || c.call_id || '')
+        if (!callId) continue
+        await pool.query(`
+          INSERT INTO threec_calls (call_id, agent_name, phone, duration, result, campaign, started_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7)
+          ON CONFLICT (call_id) DO NOTHING
+        `, [
+          callId,
+          String(c.agent_name || c.agent || c.username || ''),
+          String(c.phone || c.to || c.destination || ''),
+          Number(c.duration || c.speaking_time || 0),
+          String(c.result || c.disposition || ''),
+          String(c.campaign || c.campaign_name || ''),
+          c.started_at || c.call_date || c.created_at || null,
+        ]).catch(() => {})
+      }
+    }
+
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Proxy: ping / status
+app.get('/api/3c/ping', async (req, res) => {
+  try {
+    await threecFetch('/agents', { per_page: 1 })
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(502).json({ ok: false, error: err.message })
+  }
+})
+
+// Stats do banco (chamadas do dia)
+app.get('/api/3c/stats', async (req, res) => {
+  try {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const { rows } = await pool.query(`
+      SELECT
+        COUNT(*)                                                 AS total_calls,
+        COUNT(*) FILTER (WHERE result ILIKE '%interested%')     AS interested,
+        COUNT(*) FILTER (WHERE result ILIKE '%no_answer%')      AS no_answer,
+        COALESCE(AVG(duration) FILTER (WHERE duration > 0), 0)  AS avg_duration,
+        COALESCE(SUM(duration), 0)                              AS total_duration
+      FROM threec_calls
+      WHERE created_at >= $1
+    `, [today.toISOString()])
+    res.json(rows[0])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Histórico de chamadas do banco (sem depender da 3C estar disponível)
+app.get('/api/3c/calls', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '100'), 500)
+    const { rows } = await pool.query(
+      `SELECT * FROM threec_calls ORDER BY started_at DESC NULLS LAST LIMIT $1`, [limit]
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Webhook 3C (eventos em tempo real)
+app.post('/api/webhooks/3c', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const event_type = body.event || body.type || 'unknown'
+    const agent_name = body.agent_name || body.agent || null
+    const call_id    = String(body.call_id || body.id || '')
+
+    // Salva o evento
+    await pool.query(`
+      INSERT INTO threec_events (event_type, agent_name, call_id, payload)
+      VALUES ($1, $2, $3, $4)
+    `, [event_type, agent_name, call_id, JSON.stringify(body)])
+
+    // Se for histórico de chamada, upsert em threec_calls
+    if (['call-history-was-created', 'call_answered', 'call-was-connected'].includes(event_type)) {
+      const callId = call_id || String(body.call_id || '')
+      if (callId) {
+        await pool.query(`
+          INSERT INTO threec_calls (call_id, agent_name, phone, duration, result, campaign, started_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7)
+          ON CONFLICT (call_id) DO UPDATE SET
+            duration   = EXCLUDED.duration,
+            result     = EXCLUDED.result,
+            agent_name = EXCLUDED.agent_name
+        `, [
+          callId,
+          agent_name,
+          body.phone || body.to || body.destination || null,
+          Number(body.speaking_time || body.duration || 0),
+          body.result || body.disposition || null,
+          body.campaign || body.campaign_name || null,
+          body.started_at || body.call_date || null,
+        ])
+      }
+    }
+
+    res.json({ ok: true, event_type })
+  } catch (err) {
+    console.error('[3c webhook]', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ── Payload parser ─────────────────────────────────────────
 
 function mapStatus(raw) {

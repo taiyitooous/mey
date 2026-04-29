@@ -135,9 +135,24 @@ export function use3cStatus() {
     queryFn: () => api3c.ping(),
     retry: 1,
     staleTime: 30_000,
-    select: (data) => {
-      // Connected if we got any response with data
-      return !!(data && (Array.isArray(data) ? data.length >= 0 : true))
-    },
+    select: (data) => !!(data && (data.ok !== false)),
+  })
+}
+
+export function use3cStats() {
+  return useQuery({
+    queryKey: ['3c', 'stats'],
+    queryFn: () => api3c.stats(),
+    refetchInterval: 30_000,
+    retry: 1,
+  })
+}
+
+export function use3cCalls(limit = 50) {
+  return useQuery({
+    queryKey: ['3c', 'calls', limit],
+    queryFn: () => api3c.calls({ limit }),
+    refetchInterval: 15_000,
+    retry: 1,
   })
 }

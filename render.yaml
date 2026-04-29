@@ -18,5 +18,5 @@ services:
           property: connectionString
       - key: NODE_ENV
         value: production
-      - key: VITE_3C_TOKEN
+      - key: THREEC_TOKEN
         value: R02FvFejFgDpLxz4iIJn7s14EveNi9vDJt6c8tptGt6vYJjdcqwXHrzAPuDB

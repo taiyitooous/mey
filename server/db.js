@@ -49,5 +49,27 @@ export async function initDB() {
       payload      JSONB,
       created_at   TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS threec_calls (
+      id            SERIAL PRIMARY KEY,
+      call_id       TEXT UNIQUE,
+      agent_name    TEXT,
+      agent_email   TEXT,
+      phone         TEXT,
+      duration      INT DEFAULT 0,
+      result        TEXT,
+      campaign      TEXT,
+      started_at    TIMESTAMPTZ,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS threec_events (
+      id         SERIAL PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      agent_name TEXT,
+      call_id    TEXT,
+      payload    JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `)
 }
