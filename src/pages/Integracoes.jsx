@@ -9,7 +9,7 @@ import {
 import { Input } from '../components/ui/Input'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { use3cStatus, useAgents, useCampaigns } from '../hooks/use3c'
-import { useSkaleEvents, useSkaleOrders, useSkaleStats } from '../hooks/useSkale'
+import { useSkaleOrders, useSkaleStats } from '../hooks/useSkale'
 import { formatCurrency } from '../lib/utils'
 
 const WEBHOOK_BASE = typeof window !== 'undefined' ? window.location.origin : 'https://mey.app'
@@ -288,11 +288,10 @@ const SKALE_EVENT_LABEL = {
 
 function SkaleLivePanel() {
   const [expanded, setExpanded] = useState(true)
-  const { data: events, isLoading: loadingEvents, refetch, isFetching } = useSkaleEvents(6)
-  const { data: orders, isLoading: loadingOrders } = useSkaleOrders(5)
+  const { data: orders, isLoading: loadingOrders, refetch, isFetching } = useSkaleOrders(5)
   const { data: stats } = useSkaleStats()
 
-  const hasData = (events && events.length > 0) || (orders && orders.length > 0)
+  const hasData = orders && orders.length > 0
 
   return (
     <motion.div
@@ -421,31 +420,8 @@ function SkaleLivePanel() {
                 </div>
               )}
 
-              {/* Recent events */}
-              {!loadingEvents && events && events.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-faint uppercase tracking-wider mb-2">Eventos recentes</p>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                    {events.map(e => (
-                      <div key={e.id}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <Activity size={11} className="text-faint shrink-0" />
-                        <p className="text-xs text-text flex-1 truncate">
-                          {SKALE_EVENT_LABEL[e.event_type] || e.event_type}
-                        </p>
-                        {e.user_name && <span className="text-[10px] text-faint shrink-0">{e.user_name}</span>}
-                        <span className="text-[10px] font-mono shrink-0" style={{ color: '#444' }}>
-                          #{e.entity_id?.slice(-5) || '—'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Empty state */}
-              {!loadingEvents && !loadingOrders && !hasData && (
+              {!loadingOrders && !hasData && (
                 <div className="flex items-start gap-2.5 p-3 rounded-lg"
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <AlertCircle size={13} className="text-faint shrink-0 mt-0.5" />
