@@ -9,8 +9,8 @@ import {
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { useSkaleOrders, useSkaleEvents, useSkaleStats } from '../hooks/useSkale'
-import { formatCurrency, formatDateTime, timeAgo } from '../lib/utils'
+import { useSkaleOrders } from '../hooks/useSkale'
+import { formatCurrency, timeAgo } from '../lib/utils'
 
 // ── Config ─────────────────────────────────────────────────
 
@@ -52,69 +52,6 @@ const EVENT_LABEL = {
 }
 
 // ── Mock data (fallback se Supabase não configurado) ───────
-
-const MOCK_ORDERS = [
-  {
-    id: 'm1', external_id: 'ven_8832', customer_name: 'Maria Silva', customer_email: 'maria@email.com',
-    customer_phone: '11999999999', customer_doc: '12345678900',
-    customer_address: { zip_code: '01001000', street: 'Rua Exemplo', number: '123', district: 'Centro', city: 'São Paulo', state: 'SP', complement: 'Apto 10' },
-    product_name: 'Kit Produto Exemplo', product_sku: 'SKU6-LV0m', product_quantity: 2,
-    status: 'delivered', payment_status: 'Aguardando Pagamento', payment_method: 'After Pay',
-    total_price: 69900, tracking_code: 'AD322479048BR', carrier: '123Log',
-    seller_name: 'João Vendedor', platform: 'Asaas',
-    started_at: new Date(Date.now() - 5 * 24 * 3600000).toISOString(),
-  },
-  {
-    id: 'm2', external_id: 'ven_9100', customer_name: 'Carlos Andrade', customer_email: 'carlos@email.com',
-    customer_phone: '21988887777', customer_doc: '98765432100',
-    customer_address: { street: 'Av. Brasil', number: '500', city: 'Rio de Janeiro', state: 'RJ' },
-    product_name: 'Suplemento Premium X', product_sku: 'SUP-001', product_quantity: 1,
-    status: 'in_transit', payment_status: 'Pago', payment_method: 'Pix',
-    total_price: 18990, tracking_code: 'BR987654321', carrier: 'Correios',
-    seller_name: 'Ana Lima', platform: 'Asaas',
-    started_at: new Date(Date.now() - 2 * 24 * 3600000).toISOString(),
-  },
-  {
-    id: 'm3', external_id: 'ven_9203', customer_name: 'Fernanda Costa', customer_email: 'fer@email.com',
-    customer_phone: '31977776666', customer_doc: '11122233344',
-    customer_address: { street: 'Rua das Flores', number: '88', city: 'Belo Horizonte', state: 'MG' },
-    product_name: 'Curso Online Avançado', product_sku: 'CURSO-ADV', product_quantity: 1,
-    status: 'processing', payment_status: 'Aguardando Pagamento', payment_method: 'Boleto',
-    total_price: 29700, tracking_code: null, carrier: null,
-    seller_name: 'Bruno Sales', platform: 'Asaas',
-    started_at: new Date(Date.now() - 12 * 3600000).toISOString(),
-  },
-  {
-    id: 'm4', external_id: 'ven_9310', customer_name: 'Rafael Moura', customer_email: 'rafa@email.com',
-    customer_phone: '41966665555', customer_doc: '55566677788',
-    customer_address: { street: 'Rua XV de Novembro', number: '200', city: 'Curitiba', state: 'PR' },
-    product_name: 'Kit Beleza Completo', product_sku: 'KIT-BLZ', product_quantity: 3,
-    status: 'out_for_delivery', payment_status: 'Pago', payment_method: 'Cartão de Crédito',
-    total_price: 45000, tracking_code: 'JD555444333BR', carrier: 'JadLog',
-    seller_name: 'Carla Ramos', platform: 'Asaas',
-    started_at: new Date(Date.now() - 3 * 24 * 3600000).toISOString(),
-  },
-  {
-    id: 'm5', external_id: 'ven_9401', customer_name: 'Juliana Neves', customer_email: 'ju@email.com',
-    customer_phone: '51955554444', customer_doc: '33344455566',
-    customer_address: { street: 'Av. Ipiranga', number: '1000', city: 'Porto Alegre', state: 'RS' },
-    product_name: 'Produto Fitness Pro', product_sku: 'FIT-PRO', product_quantity: 2,
-    status: 'returned', payment_status: 'Estornado', payment_method: 'Pix',
-    total_price: 15800, tracking_code: 'TE111222333BR', carrier: 'Total Express',
-    seller_name: 'Diego Matos', platform: 'Asaas',
-    started_at: new Date(Date.now() - 7 * 24 * 3600000).toISOString(),
-  },
-  {
-    id: 'm6', external_id: 'ven_9512', customer_name: 'Thiago Barbosa', customer_email: 'thiago@email.com',
-    customer_phone: '61944443333', customer_doc: '77788899900',
-    customer_address: { street: 'SQN 304', number: 'Bloco A', city: 'Brasília', state: 'DF' },
-    product_name: 'Assinatura Mensal VIP', product_sku: 'VIP-MES', product_quantity: 1,
-    status: 'delivered', payment_status: 'Pago', payment_method: 'Pix',
-    total_price: 9700, tracking_code: 'BR222333444BR', carrier: 'Correios',
-    seller_name: 'João Vendedor', platform: 'Asaas',
-    started_at: new Date(Date.now() - 4 * 24 * 3600000).toISOString(),
-  },
-]
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -390,12 +327,7 @@ export default function Skale() {
   const [filterPay, setFilterPay] = useState('all')
   const [selected, setSelected] = useState(null)
 
-  const { data: rawOrders, isLoading, refetch, isFetching } = useSkaleOrders(100)
-  const { data: stats } = useSkaleStats()
-
-  // Use mock if no real data
-  const orders = (rawOrders && rawOrders.length > 0) ? rawOrders : MOCK_ORDERS
-  const isMock = !rawOrders || rawOrders.length === 0
+  const { data: orders = [], isLoading, isError, refetch, isFetching } = useSkaleOrders(100)
 
   const filtered = useMemo(() => {
     return orders.filter(o => {
@@ -414,10 +346,9 @@ export default function Skale() {
     })
   }, [orders, filterStatus, filterPay, search])
 
-  // Stats from real data or mock
-  const statsPaid   = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).length
-  const statsPend   = orders.filter(o => ['Aguardando Pagamento', 'Pendente'].includes(o.payment_status)).length
-  const statsRev    = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).reduce((s, o) => s + (o.total_price || 0), 0)
+  const statsPaid      = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).length
+  const statsPend      = orders.filter(o => ['Aguardando Pagamento', 'Pendente'].includes(o.payment_status)).length
+  const statsRev       = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).reduce((s, o) => s + (o.total_price || 0), 0)
   const statsDelivered = orders.filter(o => o.status === 'delivered').length
 
   return (
@@ -443,10 +374,10 @@ export default function Skale() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isMock && (
+          {isError && (
             <span className="text-[10px] px-2 py-1 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#555' }}>
-              dados de exemplo
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }}>
+              erro de conexão
             </span>
           )}
           <button onClick={() => refetch()}
@@ -558,13 +489,37 @@ export default function Skale() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <AlertCircle size={18} className="text-faint" />
+          <div className="flex flex-col items-center justify-center py-16 gap-4 max-w-md mx-auto text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.15)' }}>
+              <ShoppingCart size={22} style={{ color: '#a78bfa' }} />
             </div>
-            <p className="text-sm text-text-secondary">Nenhum pedido encontrado</p>
-            <p className="text-xs text-faint">Ajuste os filtros ou aguarde novos webhooks da Skale</p>
+            <div>
+              <p className="text-sm font-semibold text-white mb-1">Nenhum pedido recebido ainda</p>
+              <p className="text-xs text-faint leading-relaxed">
+                Configure o webhook da Skale apontando para a Edge Function do Supabase.<br />
+                Os pedidos aparecerão aqui em tempo real.
+              </p>
+            </div>
+            <div className="w-full p-4 rounded-xl text-left space-y-3"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <p className="text-[10px] text-faint uppercase tracking-wider">Passos para ativar</p>
+              {[
+                { n: '1', text: 'Crie um projeto em supabase.com e copie a URL e Anon Key' },
+                { n: '2', text: 'Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no Render → Environment' },
+                { n: '3', text: 'Execute o SQL em supabase/schema.sql no SQL Editor do Supabase' },
+                { n: '4', text: 'Faça deploy da Edge Function: supabase functions deploy skale-webhook' },
+                { n: '5', text: 'Configure a URL da função como webhook no painel da Skale' },
+              ].map(s => (
+                <div key={s.n} className="flex items-start gap-3">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
+                    style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa' }}>
+                    {s.n}
+                  </span>
+                  <p className="text-xs text-text-secondary leading-relaxed">{s.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
