@@ -14,4 +14,5 @@ export const db = {
   tasks: () => supabase.from('tasks'),
   sellerConfigs: () => supabase.from('seller_configs'),
   integrations: () => supabase.from('integrations'),
+  skaleOrders: () => supabase.from('skale_orders'),
 }

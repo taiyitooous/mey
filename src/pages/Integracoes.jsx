@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Zap, Phone, MessageSquare, Database, Truck,
-  Check, Copy, AlertCircle, Wifi, WifiOff,
+  Zap, Phone, MessageSquare, Database, Truck, ShoppingCart,
+  Check, Copy, AlertCircle,
   RefreshCw, ExternalLink, ChevronDown, ChevronUp,
-  Activity, Users, Radio,
+  Package, DollarSign, Activity,
 } from 'lucide-react'
 import { Input } from '../components/ui/Input'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { use3cStatus, useAgents, useCampaigns } from '../hooks/use3c'
-import { api3c } from '../lib/api3c'
+import { useSkaleEvents, useSkaleOrders, useSkaleStats } from '../hooks/useSkale'
+import { formatCurrency } from '../lib/utils'
 
 const WEBHOOK_BASE = typeof window !== 'undefined' ? window.location.origin : 'https://mey.app'
 
@@ -58,6 +59,22 @@ const INTEGRATIONS = [
     color: '#f59e0b',
     fields: [{ key: 'token', label: 'Token Five Delivery', placeholder: 'fd_...', type: 'password' }],
     sqls: null,
+  },
+  {
+    id: 'skale', name: 'Skale', description: 'Pedidos, pagamentos e rastreamento',
+    icon: ShoppingCart, webhook: `${WEBHOOK_BASE}/api/webhooks/skale`,
+    docsUrl: null,
+    events: [
+      'order_created', 'order_approved', 'status_updated', 'tracking_updated',
+      'payment_created', 'payment_registered', 'payment_status_updated',
+      'order_paid_manual', 'order_partial_paid_manual', 'order_updated', 'test_mapping',
+    ],
+    color: '#a78bfa',
+    fields: [
+      { key: 'secret', label: 'Secret do Webhook', placeholder: 'sk_...', type: 'password' },
+      { key: 'seller_id', label: 'Seller ID (opcional)', placeholder: '5', type: 'text' },
+    ],
+    sqls: `-- Tabela de pedidos Skale:\nPOST ${WEBHOOK_BASE}/api/webhooks/skale\n{ "event": "order_created", "transaction_id": "ven_8832", ... }`,
   },
 ]
 
@@ -251,6 +268,217 @@ function ThreeCLivePanel() {
   )
 }
 
+// ── Skale Live panel ───────────────────────────────────────
+const SKALE_STATUS_COLOR = {
+  delivered: '#22c55e', in_transit: '#60a5fa', out_for_delivery: '#f59e0b',
+  processing: '#888', returned: '#ef4444', cancelled: '#555',
+}
+const SKALE_STATUS_LABEL = {
+  delivered: 'Entregue', in_transit: 'Em Trânsito', out_for_delivery: 'Saiu p/ Entrega',
+  processing: 'Processando', returned: 'Devolvido', cancelled: 'Cancelado',
+}
+const SKALE_EVENT_LABEL = {
+  order_created: 'Pedido criado', order_approved: 'Pedido aprovado',
+  status_updated: 'Status atualizado', tracking_updated: 'Rastreio atualizado',
+  payment_created: 'Pagamento criado', payment_registered: 'Pagamento confirmado',
+  payment_status_updated: 'Status pgto alterado', order_paid_manual: 'Pago manualmente',
+  order_partial_paid_manual: 'Pago parcialmente', order_updated: 'Pedido atualizado',
+  test_mapping: 'Teste',
+}
+
+function SkaleLivePanel() {
+  const [expanded, setExpanded] = useState(true)
+  const { data: events, isLoading: loadingEvents, refetch, isFetching } = useSkaleEvents(6)
+  const { data: orders, isLoading: loadingOrders } = useSkaleOrders(5)
+  const { data: stats } = useSkaleStats()
+
+  const hasData = (events && events.length > 0) || (orders && orders.length > 0)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+      className="rounded-xl overflow-hidden hover-glow"
+      style={{
+        background: 'rgba(12,12,12,0.92)',
+        border: `1px solid ${hasData ? 'rgba(167,139,250,0.2)' : 'rgba(255,255,255,0.07)'}`,
+      }}
+    >
+      {hasData && (
+        <div className="h-[1.5px]"
+          style={{ background: 'linear-gradient(90deg, transparent, #a78bfa, transparent)' }} />
+      )}
+
+      {/* Header */}
+      <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.15)' }}>
+              <ShoppingCart size={15} style={{ color: '#a78bfa' }} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-white">Skale</p>
+                {hasData ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                    style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa' }}>
+                    Recebendo
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#555' }}>
+                    Aguardando
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-faint mt-0.5">/api/webhooks/skale</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => refetch()}
+              className="p-1.5 rounded-lg transition-colors hover:bg-white/10" title="Atualizar">
+              <RefreshCw size={13} className={`text-faint ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={() => setExpanded(e => !e)} className="p-1.5 rounded-lg hover:bg-white/10">
+              {expanded ? <ChevronUp size={13} className="text-faint" /> : <ChevronDown size={13} className="text-faint" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="p-5 space-y-4">
+
+              {/* Webhook URL */}
+              <div>
+                <p className="text-[10px] text-faint uppercase tracking-wider mb-2">URL do Webhook</p>
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg font-geist"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p className="text-xs flex-1 truncate" style={{ color: '#555' }}>{WEBHOOK_BASE}/api/webhooks/skale</p>
+                  <CopyBtn text={`${WEBHOOK_BASE}/api/webhooks/skale`} />
+                </div>
+              </div>
+
+              {/* Stats hoje */}
+              {stats && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg p-3 text-center"
+                    style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.12)' }}>
+                    <p className="text-xl font-bold text-white tabular-nums">
+                      <AnimatedNumber value={stats.ordersToday} />
+                    </p>
+                    <p className="text-[10px] text-faint mt-0.5">Pedidos hoje</p>
+                  </div>
+                  <div className="rounded-lg p-3 text-center"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <p className="text-xl font-bold text-white tabular-nums">
+                      <AnimatedNumber value={stats.eventsToday} />
+                    </p>
+                    <p className="text-[10px] text-faint mt-0.5">Eventos hoje</p>
+                  </div>
+                  <div className="rounded-lg p-3 text-center"
+                    style={{ background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.1)' }}>
+                    <p className="text-sm font-bold text-success tabular-nums truncate">
+                      {stats.revenueToday > 0 ? formatCurrency(stats.revenueToday / 100) : 'R$ 0'}
+                    </p>
+                    <p className="text-[10px] text-faint mt-0.5">Recebido hoje</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Recent orders */}
+              {!loadingOrders && orders && orders.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-faint uppercase tracking-wider mb-2">Últimos pedidos</p>
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                    {orders.map(o => (
+                      <div key={o.id || o.external_id}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Package size={11} className="text-faint shrink-0" />
+                        <p className="text-xs text-text flex-1 truncate">{o.customer_name || o.external_id}</p>
+                        {o.total_price > 0 && (
+                          <span className="text-[10px] text-success tabular-nums shrink-0">
+                            {formatCurrency(o.total_price / 100)}
+                          </span>
+                        )}
+                        <span className="text-[10px] shrink-0" style={{ color: SKALE_STATUS_COLOR[o.status] || '#555' }}>
+                          {SKALE_STATUS_LABEL[o.status] || o.status || '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent events */}
+              {!loadingEvents && events && events.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-faint uppercase tracking-wider mb-2">Eventos recentes</p>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {events.map(e => (
+                      <div key={e.id}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Activity size={11} className="text-faint shrink-0" />
+                        <p className="text-xs text-text flex-1 truncate">
+                          {SKALE_EVENT_LABEL[e.event_type] || e.event_type}
+                        </p>
+                        {e.user_name && <span className="text-[10px] text-faint shrink-0">{e.user_name}</span>}
+                        <span className="text-[10px] font-mono shrink-0" style={{ color: '#444' }}>
+                          #{e.entity_id?.slice(-5) || '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!loadingEvents && !loadingOrders && !hasData && (
+                <div className="flex items-start gap-2.5 p-3 rounded-lg"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <AlertCircle size={13} className="text-faint shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-secondary">Nenhum evento recebido ainda.</p>
+                    <p className="text-[10px] text-faint mt-1">
+                      Configure a URL acima como webhook no painel da Skale para começar a receber pedidos.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Eventos suportados */}
+              <div>
+                <p className="text-[10px] text-faint uppercase tracking-wider mb-2">Eventos suportados</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.keys(SKALE_EVENT_LABEL).map(e => (
+                    <span key={e} className="px-2 py-1 rounded-lg text-[10px] font-mono"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#555' }}>
+                      {e}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
 // ── Generic integration card ───────────────────────────────
 function IntegrationCard({ integration, delay }) {
   const [values, setValues] = useState(() =>
@@ -436,6 +664,9 @@ export default function Integracoes() {
       {/* 3C Live panel */}
       <ThreeCLivePanel />
 
+      {/* Skale Live panel */}
+      <SkaleLivePanel />
+
       {/* Schema */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
@@ -455,35 +686,71 @@ export default function Integracoes() {
   source text, payload jsonb,
   created_at timestamptz default now()
 );
-alter publication supabase_realtime add table events;`} />
+
+create table skale_orders (
+  id uuid primary key default gen_random_uuid(),
+  external_id text unique,
+  source text default 'skale',
+  customer_name text, customer_email text,
+  customer_phone text, customer_doc text,
+  customer_address jsonb,
+  product_name text, product_sku text,
+  product_quantity int default 1,
+  status text default 'processing',
+  payment_status text, payment_method text,
+  total_price numeric default 0,
+  paid_at timestamptz,
+  tracking_code text, tracking_url text, carrier text,
+  seller_key text, seller_name text,
+  platform text, note text,
+  checkout_url text, is_test boolean default false,
+  started_at timestamptz, updated_at timestamptz default now()
+);
+
+alter publication supabase_realtime add table events;
+alter publication supabase_realtime add table skale_orders;`} />
         </div>
         <pre className="px-5 py-4 text-xs overflow-x-auto leading-relaxed font-geist"
           style={{ color: '#444' }}>
 {`create table events (
   id uuid primary key default gen_random_uuid(),
-  entity_type text,        -- lead | order | payment | collection
-  entity_id text,          -- ID do objeto
-  event_type text not null,-- call_answered | lead.won | ...
-  user_name text,          -- vendedor
-  source text,             -- 3c | wavoip | datacrazy | mey
-  payload jsonb,           -- speaking_time, result, value...
+  entity_type text,         -- lead | order | payment
+  entity_id text,           -- ID do objeto
+  event_type text not null, -- call_answered | order_created | ...
+  user_name text,           -- vendedor
+  source text,              -- 3c | skale | wavoip | mey
+  payload jsonb,
   created_at timestamptz default now()
 );
 
-create table leads (id uuid primary key default gen_random_uuid(),
-  name text, phone text, stage int default 1,
-  seller_key text, source text, value numeric default 0,
-  created_at timestamptz default now()
+create table skale_orders (
+  id uuid primary key default gen_random_uuid(),
+  external_id text unique,  -- transaction_id da Skale
+  source text default 'skale',
+  customer_name text, customer_email text,
+  customer_phone text, customer_doc text,
+  customer_address jsonb,
+  product_name text, product_sku text, product_quantity int default 1,
+  status text default 'processing',
+  payment_status text, payment_method text,
+  total_price numeric default 0,
+  paid_at timestamptz,
+  tracking_code text, tracking_url text, carrier text,
+  seller_key text, seller_name text,
+  platform text, note text, checkout_url text,
+  is_test boolean default false,
+  started_at timestamptz, updated_at timestamptz default now()
 );
 
 -- Realtime
-alter publication supabase_realtime add table events;`}
+alter publication supabase_realtime add table events;
+alter publication supabase_realtime add table skale_orders;`}
         </pre>
       </motion.div>
 
       {/* Other integrations */}
       <div className="space-y-3">
-        {INTEGRATIONS.filter(i => i.id !== '3c').map((integration, i) => (
+        {INTEGRATIONS.filter(i => i.id !== '3c' && i.id !== 'skale').map((integration, i) => (
           <IntegrationCard key={integration.id} integration={integration} delay={0.28 + i * 0.07} />
         ))}
       </div>
