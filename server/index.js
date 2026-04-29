@@ -9,6 +9,32 @@ const PORT = process.env.PORT || 3000
 
 app.use(express.json())
 
+// ── Health / diagnóstico ───────────────────────────────────
+
+app.get('/api/health', async (req, res) => {
+  let dbOk = false
+  try { await pool.query('SELECT 1'); dbOk = true } catch {}
+  res.json({
+    ok: true,
+    db: dbOk,
+    threec_token: process.env.THREEC_TOKEN ? '✓ configurado' : '✗ ausente',
+    node: process.version,
+    env: process.env.NODE_ENV,
+  })
+})
+
+// Ver últimos eventos 3C recebidos
+app.get('/api/3c/recent-events', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM threec_events ORDER BY created_at DESC LIMIT 20`
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ── 3C Plus — proxy & webhook ──────────────────────────────
 
 const THREEC_TOKEN = process.env.THREEC_TOKEN || ''
@@ -125,6 +151,7 @@ app.get('/api/3c/calls', async (req, res) => {
 
 // Webhook 3C (eventos em tempo real)
 app.post('/api/webhooks/3c', async (req, res) => {
+  console.log('[3c webhook] recebido:', JSON.stringify(req.body)?.slice(0, 300))
   try {
     const body = req.body || {}
     const event_type = body.event || body.type || 'unknown'
