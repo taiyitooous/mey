@@ -4,7 +4,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 // Ajuste as variáveis abaixo com os detalhes reais da API
 
 const DATACRAZY_API_URL = "https://api.datacrazy.com.br/v1"; // ALTERE COM A URL REAL
-const DATACRAZY_API_KEY = Deno.env.get("DATACRAZY_API_KEY") || ""; // Precisa estar no .env
+const DATACRAZY_API_KEY = Deno.env.get("DATACRAZY") || ""; // Agora está em Segredos
 const DATACRAZY_LEADS_ENDPOINT = "/leads"; // ALTERE SE NECESSÁRIO
 
 Deno.serve(async (req) => {
