@@ -43,7 +43,23 @@ function mapLogisticsStatus(skaleStatus, deliveryStatus) {
   return "created";
 }
 
-function mapPaymentStatus(paymentStatus) {
+// Eventos que indicam pagamento confirmado
+const PAYMENT_CONFIRMED_EVENTS = new Set([
+  "payment_confirmed",
+  "payment_registered",
+  "order_paid_manual",
+  "order_partial_paid_manual",
+]);
+
+// Eventos que indicam pedido aprovado (logistics)
+const ORDER_APPROVED_EVENTS = new Set([
+  "order_approved",
+]);
+
+function mapPaymentStatus(paymentStatus, eventType) {
+  // Se o próprio evento indica pagamento confirmado, forçar "paid"
+  if (eventType && PAYMENT_CONFIRMED_EVENTS.has(eventType)) return "paid";
+
   if (!paymentStatus) return "pending";
   const key = paymentStatus.toLowerCase().trim();
   if (key === "pago" || key === "paid" || key === "approved" || key === "aprovado") return "paid";
@@ -98,7 +114,7 @@ Deno.serve(async (req) => {
     console.log(`[Skale] Processando event=${eventType} transaction_id=${transactionId}`);
 
     const logisticsStatus = mapLogisticsStatus(body.status, skale.status_entrega);
-    const paymentStatus   = mapPaymentStatus(skale.status_pagamento || transaction.payment_status);
+    const paymentStatus   = mapPaymentStatus(skale.status_pagamento || transaction.payment_status, eventType);
     const amount = product.price
       ? product.price / 100
       : (transaction.total_price ? transaction.total_price / 100 : null);
