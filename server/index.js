@@ -141,6 +141,48 @@ app.get('/api/3c/ping', async (req, res) => {
   }
 })
 
+// Reprocessa eventos antigos com event_type='unknown' que vieram no formato correto
+app.post('/api/3c/reprocess', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, payload FROM threec_events WHERE event_type = 'unknown' LIMIT 500`
+    )
+    let fixed = 0
+    for (const row of rows) {
+      const body = row.payload
+      const key  = Object.keys(body).find(k => k.includes('call') || k.includes('agent'))
+      if (!key) continue
+      const eventData = body[key] || {}
+      const ch        = eventData.callHistory || eventData
+      const call_id   = String(ch.telephony_id || ch._id || ch.id || '')
+      const agent_name = ch.agent?.name || null
+      const duration  = Number(ch.speaking_time || ch.billed_time || 0)
+      const campaign  = ch.campaign?.name || null
+      const phone     = ch.number || ch.phone || null
+      const started_at = ch.call_date || ch.created_at || null
+      const result    = ch.qualification?.name || null
+
+      await pool.query(
+        `UPDATE threec_events SET event_type=$1, agent_name=$2, call_id=$3 WHERE id=$4`,
+        [key, agent_name, call_id, row.id]
+      )
+      if (call_id) {
+        await pool.query(`
+          INSERT INTO threec_calls (call_id, agent_name, phone, duration, result, campaign, started_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7)
+          ON CONFLICT (call_id) DO UPDATE SET
+            duration = EXCLUDED.duration, result = EXCLUDED.result,
+            agent_name = COALESCE(EXCLUDED.agent_name, threec_calls.agent_name)
+        `, [call_id, agent_name, phone, duration, result, campaign, started_at])
+      }
+      fixed++
+    }
+    res.json({ ok: true, reprocessed: fixed })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Stats do banco (chamadas do dia)
 app.get('/api/3c/stats', async (req, res) => {
   try {
@@ -181,47 +223,66 @@ app.get('/api/webhooks/3c', (req, res) => {
 })
 
 // Webhook 3C (eventos em tempo real)
+// A 3C envia o tipo do evento como CHAVE do objeto:
+// { "call-history-was-created": { "bootTime": "...", "callHistory": { ... } } }
 app.post('/api/webhooks/3c', async (req, res) => {
-  console.log('[3c webhook POST] content-type:', req.headers['content-type'])
-  console.log('[3c webhook POST] body:', JSON.stringify(req.body)?.slice(0, 500))
   try {
     const body = req.body || {}
-    const event_type = body.event || body.type || 'unknown'
-    const agent_name = body.agent_name || body.agent || null
-    const call_id    = String(body.call_id || body.id || '')
 
-    // Salva o evento
-    await pool.query(`
-      INSERT INTO threec_events (event_type, agent_name, call_id, payload)
-      VALUES ($1, $2, $3, $4)
-    `, [event_type, agent_name, call_id, JSON.stringify(body)])
+    // Detecta o event_type pela chave do payload
+    const KNOWN_EVENTS = [
+      'call-history-was-created', 'call-was-connected', 'call-was-answered',
+      'agent_login', 'agent_logout', 'agent-status-was-changed',
+      'manual-call-was-requested', 'campaign-was-started', 'campaign-was-paused',
+    ]
+    let event_type = body.event || body.type || null
+    let eventData  = body
 
-    // Se for histórico de chamada, upsert em threec_calls
-    if (['call-history-was-created', 'call_answered', 'call-was-connected'].includes(event_type)) {
-      const callId = call_id || String(body.call_id || '')
-      if (callId) {
-        await pool.query(`
-          INSERT INTO threec_calls (call_id, agent_name, phone, duration, result, campaign, started_at)
-          VALUES ($1,$2,$3,$4,$5,$6,$7)
-          ON CONFLICT (call_id) DO UPDATE SET
-            duration   = EXCLUDED.duration,
-            result     = EXCLUDED.result,
-            agent_name = EXCLUDED.agent_name
-        `, [
-          callId,
-          agent_name,
-          body.phone || body.to || body.destination || null,
-          Number(body.speaking_time || body.duration || 0),
-          body.result || body.disposition || null,
-          body.campaign || body.campaign_name || null,
-          body.started_at || body.call_date || null,
-        ])
+    if (!event_type) {
+      const key = Object.keys(body).find(k => KNOWN_EVENTS.includes(k))
+      if (key) {
+        event_type = key
+        eventData  = body[key] || {}
+      } else {
+        event_type = Object.keys(body)[0] || 'unknown'
+        eventData  = body[event_type] || body
       }
     }
 
-    res.json({ ok: true, event_type })
+    // Extrai callHistory se presente
+    const ch         = eventData.callHistory || eventData
+    const agent_name = ch.agent?.name || eventData.agent_name || null
+    const call_id    = String(ch.telephony_id || ch._id || ch.id || ch.call_id || '')
+    const phone      = ch.number || ch.phone || ch.to || null
+    const duration   = Number(ch.speaking_time || ch.billed_time || ch.duration || 0)
+    const campaign   = ch.campaign?.name || ch.campaign_name || null
+    const started_at = ch.call_date || ch.created_at || eventData.bootTime || null
+    const result     = ch.qualification?.name || ch.result || ch.disposition || null
+
+    console.log(`[3c webhook] ${event_type} | agente: ${agent_name} | call: ${call_id} | ${duration}s`)
+
+    // Salva o evento
+    await pool.query(
+      `INSERT INTO threec_events (event_type, agent_name, call_id, payload) VALUES ($1,$2,$3,$4)`,
+      [event_type, agent_name, call_id, JSON.stringify(body)]
+    )
+
+    // Persiste chamada se for evento de histórico
+    if (call_id && ['call-history-was-created', 'call-was-connected', 'call-was-answered'].includes(event_type)) {
+      await pool.query(`
+        INSERT INTO threec_calls (call_id, agent_name, phone, duration, result, campaign, started_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        ON CONFLICT (call_id) DO UPDATE SET
+          duration   = EXCLUDED.duration,
+          result     = EXCLUDED.result,
+          agent_name = COALESCE(EXCLUDED.agent_name, threec_calls.agent_name),
+          campaign   = COALESCE(EXCLUDED.campaign, threec_calls.campaign)
+      `, [call_id, agent_name, phone, duration, result, campaign, started_at])
+    }
+
+    res.json({ ok: true, event_type, call_id })
   } catch (err) {
-    console.error('[3c webhook]', err)
+    console.error('[3c webhook error]', err)
     res.status(500).json({ error: err.message })
   }
 })
