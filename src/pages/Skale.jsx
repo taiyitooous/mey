@@ -9,7 +9,7 @@ import {
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { useSkaleOrdersInfinite } from '../hooks/useSkale'
+import { useSkaleOrders } from '../hooks/useSkale'
 import { formatCurrency, timeAgo } from '../lib/utils'
 
 // ── Config ─────────────────────────────────────────────────
@@ -328,17 +328,12 @@ export default function Skale() {
   const [selected, setSelected] = useState(null)
 
   const {
-    data: pages,
+    data: orders = [],
     isLoading,
     isError,
     refetch,
     isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useSkaleOrdersInfinite()
-
-  const orders = pages?.pages.flat() ?? []
+  } = useSkaleOrders()
 
   const filtered = useMemo(() => {
     return orders.filter(o => {
@@ -547,20 +542,10 @@ export default function Skale() {
         )}
 
         {filtered.length > 0 && (
-          <div className="flex flex-col items-center gap-3 mt-4">
+          <div className="flex items-center justify-center mt-4">
             <p className="text-[11px] text-faint">
-              {filtered.length} pedido{filtered.length !== 1 ? 's' : ''} carregados · atualiza a cada 15s
+              {filtered.length} pedido{filtered.length !== 1 ? 's' : ''} · {orders.length} total · atualiza a cada 30s
             </p>
-            {hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="px-5 py-2 rounded-xl text-sm font-medium transition-all"
-                style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa' }}
-              >
-                {isFetchingNextPage ? 'Carregando…' : 'Carregar mais pedidos'}
-              </button>
-            )}
           </div>
         )}
       </motion.div>

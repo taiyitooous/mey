@@ -430,7 +430,7 @@ app.post('/api/webhooks/skale', async (req, res) => {
 
 app.get('/api/skale/orders', async (req, res) => {
   try {
-    const limit  = Math.min(parseInt(req.query.limit  || '100'), 500)
+    const limit  = Math.min(parseInt(req.query.limit  || '10000'), 10000)
     const offset = parseInt(req.query.offset || '0')
     const status = req.query.status
     const search = req.query.search

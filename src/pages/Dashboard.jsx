@@ -1,20 +1,19 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
+  AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
   TrendingUp, Phone, Target, Clock,
-  AlertTriangle, ArrowUpRight, Activity, Users, Zap,
+  ArrowUpRight, Activity, Users, ShoppingCart, DollarSign, CheckCircle,
 } from 'lucide-react'
-import { format, subDays, getHours } from 'date-fns'
+import { format, getHours } from 'date-fns'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { ActivityGraph } from '../components/ui/ActivityGraph'
 import { Avatar } from '../components/ui/Avatar'
 import { formatCurrency, formatSeconds } from '../lib/utils'
 import { useCallHistory, useAgents } from '../hooks/use3c'
-import { useLeads, useSellers } from '../lib/store'
+import { useSkaleStats, useSkaleOrders } from '../hooks/useSkale'
 
 // ── Chart tooltip ──────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
@@ -33,7 +32,7 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ── KPI card ───────────────────────────────────────────────
-function KPICard({ label, value, sub, icon: Icon, delay = 0, trend, live }) {
+function KPICard({ label, value, sub, icon: Icon, delay = 0, trend, live, accent }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -47,8 +46,8 @@ function KPICard({ label, value, sub, icon: Icon, delay = 0, trend, live }) {
       <div className="p-5 relative">
         <div className="flex items-start justify-between mb-4">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <Icon size={15} className="text-text-secondary" />
+            style={{ background: accent ? `${accent}18` : 'rgba(255,255,255,0.05)', border: `1px solid ${accent ? `${accent}30` : 'rgba(255,255,255,0.08)'}` }}>
+            <Icon size={15} style={accent ? { color: accent } : {}} className={accent ? '' : 'text-text-secondary'} />
           </div>
           <div className="flex items-center gap-2">
             {live && (
@@ -72,79 +71,43 @@ function KPICard({ label, value, sub, icon: Icon, delay = 0, trend, live }) {
   )
 }
 
-// ── Radial ─────────────────────────────────────────────────
-function RadialProgress({ value, max, label }) {
-  const pct = Math.min(Math.round((value / Math.max(max, 1)) * 100), 100)
-  const r = 28
-  const circ = 2 * Math.PI * r
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="relative w-[72px] h-[72px]">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 72 72">
-          <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
-          <motion.circle
-            cx="36" cy="36" r={r} fill="none" stroke="white" strokeWidth="5"
-            strokeDasharray={circ}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: circ * (1 - pct / 100) }}
-            transition={{ delay: 0.8, duration: 1.0, ease: [0.23, 1, 0.32, 1] }}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold text-white">{pct}%</span>
-        </div>
-      </div>
-      <p className="text-[10px] text-faint text-center leading-tight">{label}</p>
-    </div>
-  )
-}
-
-// ── Live event feed ────────────────────────────────────────
+// ── Live call feed ─────────────────────────────────────────
 function CallFeed({ calls }) {
   const items = useMemo(() => {
     if (!calls?.length) return []
-    const sorted = [...calls]
+    return [...calls]
       .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
-      .slice(0, 30)
-    return [...sorted, ...sorted]
+      .slice(0, 40)
   }, [calls])
 
   if (!items.length) {
     return (
-      <div className="h-[280px] flex items-center justify-center">
+      <div className="h-[260px] flex items-center justify-center">
         <p className="text-xs text-faint italic">Sem ligações registradas hoje</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden h-[280px] relative">
-      <div className="absolute top-0 left-0 right-0 h-6 z-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, #0c0c0c, transparent)' }} />
-      <div className="absolute bottom-0 left-0 right-0 h-10 z-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to top, #0c0c0c, transparent)' }} />
-      <div className="ticker-inner">
-        {items.map((call, i) => (
-          <div key={`${call.id}-${i}`} className="flex items-start gap-3 px-4 py-2.5"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: call.duration > 60 ? 'white' : 'rgba(255,255,255,0.2)' }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-text leading-relaxed">
-                <span className="font-semibold text-white">{call.agent.split(' ')[0]}</span>
-                {' → '}{call.phone || '—'}{call.result ? ` (${call.result})` : ''}
-              </p>
-              {call.duration > 0 && (
-                <p className="text-[10px] text-faint">{formatSeconds(call.duration)}</p>
-              )}
-            </div>
-            <span className="text-[10px] text-faint shrink-0 tabular-nums">
-              {call.startedAt ? format(new Date(call.startedAt), 'HH:mm') : '—'}
-            </span>
+    <div className="overflow-y-auto h-[260px] divide-y" style={{ scrollbarWidth: 'none', borderColor: 'rgba(255,255,255,0.04)' }}>
+      {items.map((call, i) => (
+        <div key={`${call.id}-${i}`} className="flex items-start gap-3 px-4 py-2.5">
+          <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: call.duration > 60 ? 'white' : 'rgba(255,255,255,0.2)' }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-text leading-relaxed">
+              <span className="font-semibold text-white">{call.agent.split(' ')[0]}</span>
+              {' → '}{call.phone || '—'}{call.result ? ` · ${call.result}` : ''}
+            </p>
+            {call.duration > 0 && (
+              <p className="text-[10px] text-faint">{formatSeconds(call.duration)}</p>
+            )}
           </div>
-        ))}
-      </div>
+          <span className="text-[10px] text-faint shrink-0 tabular-nums">
+            {call.startedAt ? format(new Date(call.startedAt), 'HH:mm') : '—'}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -154,17 +117,15 @@ function AgentRanking({ agents, calls }) {
   const ranked = useMemo(() => {
     if (!agents?.length) return []
     return agents.map(a => {
-      const agentFirst = a.name.toLowerCase().split(' ')[0]
-      const myCalls = calls?.filter(c =>
-        c.agent.toLowerCase().split(' ')[0] === agentFirst
-      ) || []
+      const first = a.name.toLowerCase().split(' ')[0]
+      const myCalls = calls?.filter(c => c.agent.toLowerCase().split(' ')[0] === first) || []
       return { ...a, callCount: myCalls.length, isActive: a.status === 'online' || a.status === 'in_call' }
     }).sort((a, b) => b.callCount - a.callCount).slice(0, 8)
   }, [agents, calls])
 
   if (!ranked.length) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-10">
         <p className="text-xs text-faint italic">Sem agentes conectados</p>
       </div>
     )
@@ -209,69 +170,84 @@ function AgentRanking({ agents, calls }) {
   )
 }
 
+// ── Recent Skale orders feed ───────────────────────────────
+function OrderFeed({ orders }) {
+  const recent = useMemo(() => {
+    if (!orders?.length) return []
+    return [...orders]
+      .sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0))
+      .slice(0, 30)
+  }, [orders])
+
+  if (!recent.length) {
+    return (
+      <div className="h-[200px] flex items-center justify-center">
+        <p className="text-xs text-faint italic">Nenhum pedido recebido ainda</p>
+      </div>
+    )
+  }
+
+  const PAY_COLOR = { Pago: '#22c55e', Confirmado: '#22c55e', Pendente: '#f59e0b', 'Aguardando Pagamento': '#f59e0b', Recusado: '#ef4444' }
+
+  return (
+    <div className="overflow-y-auto h-[200px] divide-y" style={{ scrollbarWidth: 'none', borderColor: 'rgba(255,255,255,0.04)' }}>
+      {recent.map((o, i) => (
+        <div key={o.id || i} className="flex items-center gap-3 px-4 py-2.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-white truncate">{o.customer_name || '—'}</p>
+            <p className="text-[10px] truncate" style={{ color: '#444' }}>{o.product_name || '—'}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-xs font-bold text-white tabular-nums">{formatCurrency((o.total_price || 0) / 100)}</p>
+            <p className="text-[10px]" style={{ color: PAY_COLOR[o.payment_status] || '#555' }}>
+              {o.payment_status || '—'}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Main ───────────────────────────────────────────────────
 export default function Dashboard() {
   const today = format(new Date(), 'yyyy-MM-dd')
   const { data: calls, isSuccess: hasCalls, isLoading: loadingCalls } = useCallHistory(today)
   const { data: agents, isLoading: loadingAgents } = useAgents()
-  const { items: leads } = useLeads()
-  const { items: manualSellers } = useSellers()
+  const { data: skaleStats, isLoading: loadingSkale } = useSkaleStats()
+  const { data: skaleOrders = [] } = useSkaleOrders()
 
-  // ── KPI stats from real 3C data ────────────────────────
-  const stats = useMemo(() => {
-    if (!hasCalls || !calls?.length) {
-      return { total: 0, answered: 0, contactRate: 0, avgTalk: 0 }
-    }
+  // ── 3C KPIs ────────────────────────────────────────────
+  const stats3c = useMemo(() => {
+    if (!hasCalls || !calls?.length) return { total: 0, answered: 0, avgTalk: 0 }
     const answered = calls.filter(c => c.duration > 10)
-    const contactedResults = ['interessado', 'interested', 'callback', 'sale', 'sucesso', 'venda']
-    const contacted = answered.filter(c => contactedResults.includes(c.result?.toLowerCase()))
     const avgTalk = answered.length
       ? Math.round(answered.reduce((s, c) => s + c.duration, 0) / answered.length)
       : 0
-    return {
-      total: calls.length,
-      answered: answered.length,
-      contactRate: answered.length ? Math.round((contacted.length / answered.length) * 100) : 0,
-      avgTalk,
-    }
+    return { total: calls.length, answered: answered.length, avgTalk }
   }, [calls, hasCalls])
 
-  // ── Online agents ──────────────────────────────────────
   const activeAgents = useMemo(() =>
     agents?.filter(a => a.status === 'online' || a.status === 'in_call').length || 0
   , [agents])
 
-  // ── Hourly chart from real calls ───────────────────────
+  // ── Hourly chart ───────────────────────────────────────
   const hourlyData = useMemo(() => {
-    const hours = Array.from({ length: 24 }, (_, h) => ({
-      hour: `${String(h).padStart(2, '0')}h`,
-      calls: 0,
-    }))
-    if (calls?.length) {
-      calls.forEach(c => {
-        if (!c.startedAt) return
-        const h = getHours(new Date(c.startedAt))
-        if (h >= 0 && h < 24) hours[h].calls++
-      })
-    }
-    return hours.filter(h => {
-      const n = parseInt(h.hour)
-      return n >= 7 && n <= 21
+    const hours = Array.from({ length: 24 }, (_, h) => ({ hour: `${String(h).padStart(2, '0')}h`, calls: 0 }))
+    calls?.forEach(c => {
+      if (!c.startedAt) return
+      const h = getHours(new Date(c.startedAt))
+      if (h >= 0 && h < 24) hours[h].calls++
     })
+    return hours.filter(h => parseInt(h.hour) >= 7 && parseInt(h.hour) <= 21)
   }, [calls])
 
-  // ── Activity graph — 16 weeks of estimated data ────────
-  const activityData = useMemo(() => {
-    const todayCount = stats.total
-    return Array.from({ length: 112 }, (_, i) => ({
-      date: format(subDays(new Date(), 111 - i), 'yyyy-MM-dd'),
-      count: i === 111 ? todayCount : 0,
-    }))
-  }, [stats.total])
-
-  // ── Won leads from store ───────────────────────────────
-  const wonLeads = leads.filter(l => l.stage === 5)
-  const wonValue = wonLeads.reduce((s, l) => s + Number(l.value || 0), 0)
+  // ── Skale KPIs ─────────────────────────────────────────
+  const revenueToday  = Number(skaleStats?.revenue_today  || 0)
+  const ordersToday   = Number(skaleStats?.orders_today   || 0)
+  const paidToday     = Number(skaleStats?.paid_today     || 0)
+  const revenueTotal  = Number(skaleStats?.revenue_total  || 0)
+  const ordersTotal   = Number(skaleStats?.orders_total   || 0)
 
   const isLoading = loadingCalls || loadingAgents
 
@@ -288,9 +264,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
           <p className="text-xs text-faint mt-0.5">
-            {hasCalls
-              ? <span>Dados reais da <span className="text-success">3C Plus</span> · {today}</span>
-              : isLoading ? 'Carregando dados da 3C Plus…' : 'Conecte a 3C Plus para ver dados reais'}
+            Dados reais · <span className="text-success">3C Plus</span> + <span style={{ color: '#a78bfa' }}>Skale</span> · {today}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -299,140 +273,118 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
             {activeAgents} ativos
           </div>
-          {hasCalls && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#555' }}>
-              <Activity size={10} />
-              Ao vivo
-            </div>
-          )}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
+            style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa' }}>
+            <ShoppingCart size={10} />
+            {ordersTotal} pedidos
+          </div>
         </div>
       </motion.div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Ligações hoje"
-          value={isLoading ? '…' : <AnimatedNumber value={stats.total} />}
-          sub={hasCalls ? '3C Plus · dados reais' : 'aguardando 3C'}
-          icon={Phone} delay={0} live={hasCalls}
-        />
-        <KPICard
-          label="Vendas ganhas"
-          value={<AnimatedNumber value={wonLeads.length} />}
-          sub={wonValue > 0 ? formatCurrency(wonValue) : 'cadastre em Vendas'}
-          icon={TrendingUp} delay={0.08}
-        />
-        <KPICard
-          label="Taxa de contato"
-          value={isLoading ? '…' : <AnimatedNumber value={stats.contactRate} suffix="%" />}
-          sub="das ligações atendidas"
-          icon={Target} delay={0.16}
-        />
-        <KPICard
-          label="Tempo médio"
-          value={isLoading ? '…' : formatSeconds(stats.avgTalk)}
-          sub="por ligação"
-          icon={Clock} delay={0.24}
-        />
+      {/* KPIs — row 1: 3C */}
+      <div>
+        <p className="text-[10px] text-faint uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Phone size={10} /> 3C Plus · Hoje
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard
+            label="Ligações hoje"
+            value={isLoading ? '…' : <AnimatedNumber value={stats3c.total} />}
+            sub={hasCalls ? 'dados reais · 3C' : 'aguardando dados'}
+            icon={Phone} delay={0} live={hasCalls}
+          />
+          <KPICard
+            label="Agentes ativos"
+            value={loadingAgents ? '…' : <AnimatedNumber value={activeAgents} />}
+            sub={`de ${agents?.length || 0} cadastrados`}
+            icon={Users} delay={0.06} live={activeAgents > 0}
+          />
+          <KPICard
+            label="Ligações atendidas"
+            value={isLoading ? '…' : <AnimatedNumber value={stats3c.answered} />}
+            sub={stats3c.total > 0 ? `${Math.round((stats3c.answered / stats3c.total) * 100)}% do total` : 'aguardando dados'}
+            icon={Activity} delay={0.12}
+          />
+          <KPICard
+            label="Tempo médio"
+            value={isLoading ? '…' : formatSeconds(stats3c.avgTalk)}
+            sub="por ligação atendida"
+            icon={Clock} delay={0.18}
+          />
+        </div>
       </div>
 
-      {/* Hourly chart + health */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
-          className="lg:col-span-2 rounded-xl overflow-hidden hover-glow"
-          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-faint uppercase tracking-wider">Ligações por hora</p>
-              <p className="text-xl font-bold text-white mt-0.5">
-                {hasCalls
-                  ? <><AnimatedNumber value={stats.total} /> ligações</>
-                  : <span className="text-text-secondary text-sm">Aguardando dados 3C…</span>}
-              </p>
-            </div>
-            <span className="tag">{hasCalls ? 'real' : 'sem dados'}</span>
-          </div>
-          <ResponsiveContainer width="100%" height={170}>
-            <AreaChart data={hourlyData} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="callsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="rgba(255,255,255,0.18)" />
-                  <stop offset="95%" stopColor="rgba(255,255,255,0)" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" tick={{ fill: '#3a3a3a', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#3a3a3a', fontSize: 10 }} axisLine={false} tickLine={false} width={26} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="calls" name="Ligações"
-                stroke="rgba(255,255,255,0.6)" fill="url(#callsGrad)"
-                strokeWidth={1.5} dot={false} activeDot={{ r: 4, fill: 'white', stroke: 'none' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
-          className="rounded-xl p-5 hover-glow"
-          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <p className="text-[10px] text-faint uppercase tracking-wider mb-4">Saúde da operação</p>
-          <div className="flex flex-col gap-4 items-center">
-            <RadialProgress value={stats.contactRate} max={100} label="Taxa contato" />
-            <div className="w-full space-y-3">
-              {[
-                { label: 'Agentes online', value: activeAgents, max: Math.max(agents?.length || 1, activeAgents) },
-                { label: 'Ligações atend.', value: stats.answered, max: Math.max(stats.total, 1) },
-              ].map(({ label, value, max }) => (
-                <div key={label}>
-                  <div className="flex justify-between text-[11px] mb-1.5">
-                    <span className="text-faint">{label}</span>
-                    <span className="text-text-secondary tabular-nums">{value}/{max}</span>
-                  </div>
-                  <div className="data-bar">
-                    <motion.div className="data-bar-fill"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((value / Math.max(max, 1)) * 100, 100)}%` }}
-                      transition={{ delay: 0.9, duration: 1.0, ease: [0.23, 1, 0.32, 1] }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
+      {/* KPIs — row 2: Skale */}
+      <div>
+        <p className="text-[10px] text-faint uppercase tracking-wider mb-3 flex items-center gap-2">
+          <ShoppingCart size={10} /> Skale · Hoje
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard
+            label="Receita hoje"
+            value={loadingSkale ? '…' : formatCurrency(revenueToday / 100)}
+            sub="pagamentos confirmados"
+            icon={DollarSign} delay={0.06} accent="#22c55e"
+            trend={revenueToday > 0 ? undefined : undefined}
+          />
+          <KPICard
+            label="Pedidos hoje"
+            value={loadingSkale ? '…' : <AnimatedNumber value={ordersToday} />}
+            sub={`${paidToday} pagos`}
+            icon={ShoppingCart} delay={0.12} accent="#a78bfa"
+          />
+          <KPICard
+            label="Pagos hoje"
+            value={loadingSkale ? '…' : <AnimatedNumber value={paidToday} />}
+            sub={ordersToday > 0 ? `${Math.round((paidToday / ordersToday) * 100)}% dos pedidos` : '—'}
+            icon={CheckCircle} delay={0.18} accent="#22c55e"
+          />
+          <KPICard
+            label="Receita total"
+            value={loadingSkale ? '…' : formatCurrency(revenueTotal / 100)}
+            sub={`${ordersTotal} pedidos no total`}
+            icon={TrendingUp} delay={0.24} accent="#a78bfa"
+          />
+        </div>
       </div>
 
-      {/* Activity graph */}
+      {/* Hourly chart */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.42, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
-        className="rounded-xl p-5 hover-glow overflow-hidden"
+        transition={{ delay: 0.3, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+        className="rounded-xl overflow-hidden hover-glow"
         style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-faint uppercase tracking-wider">Atividade de ligações</p>
-            <p className="text-sm font-semibold text-white mt-0.5">
+            <p className="text-[10px] text-faint uppercase tracking-wider">Ligações por hora · 3C Plus</p>
+            <p className="text-xl font-bold text-white mt-0.5">
               {hasCalls
-                ? <><AnimatedNumber value={stats.total} /> ligações hoje</>
-                : 'Histórico disponível após integração 3C'}
+                ? <><AnimatedNumber value={stats3c.total} /> ligações hoje</>
+                : <span className="text-text-secondary text-sm">Aguardando dados 3C…</span>}
             </p>
           </div>
-          <span className="tag">16 semanas</span>
+          <span className="tag">{hasCalls ? 'real' : 'sem dados'}</span>
         </div>
-        <div className="overflow-x-auto scroll-x">
-          <ActivityGraph data={activityData} />
-        </div>
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart data={hourlyData} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
+            <defs>
+              <linearGradient id="callsGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="rgba(255,255,255,0.18)" />
+                <stop offset="95%" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="hour" tick={{ fill: '#3a3a3a', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#3a3a3a', fontSize: 10 }} axisLine={false} tickLine={false} width={26} />
+            <Tooltip content={<ChartTooltip />} />
+            <Area type="monotone" dataKey="calls" name="Ligações"
+              stroke="rgba(255,255,255,0.6)" fill="url(#callsGrad)"
+              strokeWidth={1.5} dot={false} activeDot={{ r: 4, fill: 'white', stroke: 'none' }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </motion.div>
 
       {/* Feed + Ranking */}
@@ -440,7 +392,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ delay: 0.38, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
           className="rounded-xl overflow-hidden hover-glow"
           style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
         >
@@ -458,7 +410,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.58, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ delay: 0.44, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
           className="rounded-xl overflow-hidden hover-glow"
           style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
         >
@@ -471,37 +423,28 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Summary — manual data alerts */}
-      {(leads.length > 0 || manualSellers.length > 0) && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.65, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
-          className="rounded-xl p-5 hover-glow"
-          style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Zap size={13} className="text-white" />
-            <p className="text-[10px] text-faint uppercase tracking-wider">Dados cadastrados manualmente</p>
+      {/* Skale recent orders */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
+        className="rounded-xl overflow-hidden hover-glow"
+        style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
+      >
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              {skaleOrders.length > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-50" style={{ background: '#a78bfa' }} />}
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: skaleOrders.length > 0 ? '#a78bfa' : '#333' }} />
+            </span>
+            <p className="text-[10px] text-faint uppercase tracking-wider">Últimos pedidos · Skale</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { label: 'Vendedores', value: manualSellers.length, desc: 'cadastrados' },
-              { label: 'Leads ativos', value: leads.filter(l => l.stage > 0 && l.stage < 5).length, desc: 'em andamento' },
-              { label: 'Vendas ganhas', value: wonLeads.length, desc: formatCurrency(wonValue) },
-            ].map(({ label, value, desc }) => (
-              <div key={label} className="rounded-xl p-4 hover-glow"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-[10px] text-faint uppercase tracking-wider mb-2">{label}</p>
-                <p className="text-3xl font-bold text-white tabular-nums">
-                  <AnimatedNumber value={value} />
-                </p>
-                <p className="text-xs text-text-secondary mt-1">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+          <ShoppingCart size={12} className="text-faint" />
+        </div>
+        <OrderFeed orders={skaleOrders} />
+      </motion.div>
+
     </div>
   )
 }
