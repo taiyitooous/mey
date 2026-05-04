@@ -10,6 +10,7 @@ import Cobranca from './pages/Cobranca'
 import Hoje from './pages/Hoje'
 import Integracoes from './pages/Integracoes'
 import Skale from './pages/Skale'
+import TresC from './pages/TresC'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/hoje" element={<ErrorBoundary><Hoje /></ErrorBoundary>} />
             <Route path="/integracoes" element={<ErrorBoundary><Integracoes /></ErrorBoundary>} />
             <Route path="/skale" element={<ErrorBoundary><Skale /></ErrorBoundary>} />
+            <Route path="/tresc" element={<ErrorBoundary><TresC /></ErrorBoundary>} />
           </Route>
         </Routes>
       </BrowserRouter>

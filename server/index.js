@@ -203,14 +203,48 @@ app.get('/api/3c/stats', async (req, res) => {
   }
 })
 
-// Histórico de chamadas do banco (sem depender da 3C estar disponível)
+// Histórico de chamadas do banco
 app.get('/api/3c/calls', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit || '100'), 500)
+    const limit    = Math.min(parseInt(req.query.limit    || '60'),  500)
+    const offset   = parseInt(req.query.offset   || '0')
+    const search   = req.query.search
+    const agent    = req.query.agent
+    const campaign = req.query.campaign
+
+    const where = []; const params = []
+    if (search) {
+      params.push(`%${search}%`)
+      const n = params.length
+      where.push(`(agent_name ILIKE $${n} OR phone ILIKE $${n} OR result ILIKE $${n})`)
+    }
+    if (agent && agent !== 'all') {
+      params.push(agent); where.push(`agent_name = $${params.length}`)
+    }
+    if (campaign && campaign !== 'all') {
+      params.push(campaign); where.push(`campaign = $${params.length}`)
+    }
+    const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
+    params.push(limit, offset)
+
     const { rows } = await pool.query(
-      `SELECT * FROM threec_calls ORDER BY started_at DESC NULLS LAST LIMIT $1`, [limit]
+      `SELECT * FROM threec_calls ${w} ORDER BY started_at DESC NULLS LAST LIMIT $${params.length-1} OFFSET $${params.length}`,
+      params
     )
     res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Filtros disponíveis (agentes e campanhas distintos)
+app.get('/api/3c/filters', async (req, res) => {
+  try {
+    const [ag, ca] = await Promise.all([
+      pool.query(`SELECT DISTINCT agent_name FROM threec_calls WHERE agent_name IS NOT NULL ORDER BY agent_name`),
+      pool.query(`SELECT DISTINCT campaign FROM threec_calls WHERE campaign IS NOT NULL ORDER BY campaign`),
+    ])
+    res.json({ agents: ag.rows.map(r => r.agent_name), campaigns: ca.rows.map(r => r.campaign) })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

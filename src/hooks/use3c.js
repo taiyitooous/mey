@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { api3c } from '../lib/api3c'
 
 // Converts ANY value (object, number, null, array) to a plain string safely
@@ -152,6 +152,22 @@ export function use3cCalls(limit = 50) {
   return useQuery({
     queryKey: ['3c', 'calls', limit],
     queryFn: () => api3c.calls({ limit }),
+    refetchInterval: 15_000,
+    retry: 1,
+  })
+}
+
+const CALLS_PAGE = 60
+
+export function use3cCallsInfinite() {
+  return useInfiniteQuery({
+    queryKey: ['3c', 'calls', 'infinite'],
+    queryFn: ({ pageParam = 0 }) =>
+      api3c.calls({ limit: CALLS_PAGE, offset: pageParam }),
+    getNextPageParam: (lastPage, allPages) =>
+      Array.isArray(lastPage) && lastPage.length === CALLS_PAGE
+        ? allPages.length * CALLS_PAGE
+        : undefined,
     refetchInterval: 15_000,
     retry: 1,
   })
