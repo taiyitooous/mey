@@ -1,0 +1,46 @@
+{
+  "name": "LeadSnapshot",
+  "type": "object",
+  "properties": {
+    "snapshot_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do snapshot"
+    },
+    "total_leads": {
+      "type": "number",
+      "description": "Total de leads no dia"
+    },
+    "leads_by_stage": {
+      "type": "string",
+      "description": "JSON com contagem de leads por etapa {1: 5, 2: 3, ...}"
+    },
+    "leads_by_seller": {
+      "type": "string",
+      "description": "JSON com contagem de leads por vendedor {Carlos: 5, ...}"
+    },
+    "leads_by_status": {
+      "type": "string",
+      "description": "JSON com contagem por status {open: 8, won: 2, lost: 1}"
+    },
+    "total_expected_value": {
+      "type": "number",
+      "description": "Valor total esperado em R$"
+    },
+    "new_leads_count": {
+      "type": "number",
+      "description": "Leads criados neste dia"
+    },
+    "won_leads_count": {
+      "type": "number",
+      "description": "Leads vencidos neste dia"
+    },
+    "lost_leads_count": {
+      "type": "number",
+      "description": "Leads perdidos neste dia"
+    }
+  },
+  "required": [
+    "snapshot_date"
+  ]
+}
