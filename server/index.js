@@ -427,6 +427,47 @@ app.post('/api/webhooks/skale', async (req, res) => {
   }
 })
 
+// ── Diagnóstico de duplicatas ──────────────────────────────
+app.get('/api/skale/debug-duplicates', async (req, res) => {
+  try {
+    const { rows: dupes } = await pool.query(`
+      SELECT customer_name, COUNT(*) as total,
+             array_agg(external_id ORDER BY started_at DESC) as external_ids,
+             array_agg(DISTINCT status) as statuses,
+             array_agg(DISTINCT payment_status) as pay_statuses,
+             array_agg(DISTINCT product_name) as products
+      FROM skale_orders
+      WHERE is_test = FALSE
+      GROUP BY customer_name
+      HAVING COUNT(*) > 3
+      ORDER BY total DESC
+      LIMIT 30
+    `)
+
+    // Ver eventos recentes da skale para entender o payload
+    const { rows: events } = await pool.query(`
+      SELECT entity_id as external_id, event_type, payload, created_at
+      FROM skale_events
+      WHERE source = 'skale'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `)
+
+    // Ver sample dos pedidos da Rosa (ou quem tiver mais)
+    const topName = dupes[0]?.customer_name
+    const { rows: sample } = topName ? await pool.query(`
+      SELECT id, external_id, status, payment_status, total_price, started_at, updated_at
+      FROM skale_orders
+      WHERE customer_name = $1 AND is_test = FALSE
+      ORDER BY started_at DESC
+    `, [topName]) : { rows: [] }
+
+    res.json({ duplicates: dupes, recentEvents: events, sampleOrders: sample, topName })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ── Orders API ─────────────────────────────────────────────
 
 app.get('/api/skale/orders', async (req, res) => {
