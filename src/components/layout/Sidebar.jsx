@@ -18,7 +18,6 @@ import { base44 } from "@/api/base44Client";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "Logística", icon: Truck, path: "/logistica" },
   { label: "Atividades", icon: Activity, path: "/atividades" },
   { label: "DataCrazy", icon: Database, path: "/datacrazy" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
