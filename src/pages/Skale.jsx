@@ -4,11 +4,12 @@ import {
   ShoppingCart, Package, CreditCard, Truck, CheckCircle,
   XCircle, Clock, RefreshCw, Search, ExternalLink,
   Copy, Check, ChevronRight, DollarSign, TrendingUp,
-  AlertCircle, MapPin, User, Phone, Mail, Hash,
+  MapPin, User, Phone, Mail, Hash, ChevronDown, ChevronUp,
+  LayoutGrid, List,
 } from 'lucide-react'
-import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { Avatar } from '../components/ui/Avatar'
 import { useSkaleOrders } from '../hooks/useSkale'
 import { formatCurrency, timeAgo } from '../lib/utils'
 
@@ -24,11 +25,11 @@ const STATUS_CFG = {
 }
 
 const PAY_CFG = {
-  pix:     { label: 'Pix',          color: '#22c55e' },
-  boleto:  { label: 'Boleto',       color: '#f59e0b' },
-  credit:  { label: 'Cartão',       color: '#60a5fa' },
-  after:   { label: 'After Pay',    color: '#a78bfa' },
-  other:   { label: 'Outro',        color: '#888'    },
+  pix:    { label: 'Pix',       color: '#22c55e' },
+  boleto: { label: 'Boleto',    color: '#f59e0b' },
+  credit: { label: 'Cartão',    color: '#60a5fa' },
+  after:  { label: 'After Pay', color: '#a78bfa' },
+  other:  { label: 'Outro',     color: '#888'    },
 }
 
 const PAY_STATUS_CFG = {
@@ -41,17 +42,6 @@ const PAY_STATUS_CFG = {
 }
 
 const DELIVERY_TIMELINE = ['processing', 'in_transit', 'out_for_delivery', 'delivered']
-
-const EVENT_LABEL = {
-  order_created: 'Pedido criado', order_approved: 'Pedido aprovado',
-  status_updated: 'Status atualizado', tracking_updated: 'Rastreio atualizado',
-  payment_created: 'Pagamento criado', payment_registered: 'Pagamento confirmado',
-  payment_status_updated: 'Status de pgto alterado', order_paid_manual: 'Marcado como pago',
-  order_partial_paid_manual: 'Pago parcialmente', order_updated: 'Pedido atualizado',
-  test_mapping: 'Teste de evento',
-}
-
-// ── Mock data (fallback se Supabase não configurado) ───────
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -77,7 +67,7 @@ function CopyBtn({ text }) {
   )
 }
 
-// ── Order Card ─────────────────────────────────────────────
+// ── Order Card (view por pedido) ───────────────────────────
 
 function OrderCard({ order, onClick, delay }) {
   const status = STATUS_CFG[order.status] || STATUS_CFG.processing
@@ -99,7 +89,6 @@ function OrderCard({ order, onClick, delay }) {
       style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}
       whileHover={{ y: -2 }}
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-white truncate">{order.customer_name}</p>
@@ -112,7 +101,6 @@ function OrderCard({ order, onClick, delay }) {
         </div>
       </div>
 
-      {/* Delivery timeline */}
       {showTimeline && (
         <div className="flex items-center gap-1 mb-3">
           {DELIVERY_TIMELINE.map((step, i) => {
@@ -120,10 +108,7 @@ function OrderCard({ order, onClick, delay }) {
             return (
               <div key={step} className="flex items-center flex-1">
                 <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                  style={done
-                    ? { background: '#a78bfa' }
-                    : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
-                  }>
+                  style={done ? { background: '#a78bfa' } : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {done && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                 </div>
                 {i < DELIVERY_TIMELINE.length - 1 && (
@@ -136,33 +121,173 @@ function OrderCard({ order, onClick, delay }) {
         </div>
       )}
 
-      {/* Footer */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-            style={{ background: 'rgba(255,255,255,0.04)', color: pay.color }}>
-            {pay.label}
-          </span>
-          <span className="text-[10px] truncate" style={{ color: payStatusColor }}>
-            {order.payment_status || '—'}
-          </span>
+            style={{ background: 'rgba(255,255,255,0.04)', color: pay.color }}>{pay.label}</span>
+          <span className="text-[10px] truncate" style={{ color: payStatusColor }}>{order.payment_status || '—'}</span>
         </div>
         <p className="text-sm font-bold text-white tabular-nums shrink-0">
           {formatCurrency((order.total_price || 0) / 100)}
         </p>
       </div>
 
-      {/* Tracking */}
       {order.tracking_code && (
         <div className="mt-2 flex items-center gap-1.5 pt-2"
           style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           <Truck size={10} className="text-faint shrink-0" />
-          <p className="text-[10px] font-mono truncate" style={{ color: '#444' }}>
-            {order.tracking_code}
-          </p>
+          <p className="text-[10px] font-mono truncate" style={{ color: '#444' }}>{order.tracking_code}</p>
           {order.carrier && <span className="text-[10px] text-faint shrink-0">· {order.carrier}</span>}
         </div>
       )}
+    </motion.div>
+  )
+}
+
+// ── Customer Card (view por cliente) ───────────────────────
+
+function CustomerCard({ customer, onClick, delay }) {
+  const [expanded, setExpanded] = useState(false)
+  const { name, orders, totalSpent, paidCount, latestStatus, latestDate, phone, email } = customer
+
+  const statusColors = { delivered: '#22c55e', in_transit: '#f0f0f0', out_for_delivery: '#f59e0b', processing: '#888', returned: '#ef4444', cancelled: '#ef4444' }
+  const statusLabel  = STATUS_CFG[latestStatus]?.label || 'Processando'
+  const statusColor  = statusColors[latestStatus] || '#888'
+
+  const isRepeat = orders.length > 1
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.3 }}
+      className="rounded-xl overflow-hidden hover-glow"
+      style={{
+        background: 'rgba(12,12,12,0.92)',
+        border: `1px solid ${isRepeat ? 'rgba(167,139,250,0.2)' : 'rgba(255,255,255,0.07)'}`,
+      }}
+    >
+      {/* Header do cliente */}
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <Avatar name={name} size="sm" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-semibold text-white truncate">{name}</p>
+              {isRepeat && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                  style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa' }}>
+                  {orders.length}× comprou
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-0.5">
+              <p className="text-xs tabular-nums font-bold" style={{ color: '#22c55e' }}>
+                {formatCurrency(totalSpent / 100)}
+              </p>
+              <span className="text-[10px]" style={{ color: statusColor }}>{statusLabel}</span>
+              {latestDate && <span className="text-[10px] text-faint">{timeAgo(latestDate)}</span>}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            {expanded
+              ? <ChevronUp size={14} className="text-faint" />
+              : <ChevronDown size={14} className="text-faint" />}
+          </button>
+        </div>
+
+        {/* Mini linha de pedidos */}
+        {!expanded && (
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {orders.map(o => {
+              const pk = payKey(o.payment_method)
+              const pay = PAY_CFG[pk]
+              const payColor = PAY_STATUS_CFG[o.payment_status]?.color || '#666'
+              return (
+                <button
+                  key={o.external_id}
+                  onClick={() => onClick(o)}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] transition-colors hover:bg-white/10"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <span style={{ color: pay.color }}>{pay.label}</span>
+                  <span style={{ color: payColor }}>{o.payment_status || '—'}</span>
+                  <span className="font-bold text-white">{formatCurrency((o.total_price || 0) / 100)}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Lista expandida de pedidos */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          >
+            {phone || email ? (
+              <div className="px-4 py-2 flex items-center gap-4"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                {phone && <span className="flex items-center gap-1.5 text-[11px] text-faint"><Phone size={10} />{phone}</span>}
+                {email && <span className="flex items-center gap-1.5 text-[11px] text-faint"><Mail size={10} />{email}</span>}
+              </div>
+            ) : null}
+
+            <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+              {orders.map((o, i) => {
+                const st = STATUS_CFG[o.status] || STATUS_CFG.processing
+                const StIcon = st.icon
+                const pk = payKey(o.payment_method)
+                const pay = PAY_CFG[pk]
+                const payColor = PAY_STATUS_CFG[o.payment_status]?.color || '#666'
+                return (
+                  <div
+                    key={o.external_id}
+                    onClick={() => onClick(o)}
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="w-1 h-8 rounded-full shrink-0" style={{ background: st.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{o.product_name || '—'}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px]" style={{ color: pay.color }}>{pay.label}</span>
+                        <span className="text-[10px]" style={{ color: payColor }}>{o.payment_status || '—'}</span>
+                        {o.tracking_code && (
+                          <span className="text-[10px] font-mono" style={{ color: '#444' }}>{o.tracking_code}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-white tabular-nums">{formatCurrency((o.total_price || 0) / 100)}</p>
+                      <p className="text-[10px] text-faint">{o.started_at ? timeAgo(o.started_at) : '—'}</p>
+                    </div>
+                    <ChevronRight size={12} className="text-faint shrink-0" />
+                  </div>
+                )
+              })}
+            </div>
+
+            {orders.length > 1 && (
+              <div className="px-4 py-2.5 flex items-center justify-between"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: 'rgba(167,139,250,0.03)' }}>
+                <p className="text-[10px] text-faint">{orders.length} pedidos · cliente recorrente</p>
+                <p className="text-xs font-bold tabular-nums" style={{ color: '#a78bfa' }}>
+                  {formatCurrency(totalSpent / 100)} total
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -181,8 +306,6 @@ function OrderModal({ order, onClose }) {
   return (
     <Modal open={!!order} onClose={onClose} title={`Pedido #${order.external_id}`} className="max-w-lg mx-4">
       <div className="space-y-4">
-
-        {/* Status bar */}
         <div className="flex items-center justify-between p-3 rounded-lg"
           style={{ background: status.bg, border: `1px solid ${status.border}` }}>
           <div className="flex items-center gap-2">
@@ -192,7 +315,6 @@ function OrderModal({ order, onClose }) {
           <p className="text-sm font-bold text-white">{formatCurrency((order.total_price || 0) / 100)}</p>
         </div>
 
-        {/* Pagamento */}
         <div className="p-3 rounded-lg space-y-2"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-[10px] text-faint uppercase tracking-wider">Pagamento</p>
@@ -206,9 +328,7 @@ function OrderModal({ order, onClose }) {
             </div>
             <div>
               <p className="text-[10px] text-faint mb-0.5">Status</p>
-              <p className="text-sm font-medium" style={{ color: payStatusColor }}>
-                {order.payment_status || '—'}
-              </p>
+              <p className="text-sm font-medium" style={{ color: payStatusColor }}>{order.payment_status || '—'}</p>
             </div>
             <div>
               <p className="text-[10px] text-faint mb-0.5">Plataforma</p>
@@ -221,16 +341,13 @@ function OrderModal({ order, onClose }) {
           </div>
         </div>
 
-        {/* Produto */}
         <div className="p-3 rounded-lg space-y-2"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-[10px] text-faint uppercase tracking-wider">Produto</p>
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-sm text-white">{order.product_name || '—'}</p>
-              {order.product_sku && (
-                <p className="text-[10px] font-mono mt-0.5" style={{ color: '#444' }}>SKU: {order.product_sku}</p>
-              )}
+              {order.product_sku && <p className="text-[10px] font-mono mt-0.5" style={{ color: '#444' }}>SKU: {order.product_sku}</p>}
             </div>
             <div className="text-right shrink-0">
               <p className="text-xs text-faint">Qtd</p>
@@ -239,43 +356,20 @@ function OrderModal({ order, onClose }) {
           </div>
         </div>
 
-        {/* Cliente */}
         <div className="p-3 rounded-lg space-y-2.5"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-[10px] text-faint uppercase tracking-wider">Cliente</p>
           <div className="space-y-1.5">
-            {order.customer_name && (
-              <div className="flex items-center gap-2">
-                <User size={11} className="text-faint shrink-0" />
-                <p className="text-xs text-text">{order.customer_name}</p>
-              </div>
-            )}
-            {order.customer_email && (
-              <div className="flex items-center gap-2">
-                <Mail size={11} className="text-faint shrink-0" />
-                <p className="text-xs text-text">{order.customer_email}</p>
-              </div>
-            )}
-            {order.customer_phone && (
-              <div className="flex items-center gap-2">
-                <Phone size={11} className="text-faint shrink-0" />
-                <p className="text-xs text-text">{order.customer_phone}</p>
-              </div>
-            )}
-            {order.customer_doc && (
-              <div className="flex items-center gap-2">
-                <Hash size={11} className="text-faint shrink-0" />
-                <p className="text-xs text-text">{order.customer_doc}</p>
-              </div>
-            )}
+            {order.customer_name && <div className="flex items-center gap-2"><User size={11} className="text-faint shrink-0" /><p className="text-xs text-text">{order.customer_name}</p></div>}
+            {order.customer_email && <div className="flex items-center gap-2"><Mail size={11} className="text-faint shrink-0" /><p className="text-xs text-text">{order.customer_email}</p></div>}
+            {order.customer_phone && <div className="flex items-center gap-2"><Phone size={11} className="text-faint shrink-0" /><p className="text-xs text-text">{order.customer_phone}</p></div>}
+            {order.customer_doc && <div className="flex items-center gap-2"><Hash size={11} className="text-faint shrink-0" /><p className="text-xs text-text">{order.customer_doc}</p></div>}
             {addr.street && (
               <div className="flex items-start gap-2">
                 <MapPin size={11} className="text-faint shrink-0 mt-0.5" />
                 <p className="text-xs text-text">
-                  {addr.street}, {addr.number}
-                  {addr.complement ? `, ${addr.complement}` : ''}
-                  {addr.district ? ` — ${addr.district}` : ''}
-                  {addr.city ? ` · ${addr.city}/${addr.state}` : ''}
+                  {addr.street}, {addr.number}{addr.complement ? `, ${addr.complement}` : ''}
+                  {addr.district ? ` — ${addr.district}` : ''}{addr.city ? ` · ${addr.city}/${addr.state}` : ''}
                   {addr.zip_code ? ` · CEP ${addr.zip_code}` : ''}
                 </p>
               </div>
@@ -283,7 +377,6 @@ function OrderModal({ order, onClose }) {
           </div>
         </div>
 
-        {/* Rastreio */}
         {(order.tracking_code || order.carrier) && (
           <div className="p-3 rounded-lg space-y-2"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -301,15 +394,13 @@ function OrderModal({ order, onClose }) {
               {order.tracking_url && (
                 <a href={order.tracking_url} target="_blank" rel="noreferrer"
                   className="flex items-center gap-1 text-[11px] text-faint hover:text-white transition-colors shrink-0">
-                  <ExternalLink size={11} />
-                  Rastrear
+                  <ExternalLink size={11} />Rastrear
                 </a>
               )}
             </div>
           </div>
         )}
 
-        {/* Meta */}
         <div className="flex items-center justify-between px-1 text-[10px] text-faint">
           <span>Criado {timeAgo(order.started_at)}</span>
           <span className="font-mono" style={{ color: '#333' }}>#{order.external_id}</span>
@@ -322,19 +413,15 @@ function OrderModal({ order, onClose }) {
 // ── Main ───────────────────────────────────────────────────
 
 export default function Skale() {
-  const [search, setSearch] = useState('')
+  const [search, setSearch]         = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
-  const [filterPay, setFilterPay] = useState('all')
-  const [selected, setSelected] = useState(null)
+  const [filterPay, setFilterPay]   = useState('all')
+  const [selected, setSelected]     = useState(null)
+  const [viewMode, setViewMode]     = useState('customer') // 'order' | 'customer'
 
-  const {
-    data: orders = [],
-    isLoading,
-    isError,
-    refetch,
-    isFetching,
-  } = useSkaleOrders()
+  const { data: orders = [], isLoading, isError, refetch, isFetching } = useSkaleOrders()
 
+  // ── Filtragem ──────────────────────────────────────────
   const filtered = useMemo(() => {
     return orders.filter(o => {
       if (filterStatus !== 'all' && o.status !== filterStatus) return false
@@ -345,17 +432,65 @@ export default function Skale() {
           (o.customer_name || '').toLowerCase().includes(q) ||
           (o.external_id || '').toLowerCase().includes(q) ||
           (o.product_name || '').toLowerCase().includes(q) ||
-          (o.tracking_code || '').toLowerCase().includes(q)
+          (o.tracking_code || '').toLowerCase().includes(q) ||
+          (o.customer_phone || '').includes(q)
         )
       }
       return true
     })
   }, [orders, filterStatus, filterPay, search])
 
-  const statsPaid      = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).length
-  const statsPend      = orders.filter(o => ['Aguardando Pagamento', 'Pendente'].includes(o.payment_status)).length
-  const statsRev       = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).reduce((s, o) => s + (o.total_price || 0), 0)
-  const statsDelivered = orders.filter(o => o.status === 'delivered').length
+  // ── Agrupamento por cliente ────────────────────────────
+  const customers = useMemo(() => {
+    const map = new Map()
+    for (const o of filtered) {
+      // Chave: primeiro agrupa por telefone, depois por nome
+      const phone = (o.customer_phone || '').replace(/\D/g, '').slice(-9)
+      const key = phone.length >= 8 ? `phone:${phone}` : `name:${(o.customer_name || '').toLowerCase().trim()}`
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          name: o.customer_name || '—',
+          phone: o.customer_phone || '',
+          email: o.customer_email || '',
+          orders: [],
+          totalSpent: 0,
+          paidCount: 0,
+          latestDate: null,
+          latestStatus: o.status,
+        })
+      }
+      const c = map.get(key)
+      c.orders.push(o)
+      c.totalSpent += o.total_price || 0
+      if (['Pago', 'Confirmado'].includes(o.payment_status)) c.paidCount++
+      const d = o.started_at ? new Date(o.started_at) : null
+      if (d && (!c.latestDate || d > new Date(c.latestDate))) {
+        c.latestDate = o.started_at
+        c.latestStatus = o.status
+      }
+    }
+    // Ordena: clientes com mais pedidos primeiro, depois por data
+    return Array.from(map.values()).sort((a, b) => {
+      if (b.orders.length !== a.orders.length) return b.orders.length - a.orders.length
+      return new Date(b.latestDate || 0) - new Date(a.latestDate || 0)
+    })
+  }, [filtered])
+
+  // ── Stats ──────────────────────────────────────────────
+  const statsPaid  = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).length
+  const statsPend  = orders.filter(o => ['Aguardando Pagamento', 'Pendente'].includes(o.payment_status)).length
+  const statsRev   = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).reduce((s, o) => s + (o.total_price || 0), 0)
+  const uniqueCustomers = useMemo(() => {
+    const phones = new Set()
+    const names  = new Set()
+    for (const o of orders) {
+      const p = (o.customer_phone || '').replace(/\D/g, '').slice(-9)
+      if (p.length >= 8) phones.add(p)
+      else names.add((o.customer_name || '').toLowerCase().trim())
+    }
+    return phones.size + names.size
+  }, [orders])
 
   return (
     <div className="p-6 space-y-6">
@@ -403,10 +538,10 @@ export default function Skale() {
         className="grid grid-cols-4 gap-3"
       >
         {[
-          { label: 'Total de pedidos', value: orders.length, icon: ShoppingCart, color: '#a78bfa', suffix: '' },
+          { label: 'Clientes únicos',    value: uniqueCustomers, icon: User,         color: '#a78bfa', isNum: true },
+          { label: 'Total de pedidos',   value: orders.length,   icon: ShoppingCart, color: '#a78bfa', isNum: true },
           { label: 'Receita confirmada', value: formatCurrency(statsRev / 100), icon: DollarSign, color: '#22c55e', isText: true },
-          { label: 'Pagos', value: statsPaid, icon: CheckCircle, color: '#22c55e', suffix: '' },
-          { label: 'Aguardando pgto', value: statsPend, icon: Clock, color: '#f59e0b', suffix: '' },
+          { label: 'Pagos',             value: statsPaid,        icon: CheckCircle,  color: '#22c55e', isNum: true },
         ].map((s, i) => {
           const Icon = s.icon
           return (
@@ -421,72 +556,66 @@ export default function Skale() {
               </div>
               {s.isText
                 ? <p className="text-lg font-bold tabular-nums" style={{ color: s.color }}>{s.value}</p>
-                : <p className="text-2xl font-bold text-white tabular-nums"><AnimatedNumber value={s.value} /></p>
-              }
+                : <p className="text-2xl font-bold text-white tabular-nums"><AnimatedNumber value={s.value} /></p>}
             </motion.div>
           )
         })}
       </motion.div>
 
-      {/* Filters */}
+      {/* Filters + view toggle */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.14, duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
         className="flex items-center gap-3 flex-wrap"
       >
-        {/* Search */}
-        <div className="flex-1 min-w-48">
-          <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Buscar por cliente, pedido, produto ou rastreio…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm bg-transparent text-text outline-none"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-            />
-          </div>
+        <div className="flex-1 min-w-48 relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
+          <input type="text" placeholder="Buscar por cliente, pedido, produto, telefone ou rastreio…"
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm bg-transparent text-text outline-none"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
         </div>
 
-        {/* Status filter */}
+        {/* Status */}
         <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {[{ k: 'all', label: 'Todos' }, ...Object.entries(STATUS_CFG).map(([k, v]) => ({ k, label: v.label }))].map(({ k, label }) => (
-            <button key={k}
-              onClick={() => setFilterStatus(k)}
+            <button key={k} onClick={() => setFilterStatus(k)}
               className="px-2.5 py-1 rounded text-[11px] font-medium transition-all"
-              style={filterStatus === k
-                ? { background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)' }
-                : { color: '#555' }
-              }>
+              style={filterStatus === k ? { background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)' } : { color: '#555' }}>
               {label}
             </button>
           ))}
         </div>
 
-        {/* Payment filter */}
+        {/* Pagamento */}
         <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {[{ k: 'all', label: 'Pgto', color: '#555' }, ...Object.entries(PAY_CFG).map(([k, v]) => ({ k, label: v.label, color: v.color }))].map(({ k, label, color }) => (
-            <button key={k}
-              onClick={() => setFilterPay(k)}
+            <button key={k} onClick={() => setFilterPay(k)}
               className="px-2.5 py-1 rounded text-[11px] font-medium transition-all"
-              style={filterPay === k
-                ? { background: 'rgba(255,255,255,0.08)', color: color || '#fff', border: '1px solid rgba(255,255,255,0.12)' }
-                : { color: '#555' }
-              }>
+              style={filterPay === k ? { background: 'rgba(255,255,255,0.08)', color: color || '#fff', border: '1px solid rgba(255,255,255,0.12)' } : { color: '#555' }}>
               {label}
             </button>
           ))}
+        </div>
+
+        {/* View toggle */}
+        <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <button onClick={() => setViewMode('customer')}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all"
+            style={viewMode === 'customer' ? { background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)' } : { color: '#555' }}>
+            <User size={11} />Por cliente
+          </button>
+          <button onClick={() => setViewMode('order')}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all"
+            style={viewMode === 'order' ? { background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)' } : { color: '#555' }}>
+            <LayoutGrid size={11} />Por pedido
+          </button>
         </div>
       </motion.div>
 
-      {/* Orders grid */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-      >
+      {/* Content */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.4 }}>
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[...Array(6)].map((_, i) => (
@@ -501,56 +630,54 @@ export default function Skale() {
               <ShoppingCart size={22} style={{ color: '#a78bfa' }} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white mb-1">Nenhum pedido recebido ainda</p>
-              <p className="text-xs text-faint leading-relaxed">
-                Configure o webhook da Skale apontando para este servidor.<br />
-                Os pedidos aparecerão aqui automaticamente.
+              <p className="text-sm font-semibold text-white mb-1">Nenhum pedido encontrado</p>
+              <p className="text-xs text-faint">Tente ajustar os filtros ou a busca</p>
+            </div>
+          </div>
+
+        ) : viewMode === 'customer' ? (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-faint">
+                {customers.length} cliente{customers.length !== 1 ? 's' : ''} ·{' '}
+                {customers.filter(c => c.orders.length > 1).length} recorrentes ·{' '}
+                {filtered.length} pedidos
               </p>
             </div>
-            <div className="w-full p-4 rounded-xl text-left space-y-3"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-[10px] text-faint uppercase tracking-wider">Como ativar</p>
-              {[
-                { n: '1', text: 'No painel da Skale, vá em Configurações → Webhooks' },
-                { n: '2', text: `Cole a URL: ${window.location.origin}/api/webhooks/skale` },
-                { n: '3', text: 'Selecione os eventos: order_created, payment_registered, tracking_updated e os demais' },
-                { n: '4', text: 'Salve e dispare um pedido de teste — ele aparecerá aqui em segundos' },
-              ].map(s => (
-                <div key={s.n} className="flex items-start gap-3">
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
-                    style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa' }}>
-                    {s.n}
-                  </span>
-                  <p className="text-xs text-text-secondary leading-relaxed">{s.text}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <AnimatePresence>
+                {customers.map((c, i) => (
+                  <CustomerCard
+                    key={c.key}
+                    customer={c}
+                    onClick={setSelected}
+                    delay={Math.min(i * 0.03, 0.25)}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
-          </div>
+          </>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <AnimatePresence>
-              {filtered.map((order, i) => (
-                <OrderCard
-                  key={order.id || order.external_id}
-                  order={order}
-                  onClick={setSelected}
-                  delay={i * 0.04}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {filtered.length > 0 && (
-          <div className="flex items-center justify-center mt-4">
-            <p className="text-[11px] text-faint">
-              {filtered.length} pedido{filtered.length !== 1 ? 's' : ''} · {orders.length} total · atualiza a cada 30s
-            </p>
-          </div>
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-faint">{filtered.length} pedidos · atualiza a cada 30s</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <AnimatePresence>
+                {filtered.map((order, i) => (
+                  <OrderCard
+                    key={order.id || order.external_id}
+                    order={order}
+                    onClick={setSelected}
+                    delay={Math.min(i * 0.03, 0.25)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          </>
         )}
       </motion.div>
 
-      {/* Detail modal */}
       <OrderModal order={selected} onClose={() => setSelected(null)} />
     </div>
   )
