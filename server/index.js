@@ -19,6 +19,7 @@ app.get('/api/health', async (req, res) => {
     ok: true,
     db: dbOk,
     threec_token: process.env.THREEC_TOKEN ? '✓ configurado' : '✗ ausente',
+    dc_token: process.env.DC_TOKEN ? '✓ configurado' : '✗ ausente',
     node: process.version,
     env: process.env.NODE_ENV,
   })
@@ -487,6 +488,89 @@ app.get('/api/skale/stats', async (req, res) => {
   } catch (err) {
     console.error('[GET /api/skale/stats]', err)
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ── DataCrazy CRM — proxy ─────────────────────────────────
+
+const DC_TOKEN = process.env.DC_TOKEN || ''
+const DC_BASE  = 'https://api.g1.datacrazy.io/api/v1'
+
+async function dcFetch(path, params = {}) {
+  const qs = new URLSearchParams(params)
+  const url = `${DC_BASE}${path}${qs.toString() ? `?${qs}` : ''}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${DC_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`DC API ${res.status}: ${body.slice(0, 200)}`)
+  }
+  return res.json()
+}
+
+// Leads (com search e paginação)
+app.get('/api/dc/leads', async (req, res) => {
+  try {
+    const params = { skip: req.query.skip || 0, take: req.query.take || 200 }
+    if (req.query.search) params.search = req.query.search
+    const data = await dcFetch('/leads', params)
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Negócios (deals — won / in_process / lost)
+app.get('/api/dc/businesses', async (req, res) => {
+  try {
+    const params = { skip: req.query.skip || 0, take: req.query.take || 500 }
+    if (req.query.status && req.query.status !== 'all') params['filter[status]'] = req.query.status
+    const data = await dcFetch('/businesses', params)
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Conversas
+app.get('/api/dc/conversations', async (req, res) => {
+  try {
+    const params = { skip: req.query.skip || 0, take: req.query.take || 100 }
+    if (req.query.search) params.search = req.query.search
+    const data = await dcFetch('/conversations', params)
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Produtos
+app.get('/api/dc/products', async (req, res) => {
+  try {
+    const data = await dcFetch('/products', { skip: 0, take: 200 })
+    res.json(data)
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+// Stats agregado (paralelo para não estourar rate limit do cliente)
+app.get('/api/dc/stats', async (req, res) => {
+  try {
+    const [leads, won, inProcess, lost] = await Promise.all([
+      dcFetch('/leads',      { skip: 0, take: 1 }),
+      dcFetch('/businesses', { skip: 0, take: 1, 'filter[status]': 'won' }),
+      dcFetch('/businesses', { skip: 0, take: 1, 'filter[status]': 'in_process' }),
+      dcFetch('/businesses', { skip: 0, take: 1, 'filter[status]': 'lost' }),
+    ])
+    const totalLeads    = leads?.total      ?? leads?.count      ?? (Array.isArray(leads) ? leads.length : 0)
+    const wonDeals      = won?.total        ?? won?.count        ?? (Array.isArray(won) ? won.length : 0)
+    const inProcessDeals= inProcess?.total  ?? inProcess?.count  ?? (Array.isArray(inProcess) ? inProcess.length : 0)
+    const lostDeals     = lost?.total       ?? lost?.count       ?? (Array.isArray(lost) ? lost.length : 0)
+    res.json({ totalLeads, wonDeals, inProcessDeals, lostDeals })
+  } catch (err) {
+    res.status(502).json({ error: err.message })
   }
 })
 

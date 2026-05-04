@@ -20,3 +20,5 @@ services:
         value: production
       - key: THREEC_TOKEN
         value: R02FvFejFgDpLxz4iIJn7s14EveNi9vDJt6c8tptGt6vYJjdcqwXHrzAPuDB
+      - key: DC_TOKEN
+        value: dc_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Zjg1ZDAxNzc3MGNkYzY1OGY3MWMyYiIsInRlbmFudElkIjoiNzkzYmZlZTctZGMwZS00ZTI1LTk0YjgtYWM1ZmQ3YzkwZmJjIiwibmFtZSI6Ik1FWSIsInJvbGVzIjpbImFkbWluIl0sImlzQWRtaW4iOnRydWUsImlhdCI6MTc3Nzg4NDQxN30.vlUq_axN3GeXdEpn00FZqFKt733tNqNm7pIm_t8RE-o

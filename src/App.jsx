@@ -11,6 +11,7 @@ import Hoje from './pages/Hoje'
 import Integracoes from './pages/Integracoes'
 import Skale from './pages/Skale'
 import TresC from './pages/TresC'
+import DataCrazy from './pages/DataCrazy'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/integracoes" element={<ErrorBoundary><Integracoes /></ErrorBoundary>} />
             <Route path="/skale" element={<ErrorBoundary><Skale /></ErrorBoundary>} />
             <Route path="/tresc" element={<ErrorBoundary><TresC /></ErrorBoundary>} />
+            <Route path="/datacrazy" element={<ErrorBoundary><DataCrazy /></ErrorBoundary>} />
           </Route>
         </Routes>
       </BrowserRouter>

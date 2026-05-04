@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import {
   TrendingUp, Phone, Target, Clock,
-  ArrowUpRight, Activity, Users, ShoppingCart, DollarSign, CheckCircle,
+  ArrowUpRight, Activity, Users, ShoppingCart, DollarSign, CheckCircle, BarChart2, Layers,
 } from 'lucide-react'
 import { format, getHours } from 'date-fns'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
@@ -14,6 +14,7 @@ import { Avatar } from '../components/ui/Avatar'
 import { formatCurrency, formatSeconds } from '../lib/utils'
 import { useCallHistory, useAgents } from '../hooks/use3c'
 import { useSkaleStats, useSkaleOrders } from '../hooks/useSkale'
+import { useDCStats, useDCBusinesses } from '../hooks/useDC'
 
 // ── Chart tooltip ──────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
@@ -216,6 +217,8 @@ export default function Dashboard() {
   const { data: agents, isLoading: loadingAgents } = useAgents()
   const { data: skaleStats, isLoading: loadingSkale } = useSkaleStats()
   const { data: skaleOrders = [] } = useSkaleOrders()
+  const { data: dcStats } = useDCStats()
+  const { data: dcBiz } = useDCBusinesses('won', 500)
 
   // ── 3C KPIs ────────────────────────────────────────────
   const stats3c = useMemo(() => {
@@ -248,6 +251,13 @@ export default function Dashboard() {
   const paidToday     = Number(skaleStats?.paid_today     || 0)
   const revenueTotal  = Number(skaleStats?.revenue_total  || 0)
   const ordersTotal   = Number(skaleStats?.orders_total   || 0)
+
+  const dcWonCount  = dcStats?.wonDeals      || 0
+  const dcLeadsTotal= dcStats?.totalLeads    || 0
+  const dcInProcess = dcStats?.inProcessDeals|| 0
+  const dcWonValue  = useMemo(() =>
+    (dcBiz?.items || []).reduce((s, b) => s + b.value, 0)
+  , [dcBiz])
 
   const isLoading = loadingCalls || loadingAgents
 
@@ -421,6 +431,26 @@ export default function Dashboard() {
           </div>
           <AgentRanking agents={agents} calls={calls} />
         </motion.div>
+      </div>
+
+      {/* DataCrazy KPIs */}
+      <div>
+        <p className="text-[10px] text-faint uppercase tracking-wider mb-3 flex items-center gap-2">
+          <BarChart2 size={10} /> DataCrazy · CRM
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard label="Leads no CRM" value={<AnimatedNumber value={dcLeadsTotal} />}
+            sub="total de contatos" icon={Users} delay={0} accent="#60a5fa" />
+          <KPICard label="Em negociação" value={<AnimatedNumber value={dcInProcess} />}
+            sub="negócios em processo" icon={Target} delay={0.06} accent="#60a5fa" />
+          <KPICard label="Negócios ganhos" value={<AnimatedNumber value={dcWonCount} />}
+            sub={dcWonValue > 0 ? formatCurrency(dcWonValue) : 'fechados no CRM'} icon={CheckCircle} delay={0.12} accent="#22c55e" />
+          <KPICard label="Conversão DC→Skale" value={
+            dcLeadsTotal > 0 && ordersTotal > 0
+              ? `${Math.min(Math.round((ordersTotal / dcLeadsTotal) * 100), 100)}%`
+              : '—'
+          } sub="leads → pedidos Skale" icon={Layers} delay={0.18} accent="#a78bfa" />
+        </div>
       </div>
 
       {/* Skale recent orders */}
