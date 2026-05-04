@@ -6,6 +6,7 @@ import TeamScoreboard from "@/components/atividades/TeamScoreboard";
 import TeamActivityChart from "@/components/atividades/TeamActivityChart";
 import SellerCard from "@/components/atividades/SellerCard";
 import SellerProfilePage from "@/components/atividades/SellerProfilePage";
+import QualificacoesList from "@/components/atividades/QualificacoesList";
 import { subDays } from "date-fns";
 import { getCategory, isCallAttempt } from "@/lib/eventUtils";
 
@@ -320,6 +321,9 @@ export default function Atividades() {
 
       {/* Row 2: Activity chart */}
       <TeamActivityChart events={filteredEvents} />
+
+      {/* Row 2.5: Qualificações */}
+      <QualificacoesList events={filteredEvents} />
 
       {/* Row 3: Seller cards */}
       <div>

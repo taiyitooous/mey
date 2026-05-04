@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import QualificacoesList from "@/components/atividades/QualificacoesList";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Legend, CartesianGrid, FunnelChart, Funnel, LabelList,
@@ -207,6 +208,9 @@ export default function SellerProfilePage({ seller, onClose, avatarUrl, sellerCo
 
           {/* PERFORMANCE */}
           <TabsContent value="performance" className="space-y-6">
+            {/* Qualificações */}
+            <QualificacoesList events={events} />
+
             {/* KPI grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {kpiCards.map((k) => (
