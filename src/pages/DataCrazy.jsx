@@ -235,8 +235,8 @@ function BusinessRow({ b, skaleOrders, delay }) {
 // ── Funil de Conversão ─────────────────────────────────────
 
 function ConversionFunnel({ leads, businesses, calls3c, skaleOrders }) {
-  const totalLeads   = leads?.total || 0
-  const wonDeals     = businesses?.items?.filter(b => b.status === 'won').length || 0
+  const totalLeads   = leads?.total || leads?.items?.length || 0
+  const wonDeals     = (businesses?.items || []).filter(b => b.status === 'won').length
   const leadsWithCall = useMemo(() => {
     if (!leads?.items?.length || !calls3c?.length) return 0
     return leads.items.filter(l => l.phone && calls3c.some(c => matchPhone(c.phone, l.phone))).length
@@ -322,14 +322,11 @@ export default function DataCrazy() {
     )
   }, [allBiz, bizStatus, search])
 
-  const wonValue = useMemo(() =>
-    (allBiz?.items || []).filter(b => b.status === 'won').reduce((s, b) => s + b.value, 0)
-  , [allBiz])
+  // wonValue vem do stats do servidor (soma de TODOS os ganhos, não só os 500 carregados)
+  const wonValue   = dcStats?.wonValue || 0
+  const convCount  = convos?.count || 0
 
-  const convCount = Array.isArray(convos) ? convos.length : 0
-
-  // Cross-ref: leads com 3C calls (agentes ativos com o mesmo ramal não conta, queremos chamadas)
-  const calls3cAll = useMemo(() => [], []) // será preenchido via useCallHistory se necessário
+  const calls3cAll = useMemo(() => [], [])
 
   return (
     <div className="p-6 space-y-6">
@@ -368,12 +365,13 @@ export default function DataCrazy() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KPICard label="Total de leads" value={loadStats ? '…' : <AnimatedNumber value={dcStats?.totalLeads || 0} />}
-          sub="no CRM" icon={Users} color="#60a5fa" delay={0} />
-        <KPICard label="Em processo" value={loadStats ? '…' : <AnimatedNumber value={dcStats?.inProcessDeals || 0} />}
+        <KPICard label="Total de leads" value={loadStats ? '…' : (dcStats?.totalLeads || 0).toLocaleString('pt-BR')}
+          sub="contatos no CRM" icon={Users} color="#60a5fa" delay={0} />
+        <KPICard label="Em processo" value={loadStats ? '…' : (dcStats?.inProcessDeals || 0).toLocaleString('pt-BR')}
           sub="negócios ativos" icon={Clock} color="#60a5fa" delay={0.06} />
-        <KPICard label="Ganhos" value={loadStats ? '…' : <AnimatedNumber value={dcStats?.wonDeals || 0} />}
+        <KPICard label="Ganhos" value={loadStats ? '…' : (dcStats?.wonDeals || 0).toLocaleString('pt-BR')}
           sub={wonValue > 0 ? formatCurrency(wonValue) : 'negócios fechados'} icon={CheckCircle} color="#22c55e" delay={0.12} />
+
         <KPICard label="Perdidos" value={loadStats ? '…' : <AnimatedNumber value={dcStats?.lostDeals || 0} />}
           sub="negócios perdidos" icon={XCircle} color="#ef4444" delay={0.18} />
         <KPICard label="Conversas" value={loadConvos ? '…' : <AnimatedNumber value={convCount} />}
@@ -533,32 +531,34 @@ export default function DataCrazy() {
                 style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <p className="text-[10px] text-faint uppercase tracking-wider mb-5">Distribuição de negócios</p>
                 <div className="space-y-4">
-                  {[
-                    { label: 'Em processo', key: 'in_process', color: '#60a5fa' },
-                    { label: 'Ganhos', key: 'won', color: '#22c55e' },
-                    { label: 'Perdidos', key: 'lost', color: '#ef4444' },
-                  ].map(({ label, key, color }) => {
-                    const count = (allBiz?.items || []).filter(b => b.status === key).length
-                    const total = (allBiz?.items || []).length || 1
-                    return (
-                      <div key={key}>
+                  {(() => {
+                    const inP = dcStats?.inProcessDeals || 0
+                    const won = dcStats?.wonDeals || 0
+                    const lost = dcStats?.lostDeals || 0
+                    const totalBiz = inP + won + lost || 1
+                    return [
+                      { label: 'Em processo', count: inP, color: '#60a5fa' },
+                      { label: 'Ganhos', count: won, color: '#22c55e' },
+                      { label: 'Perdidos', count: lost, color: '#ef4444' },
+                    ].map(({ label, count, color }) => (
+                      <div key={label}>
                         <div className="flex items-center justify-between text-[11px] mb-1.5">
                           <span className="text-text-secondary">{label}</span>
                           <span className="font-bold tabular-nums" style={{ color }}>
-                            {count} ({Math.round((count / total) * 100)}%)
+                            {count.toLocaleString('pt-BR')} ({Math.round((count / totalBiz) * 100)}%)
                           </span>
                         </div>
                         <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
                           <motion.div className="h-full rounded-full"
                             initial={{ width: 0 }}
-                            animate={{ width: `${(count / total) * 100}%` }}
+                            animate={{ width: `${(count / totalBiz) * 100}%` }}
                             transition={{ delay: 0.5, duration: 0.9, ease: [0.23, 1, 0.32, 1] }}
                             style={{ background: color }}
                           />
                         </div>
                       </div>
-                    )
-                  })}
+                    ))
+                  })()}
                 </div>
 
                 {/* Agents online vs DC in_process */}

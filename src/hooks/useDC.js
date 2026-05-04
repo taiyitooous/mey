@@ -6,57 +6,55 @@ async function fetchJSON(path) {
   return res.json()
 }
 
-// Normaliza a lista de itens de uma resposta paginada do DC
+// DC resposta: { count: N, total: valor_monetário, data: [...] }
 function extractItems(data) {
   if (Array.isArray(data)) return data
   if (!data || typeof data !== 'object') return []
   return data.data || data.leads || data.businesses || data.conversations || data.products || data.items || []
 }
 
-function extractTotal(data) {
-  if (!data || typeof data !== 'object') return 0
-  return data.total ?? data.count ?? data.totalCount ?? 0
-}
-
 // ── Normalizadores ─────────────────────────────────────────
 
 export function normalizeLead(l) {
-  const contact = l.contact || l.contacts?.[0] || {}
-  const phone = contact.phone || contact.whatsapp || l.phone || ''
+  // Etapa vem das tags (ex: "Etapa01", "Etapa02")
+  const etapaTag = (l.tags || []).find(t => /^etapa/i.test(t.name || ''))
   return {
-    id: String(l.id || l._id || ''),
-    name: l.name || contact.name || l.fullName || 'Sem nome',
-    phone: String(phone).replace(/\D/g, ''),
-    phoneRaw: String(phone),
-    email: contact.email || l.email || '',
-    stage: l.stage?.name || l.stageName || l.stage || '',
-    tags: Array.isArray(l.tags) ? l.tags.map(t => t.name || t) : [],
-    source: l.source?.name || l.source || '',
-    attendant: l.attendant?.name || l.attendantName || '',
-    list: l.list?.name || l.listName || '',
-    createdAt: l.createdAt || l.created_at || null,
-    updatedAt: l.updatedAt || l.updated_at || null,
+    id: String(l.id || ''),
+    name: l.name || 'Sem nome',
+    phone: String(l.phone || l.rawPhone || '').replace(/\D/g, ''),
+    phoneRaw: String(l.phone || l.rawPhone || ''),
+    email: l.email || '',
+    stage: etapaTag?.name || '',
+    tags: (l.tags || []).map(t => t.name || '').filter(Boolean),
+    source: typeof l.source === 'string' ? l.source : (l.source?.name || ''),
+    attendant: l.attendant?.name || '',
+    list: (l.lists || [])[0]?.name || '',
+    metrics: l.metrics || null,
+    createdAt: l.createdAt || null,
   }
 }
 
 export function normalizeBusiness(b) {
   const products = Array.isArray(b.products) ? b.products : []
-  const totalValue = products.reduce((s, p) => s + (Number(p.price || p.value || 0) * Number(p.quantity || 1)), 0)
-    || Number(b.value || b.total || b.amount || 0)
+  // leadPhone está em b.lead.contacts[0].contactId
+  const leadPhone = (b.lead?.contacts || [])[0]?.contactId || ''
+  const productName = products[0]?.product?.name || ''
   return {
-    id: String(b.id || b._id || ''),
-    name: b.name || b.title || '',
+    id: String(b.id || ''),
+    code: b.code || 0,
+    name: productName || `Negócio #${b.code}`,
     status: b.status || 'in_process',
-    value: totalValue,
-    leadName: b.lead?.name || b.leadName || b.contact?.name || '',
-    leadPhone: String(b.lead?.phone || b.contact?.phone || '').replace(/\D/g, ''),
-    stage: b.stage?.name || b.stageName || b.stage || '',
-    attendant: b.attendant?.name || b.attendantName || '',
-    products: products.map(p => ({ name: p.name || '', price: Number(p.price || 0), qty: Number(p.quantity || 1) })),
-    lossReason: b.lossReason?.name || b.lossReason || '',
-    wonAt: b.wonAt || b.won_at || null,
-    lostAt: b.lostAt || b.lost_at || null,
-    createdAt: b.createdAt || b.created_at || null,
+    // b.total é o valor monetário em R$ (ex: 540 = R$540)
+    value: Number(b.total || 0),
+    leadName: `#${b.code}`,
+    leadPhone: String(leadPhone).replace(/\D/g, ''),
+    products: products.map(p => ({
+      name: p.product?.name || '',
+      price: Number(p.price || p.product?.price || 0),
+      qty: Number(p.quantity || 1),
+    })),
+    wonAt: b.statusChangedAt || null,
+    createdAt: b.createdAt || null,
   }
 }
 
@@ -67,12 +65,14 @@ export function useDCLeads(take = 300) {
     queryKey: ['dc', 'leads', take],
     queryFn: async () => {
       const data = await fetchJSON(`/api/dc/leads?skip=0&take=${take}`)
-      return { items: extractItems(data).map(normalizeLead), total: extractTotal(data) }
+      return {
+        items: extractItems(data).map(normalizeLead),
+        total: data?.count ?? (Array.isArray(data) ? data.length : 0),
+      }
     },
     staleTime: 60_000,
     refetchInterval: 120_000,
     retry: 2,
-    select: d => d,
   })
 }
 
@@ -82,7 +82,12 @@ export function useDCBusinesses(status = 'all', take = 500) {
     queryFn: async () => {
       const qs = status !== 'all' ? `&status=${status}` : ''
       const data = await fetchJSON(`/api/dc/businesses?skip=0&take=${take}${qs}`)
-      return { items: extractItems(data).map(normalizeBusiness), total: extractTotal(data) }
+      return {
+        items: extractItems(data).map(normalizeBusiness),
+        // count = quantidade, total = soma monetária
+        count: data?.count ?? (Array.isArray(data) ? data.length : 0),
+        totalValue: data?.total ?? 0,
+      }
     },
     staleTime: 60_000,
     refetchInterval: 120_000,
@@ -105,7 +110,7 @@ export function useDCConversations(take = 100) {
     queryKey: ['dc', 'conversations', take],
     queryFn: async () => {
       const data = await fetchJSON(`/api/dc/conversations?skip=0&take=${take}`)
-      return extractItems(data)
+      return { items: extractItems(data), count: data?.count ?? 0 }
     },
     staleTime: 60_000,
     refetchInterval: 120_000,

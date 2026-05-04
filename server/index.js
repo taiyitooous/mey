@@ -564,11 +564,13 @@ app.get('/api/dc/stats', async (req, res) => {
       dcFetch('/businesses', { skip: 0, take: 1, 'filter[status]': 'in_process' }),
       dcFetch('/businesses', { skip: 0, take: 1, 'filter[status]': 'lost' }),
     ])
-    const totalLeads    = leads?.total      ?? leads?.count      ?? (Array.isArray(leads) ? leads.length : 0)
-    const wonDeals      = won?.total        ?? won?.count        ?? (Array.isArray(won) ? won.length : 0)
-    const inProcessDeals= inProcess?.total  ?? inProcess?.count  ?? (Array.isArray(inProcess) ? inProcess.length : 0)
-    const lostDeals     = lost?.total       ?? lost?.count       ?? (Array.isArray(lost) ? lost.length : 0)
-    res.json({ totalLeads, wonDeals, inProcessDeals, lostDeals })
+    // ATENÇÃO: na API DC, "total" = soma monetária, "count" = quantidade de registros
+    const totalLeads     = leads?.count     ?? (Array.isArray(leads) ? leads.length : 0)
+    const wonDeals       = won?.count       ?? (Array.isArray(won) ? won.length : 0)
+    const wonValue       = won?.total       ?? 0   // soma monetária dos ganhos em R$
+    const inProcessDeals = inProcess?.count ?? (Array.isArray(inProcess) ? inProcess.length : 0)
+    const lostDeals      = lost?.count      ?? (Array.isArray(lost) ? lost.length : 0)
+    res.json({ totalLeads, wonDeals, wonValue, inProcessDeals, lostDeals })
   } catch (err) {
     res.status(502).json({ error: err.message })
   }

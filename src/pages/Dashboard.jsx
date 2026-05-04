@@ -14,7 +14,7 @@ import { Avatar } from '../components/ui/Avatar'
 import { formatCurrency, formatSeconds } from '../lib/utils'
 import { useCallHistory, useAgents } from '../hooks/use3c'
 import { useSkaleStats, useSkaleOrders } from '../hooks/useSkale'
-import { useDCStats, useDCBusinesses } from '../hooks/useDC'
+import { useDCStats } from '../hooks/useDC'
 
 // ── Chart tooltip ──────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
@@ -218,7 +218,6 @@ export default function Dashboard() {
   const { data: skaleStats, isLoading: loadingSkale } = useSkaleStats()
   const { data: skaleOrders = [] } = useSkaleOrders()
   const { data: dcStats } = useDCStats()
-  const { data: dcBiz } = useDCBusinesses('won', 500)
 
   // ── 3C KPIs ────────────────────────────────────────────
   const stats3c = useMemo(() => {
@@ -252,12 +251,10 @@ export default function Dashboard() {
   const revenueTotal  = Number(skaleStats?.revenue_total  || 0)
   const ordersTotal   = Number(skaleStats?.orders_total   || 0)
 
-  const dcWonCount  = dcStats?.wonDeals      || 0
-  const dcLeadsTotal= dcStats?.totalLeads    || 0
-  const dcInProcess = dcStats?.inProcessDeals|| 0
-  const dcWonValue  = useMemo(() =>
-    (dcBiz?.items || []).reduce((s, b) => s + b.value, 0)
-  , [dcBiz])
+  const dcWonCount   = dcStats?.wonDeals       || 0
+  const dcLeadsTotal = dcStats?.totalLeads     || 0
+  const dcInProcess  = dcStats?.inProcessDeals || 0
+  const dcWonValue   = dcStats?.wonValue       || 0  // soma monetária em R$
 
   const isLoading = loadingCalls || loadingAgents
 
