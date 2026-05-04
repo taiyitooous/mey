@@ -8,16 +8,14 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import AppLayout from '@/components/layout/AppLayout';
 import Dashboard from '@/pages/Dashboard';
-import Vendas from '@/pages/Vendas';
 import Logistica from '@/pages/Logistica';
-import Cobranca from '@/pages/Cobranca';
 import Eventos from '@/pages/Eventos';
 import LeadDetail from '@/pages/LeadDetail';
-import Hoje from '@/pages/Hoje';
 import Atividades from '@/pages/Atividades';
 import Integracoes from '@/pages/Integracoes';
 import Coordenadores from '@/pages/Coordenadores';
 import ImportarCSV from '@/pages/ImportarCSV';
+import DataCrazy from '@/pages/DataCrazy';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -50,13 +48,11 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/vendas" element={<Vendas />} />
         <Route path="/lead/:id" element={<LeadDetail />} />
         <Route path="/logistica" element={<Logistica />} />
-        <Route path="/cobranca" element={<Cobranca />} />
         <Route path="/eventos" element={<Eventos />} />
-        <Route path="/hoje" element={<Hoje />} />
         <Route path="/atividades" element={<Atividades />} />
+        <Route path="/datacrazy" element={<DataCrazy />} />
         <Route path="/coordenadores" element={<Coordenadores />} />
         <Route path="/integracoes" element={<Integracoes />} />
         <Route path="/importar-csv" element={<ImportarCSV />} />

@@ -2,30 +2,25 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Users,
   Truck,
-  Phone,
   ScrollText,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  CalendarCheck,
   Activity,
   Settings,
   Shield,
-  Camera,
+  Database,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS = [
-  { label: "Hoje", icon: CalendarCheck, path: "/hoje" },
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "Vendas", icon: Users, path: "/vendas" },
   { label: "Logística", icon: Truck, path: "/logistica" },
-  { label: "Cobrança", icon: Phone, path: "/cobranca" },
   { label: "Atividades", icon: Activity, path: "/atividades" },
+  { label: "DataCrazy", icon: Database, path: "/datacrazy" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
   { label: "Coordenadores", icon: Shield, path: "/coordenadores" },
   { label: "Integrações", icon: Settings, path: "/integracoes" },
