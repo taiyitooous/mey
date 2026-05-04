@@ -342,6 +342,7 @@ function CopyableUrl({ url }) {
 }
 
 const DATACRAZY_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/dataCrazyWebhook`;
+const SKALE_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/skaleWebhook`;
 
 export default function Integracoes() {
   const queryClient = useQueryClient();
@@ -488,6 +489,43 @@ export default function Integracoes() {
           <p>• Lead criado → aparece automaticamente no Funil (Etapa 1)</p>
           <p>• Lead atualizado → dados de nome, telefone e campanha são atualizados</p>
           <p>• Evento <code className="bg-muted px-1 rounded">lead.created</code> registrado na timeline de Atividades</p>
+        </div>
+      </Card>
+
+      {/* Skale Card */}
+      <Card className="p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Skale — Webhook de Pedidos</h2>
+              <p className="text-xs text-muted-foreground">Recebe eventos de pedido, pagamento e entrega da plataforma Skale</p>
+            </div>
+          </div>
+          <Badge className="bg-success/10 text-success border-0">Ativo</Badge>
+        </div>
+
+        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-2">
+          <p className="font-semibold text-foreground">🔗 Como configurar na Skale:</p>
+          <p>1. Acesse Skale → <strong>Configurações</strong> → <strong>Webhooks</strong></p>
+          <p>2. Clique em <strong>Novo</strong> e cole a URL abaixo</p>
+          <p>3. Selecione todos os eventos (Pedido + Pagamento + Entrega)</p>
+          <p>4. Salve — pedidos e atualizações chegarão automaticamente no MEY</p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URL do Webhook</p>
+          <CopyableUrl url={SKALE_WEBHOOK_URL} />
+        </div>
+
+        <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-semibold text-foreground">📋 O que é sincronizado:</p>
+          <p>• Pedido criado → registrado automaticamente no sistema</p>
+          <p>• Status logístico → atualizado em tempo real (criado, enviado, em trânsito, entregue)</p>
+          <p>• Status de pagamento → atualizado conforme confirmação</p>
+          <p>• Código de rastreio e transportadora → salvos automaticamente</p>
         </div>
       </Card>
 
