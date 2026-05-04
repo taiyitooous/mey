@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
@@ -45,6 +45,26 @@ export default function DataCrazy() {
     queryKey: ["events_datacrazy"],
     queryFn: () => base44.entities.Event.filter({ source: "datacrazy" }, "-created_date", 50),
   });
+
+  // Real-time subscriptions para atualizar quando webhook receber dados
+  useEffect(() => {
+    const unsubscribeLead = base44.entities.Lead.subscribe((event) => {
+      if (event.data?.source === "datacrazy") {
+        queryClient.invalidateQueries({ queryKey: ["leads_datacrazy"] });
+      }
+    });
+
+    const unsubscribeEvent = base44.entities.Event.subscribe((event) => {
+      if (event.data?.source === "datacrazy") {
+        queryClient.invalidateQueries({ queryKey: ["events_datacrazy"] });
+      }
+    });
+
+    return () => {
+      unsubscribeLead();
+      unsubscribeEvent();
+    };
+  }, [queryClient]);
 
   const filtered = leads.filter((l) =>
     !search ||
