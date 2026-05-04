@@ -3,9 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 // Polling automático da API DataCrazy para sincronizar leads
 // Ajuste as variáveis abaixo com os detalhes reais da API
 
-const DATACRAZY_API_URL = "https://api.datacrazy.com.br/v1"; // ALTERE COM A URL REAL
+const DATACRAZY_API_URL = "https://api.datacrazy.io/v1/crm/api/crm/integrations/webhook/business/b8e76026-480b-48d9-a847-7dad93c45f4e";
 const DATACRAZY_API_KEY = Deno.env.get("DATACRAZY") || ""; // Agora está em Segredos
-const DATACRAZY_LEADS_ENDPOINT = "/leads"; // ALTERE SE NECESSÁRIO
 
 Deno.serve(async (req) => {
   if (req.method === 'GET') {
@@ -23,8 +22,7 @@ Deno.serve(async (req) => {
     console.log('[DataCrazy] Iniciando polling...');
 
     // 1. Buscar leads da API DataCrazy
-    const apiUrl = `${DATACRAZY_API_URL}${DATACRAZY_LEADS_ENDPOINT}`;
-    const response = await fetch(apiUrl, {
+    const response = await fetch(DATACRAZY_API_URL, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${DATACRAZY_API_KEY}`,
