@@ -8,11 +8,11 @@ import {
   TrendingUp, Phone, Target, Clock,
   ArrowUpRight, Activity, Users, ShoppingCart, DollarSign, CheckCircle, BarChart2, Layers,
 } from 'lucide-react'
-import { format, getHours } from 'date-fns'
+import { getHours } from 'date-fns'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Avatar } from '../components/ui/Avatar'
 import { formatCurrency, formatSeconds } from '../lib/utils'
-import { useCallHistory, useAgents } from '../hooks/use3c'
+import { use3cStats, use3cCalls, useAgents } from '../hooks/use3c'
 import { useSkaleStats, useSkaleOrders } from '../hooks/useSkale'
 import { useDCStats } from '../hooks/useDC'
 
@@ -77,38 +77,42 @@ function CallFeed({ calls }) {
   const items = useMemo(() => {
     if (!calls?.length) return []
     return [...calls]
-      .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
+      .sort((a, b) => new Date(b.started_at || b.startedAt || 0) - new Date(a.started_at || a.startedAt || 0))
       .slice(0, 40)
   }, [calls])
 
   if (!items.length) {
     return (
       <div className="h-[260px] flex items-center justify-center">
-        <p className="text-xs text-faint italic">Sem ligações registradas hoje</p>
+        <p className="text-xs text-faint italic">Sem ligações no banco ainda</p>
       </div>
     )
   }
 
   return (
     <div className="overflow-y-auto h-[260px] divide-y" style={{ scrollbarWidth: 'none', borderColor: 'rgba(255,255,255,0.04)' }}>
-      {items.map((call, i) => (
-        <div key={`${call.id}-${i}`} className="flex items-start gap-3 px-4 py-2.5">
-          <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
-            style={{ background: call.duration > 60 ? 'white' : 'rgba(255,255,255,0.2)' }} />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-text leading-relaxed">
-              <span className="font-semibold text-white">{call.agent.split(' ')[0]}</span>
-              {' → '}{call.phone || '—'}{call.result ? ` · ${call.result}` : ''}
-            </p>
-            {call.duration > 0 && (
-              <p className="text-[10px] text-faint">{formatSeconds(call.duration)}</p>
-            )}
+      {items.map((call, i) => {
+        const agent = call.agent_name || call.agent || '—'
+        const dt    = call.started_at || call.startedAt
+        return (
+          <div key={`${call.id || call.call_id}-${i}`} className="flex items-start gap-3 px-4 py-2.5">
+            <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: (call.duration || 0) > 60 ? 'white' : 'rgba(255,255,255,0.2)' }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-text leading-relaxed">
+                <span className="font-semibold text-white">{agent.split(' ')[0]}</span>
+                {' → '}{call.phone || '—'}{call.result ? ` · ${call.result}` : ''}
+              </p>
+              {(call.duration || 0) > 0 && (
+                <p className="text-[10px] text-faint">{formatSeconds(call.duration)}</p>
+              )}
+            </div>
+            <span className="text-[10px] text-faint shrink-0 tabular-nums">
+              {dt ? new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+            </span>
           </div>
-          <span className="text-[10px] text-faint shrink-0 tabular-nums">
-            {call.startedAt ? format(new Date(call.startedAt), 'HH:mm') : '—'}
-          </span>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -119,7 +123,10 @@ function AgentRanking({ agents, calls }) {
     if (!agents?.length) return []
     return agents.map(a => {
       const first = a.name.toLowerCase().split(' ')[0]
-      const myCalls = calls?.filter(c => c.agent.toLowerCase().split(' ')[0] === first) || []
+      const myCalls = calls?.filter(c => {
+        const cn = (c.agent_name || c.agent || '').toLowerCase().split(' ')[0]
+        return cn === first
+      }) || []
       return { ...a, callCount: myCalls.length, isActive: a.status === 'online' || a.status === 'in_call' }
     }).sort((a, b) => b.callCount - a.callCount).slice(0, 8)
   }, [agents, calls])
@@ -212,33 +219,30 @@ function OrderFeed({ orders }) {
 
 // ── Main ───────────────────────────────────────────────────
 export default function Dashboard() {
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const { data: calls, isSuccess: hasCalls, isLoading: loadingCalls } = useCallHistory(today)
-  const { data: agents, isLoading: loadingAgents } = useAgents()
-  const { data: skaleStats, isLoading: loadingSkale } = useSkaleStats()
-  const { data: skaleOrders = [] } = useSkaleOrders()
-  const { data: dcStats } = useDCStats()
+  const { data: stats3cRaw, isLoading: loadingStats3c } = use3cStats()
+  const { data: calls = [],  isLoading: loadingCalls   } = use3cCalls(500)
+  const { data: agents,      isLoading: loadingAgents  } = useAgents()
+  const { data: skaleStats,  isLoading: loadingSkale   } = useSkaleStats()
+  const { data: skaleOrders = [] }                        = useSkaleOrders()
+  const { data: dcStats }                                 = useDCStats()
 
-  // ── 3C KPIs ────────────────────────────────────────────
-  const stats3c = useMemo(() => {
-    if (!hasCalls || !calls?.length) return { total: 0, answered: 0, avgTalk: 0 }
-    const answered = calls.filter(c => c.duration > 10)
-    const avgTalk = answered.length
-      ? Math.round(answered.reduce((s, c) => s + c.duration, 0) / answered.length)
-      : 0
-    return { total: calls.length, answered: answered.length, avgTalk }
-  }, [calls, hasCalls])
+  // ── 3C KPIs — direto do banco ─────────────────────────
+  const totalCalls  = Number(stats3cRaw?.total_calls  || 0)
+  const avgDuration = Math.round(Number(stats3cRaw?.avg_duration || 0))
+  const answered    = useMemo(() => calls.filter(c => (c.duration || 0) > 10).length, [calls])
+  const hasData     = totalCalls > 0
 
   const activeAgents = useMemo(() =>
     agents?.filter(a => a.status === 'online' || a.status === 'in_call').length || 0
   , [agents])
 
-  // ── Hourly chart ───────────────────────────────────────
+  // ── Hourly chart — distribuição horária do banco ───────
   const hourlyData = useMemo(() => {
     const hours = Array.from({ length: 24 }, (_, h) => ({ hour: `${String(h).padStart(2, '0')}h`, calls: 0 }))
-    calls?.forEach(c => {
-      if (!c.startedAt) return
-      const h = getHours(new Date(c.startedAt))
+    calls.forEach(c => {
+      const dt = c.started_at || c.startedAt
+      if (!dt) return
+      const h = getHours(new Date(dt))
       if (h >= 0 && h < 24) hours[h].calls++
     })
     return hours.filter(h => parseInt(h.hour) >= 7 && parseInt(h.hour) <= 21)
@@ -256,7 +260,7 @@ export default function Dashboard() {
   const dcInProcess  = dcStats?.inProcessDeals || 0
   const dcWonValue   = dcStats?.wonValue       || 0  // soma monetária em R$
 
-  const isLoading = loadingCalls || loadingAgents
+  const isLoading = loadingStats3c || loadingCalls || loadingAgents
 
   return (
     <div className="p-6 space-y-6">
@@ -271,7 +275,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
           <p className="text-xs text-faint mt-0.5">
-            Dados reais · <span className="text-success">3C Plus</span> + <span style={{ color: '#a78bfa' }}>Skale</span> · {today}
+            Dados reais · <span className="text-success">3C Plus</span> + <span style={{ color: '#a78bfa' }}>Skale</span> · histórico completo
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -291,14 +295,14 @@ export default function Dashboard() {
       {/* KPIs — row 1: 3C */}
       <div>
         <p className="text-[10px] text-faint uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Phone size={10} /> 3C Plus · Hoje
+          <Phone size={10} /> 3C Plus · Histórico do banco
         </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
-            label="Ligações hoje"
-            value={isLoading ? '…' : <AnimatedNumber value={stats3c.total} />}
-            sub={hasCalls ? 'dados reais · 3C' : 'aguardando dados'}
-            icon={Phone} delay={0} live={hasCalls}
+            label="Total de ligações"
+            value={isLoading ? '…' : <AnimatedNumber value={totalCalls} />}
+            sub={hasData ? 'no banco · 3C Plus' : 'aguardando dados'}
+            icon={Phone} delay={0} live={hasData}
           />
           <KPICard
             label="Agentes ativos"
@@ -307,15 +311,15 @@ export default function Dashboard() {
             icon={Users} delay={0.06} live={activeAgents > 0}
           />
           <KPICard
-            label="Ligações atendidas"
-            value={isLoading ? '…' : <AnimatedNumber value={stats3c.answered} />}
-            sub={stats3c.total > 0 ? `${Math.round((stats3c.answered / stats3c.total) * 100)}% do total` : 'aguardando dados'}
+            label="Atendidas (amostra)"
+            value={isLoading ? '…' : <AnimatedNumber value={answered} />}
+            sub={calls.length > 0 ? `de ${calls.length} carregadas` : 'aguardando dados'}
             icon={Activity} delay={0.12}
           />
           <KPICard
             label="Tempo médio"
-            value={isLoading ? '…' : formatSeconds(stats3c.avgTalk)}
-            sub="por ligação atendida"
+            value={isLoading ? '…' : formatSeconds(avgDuration)}
+            sub="por ligação · média geral"
             icon={Clock} delay={0.18}
           />
         </div>
@@ -365,14 +369,14 @@ export default function Dashboard() {
       >
         <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-faint uppercase tracking-wider">Ligações por hora · 3C Plus</p>
+            <p className="text-[10px] text-faint uppercase tracking-wider">Distribuição por hora · 3C Plus</p>
             <p className="text-xl font-bold text-white mt-0.5">
-              {hasCalls
-                ? <><AnimatedNumber value={stats3c.total} /> ligações hoje</>
+              {hasData
+                ? <><AnimatedNumber value={totalCalls} /> ligações no total</>
                 : <span className="text-text-secondary text-sm">Aguardando dados 3C…</span>}
             </p>
           </div>
-          <span className="tag">{hasCalls ? 'real' : 'sem dados'}</span>
+          <span className="tag">{hasData ? 'real' : 'sem dados'}</span>
         </div>
         <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={hourlyData} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
@@ -406,10 +410,10 @@ export default function Dashboard() {
           <div className="px-5 pt-4 pb-3 flex items-center gap-2"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <span className="relative flex h-2 w-2">
-              {hasCalls && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-50" />}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${hasCalls ? 'bg-success' : 'bg-subtle'}`} />
+              {hasData && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-50" />}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${hasData ? 'bg-success' : 'bg-subtle'}`} />
             </span>
-            <p className="text-[10px] text-faint uppercase tracking-wider">Feed de ligações · 3C</p>
+            <p className="text-[10px] text-faint uppercase tracking-wider">Últimas ligações · 3C banco</p>
           </div>
           <CallFeed calls={calls} />
         </motion.div>
