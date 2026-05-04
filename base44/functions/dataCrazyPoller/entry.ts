@@ -23,11 +23,12 @@ Deno.serve(async (req) => {
 
     // 1. Buscar leads da API DataCrazy
     const response = await fetch(DATACRAZY_API_URL, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${DATACRAZY_API_KEY}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({}),
     });
 
     if (!response.ok) {
