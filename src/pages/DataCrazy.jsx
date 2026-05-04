@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
@@ -6,9 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Database, Copy, Check, RefreshCw, Search, ExternalLink } from "lucide-react";
-import { format } from "date-fns";
+import { Database, Copy, Check, RefreshCw, Search, Users, TrendingUp } from "lucide-react";
+import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
+} from "recharts";
 
 const DATACRAZY_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/dataCrazyWebhook`;
 
@@ -52,6 +55,36 @@ export default function DataCrazy() {
 
   const recentEvents = events.slice(0, 10);
 
+  // --- Stats ---
+  const todayLeads = useMemo(() =>
+    leads.filter((l) => l.created_date && isToday(new Date(l.created_date))).length,
+    [leads]
+  );
+
+  const stageData = useMemo(() => {
+    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    leads.forEach((l) => { const s = l.stage || 1; if (counts[s] !== undefined) counts[s]++; });
+    return [
+      { name: "Etapa 1", value: counts[1], color: "#4F8F63" },
+      { name: "Etapa 2", value: counts[2], color: "#6FA77A" },
+      { name: "Etapa 3", value: counts[3], color: "#C8A94D" },
+      { name: "Etapa 4", value: counts[4], color: "#6E9FA3" },
+      { name: "Final",   value: counts[5], color: "#A7B0A9" },
+    ].filter((d) => d.value > 0);
+  }, [leads]);
+
+  const sellerData = useMemo(() => {
+    const map = {};
+    leads.forEach((l) => {
+      const name = l.seller_name?.trim() || "Sem vendedor";
+      map[name] = (map[name] || 0) + 1;
+    });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [leads]);
+
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -61,6 +94,83 @@ export default function DataCrazy() {
           <p className="text-muted-foreground text-sm mt-1">Integração de leads e webhooks do CRM DataCrazy</p>
         </div>
         <Badge className="bg-success/10 text-success border-0 text-sm px-3 py-1">● Webhook Ativo</Badge>
+      </div>
+
+      {/* KPI + Charts */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Leads hoje</p>
+            <p className="text-3xl font-bold">{todayLeads}</p>
+          </div>
+        </Card>
+        <Card className="p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Database className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total de leads</p>
+            <p className="text-3xl font-bold">{leads.length}</p>
+          </div>
+        </Card>
+        <Card className="p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Vendedores ativos</p>
+            <p className="text-3xl font-bold">{sellerData.filter(s => s.name !== "Sem vendedor").length}</p>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Funil por etapa */}
+        <Card className="p-5 space-y-3">
+          <h2 className="font-semibold text-sm">Leads por Etapa</h2>
+          {stageData.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">Sem dados</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={stageData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(150 14% 9%)", border: "1px solid hsl(142 11% 18%)", borderRadius: 8, fontSize: 12 }}
+                  cursor={{ fill: "hsl(142 11% 18%)" }}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                  {stageData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+
+        {/* Leads por vendedor */}
+        <Card className="p-5 space-y-3">
+          <h2 className="font-semibold text-sm">Leads por Vendedor</h2>
+          {sellerData.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">Sem dados</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={sellerData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
+                <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(150 14% 9%)", border: "1px solid hsl(142 11% 18%)", borderRadius: 8, fontSize: 12 }}
+                  cursor={{ fill: "hsl(142 11% 18%)" }}
+                />
+                <Bar dataKey="value" fill="#4F8F63" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
       </div>
 
       {/* Webhook Config */}
