@@ -174,9 +174,16 @@ app.get('/api/3c/calls', async (req, res) => {
   }
 })
 
+// GET — verificação/ping que algumas plataformas fazem antes de ativar o webhook
+app.get('/api/webhooks/3c', (req, res) => {
+  console.log('[3c webhook GET] verificação recebida', req.query)
+  res.json({ ok: true, service: 'mey', endpoint: '3c' })
+})
+
 // Webhook 3C (eventos em tempo real)
 app.post('/api/webhooks/3c', async (req, res) => {
-  console.log('[3c webhook] recebido:', JSON.stringify(req.body)?.slice(0, 300))
+  console.log('[3c webhook POST] content-type:', req.headers['content-type'])
+  console.log('[3c webhook POST] body:', JSON.stringify(req.body)?.slice(0, 500))
   try {
     const body = req.body || {}
     const event_type = body.event || body.type || 'unknown'
