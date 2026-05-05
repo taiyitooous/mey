@@ -342,7 +342,7 @@ function CopyableUrl({ url }) {
 }
 
 const DATACRAZY_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/dataCrazyWebhook`;
-const SKALE_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/skaleWebhook`;
+const SKALE_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/skaleEvents`;
 
 export default function Integracoes() {
   const queryClient = useQueryClient();
