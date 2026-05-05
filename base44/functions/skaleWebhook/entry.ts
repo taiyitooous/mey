@@ -67,13 +67,23 @@ function mapPaymentStatus(paymentStatus, eventType) {
   return "pending";
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Webhook-Secret',
+};
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   if (req.method === 'GET') {
-    return Response.json({ status: 'ok', message: 'Skale webhook endpoint active' });
+    return Response.json({ status: 'ok', message: 'Skale webhook endpoint active' }, { headers: CORS_HEADERS });
   }
 
   if (req.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return Response.json({ error: 'Method not allowed' }, { status: 405, headers: CORS_HEADERS });
   }
 
   try {
@@ -187,10 +197,10 @@ Deno.serve(async (req) => {
       transaction_id:   transactionId,
       logistics_status: logisticsStatus,
       payment_status:   paymentStatus,
-    });
+    }, { headers: CORS_HEADERS });
 
   } catch (error) {
     console.error('[Skale] ERRO:', error.message, error.stack);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500, headers: CORS_HEADERS });
   }
 });
