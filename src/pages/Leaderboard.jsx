@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, TrendingUp, DollarSign, PlusCircle, Users } from "lucide-react";
+import { Trophy, TrendingUp, DollarSign, PlusCircle, Users, Package } from "lucide-react";
 import { deduplicateCallEvents } from "@/lib/eventUtils";
 import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
@@ -13,6 +13,7 @@ import LeaderboardTable from "@/components/leaderboard/LeaderboardTable";
 import LeaderboardCharts from "@/components/leaderboard/LeaderboardCharts";
 import RegisterSaleModal from "@/components/leaderboard/RegisterSaleModal";
 import RegisterLeadsModal from "@/components/leaderboard/RegisterLeadsModal";
+import ManageProductsModal from "@/components/leaderboard/ManageProductsModal";
 import { getDateRange, PERIOD_OPTIONS, SALES_CRITERIA, COLLECTION_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -23,6 +24,7 @@ export default function Leaderboard() {
   const [collectionCriteria, setCollectionCriteria] = useState("payment_rate");
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showLeadsModal, setShowLeadsModal] = useState(false);
+  const [showProductsModal, setShowProductsModal] = useState(false);
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -213,7 +215,16 @@ export default function Leaderboard() {
           setCustomStart={setCustomStart}
           setCustomEnd={setCustomEnd}
         />
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowProductsModal(true)}
+            className="border-border gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <Package className="w-4 h-4" />
+            Produtos
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -239,6 +250,9 @@ export default function Leaderboard() {
       )}
       {showLeadsModal && (
         <RegisterLeadsModal sellers={allSellers} onClose={() => setShowLeadsModal(false)} />
+      )}
+      {showProductsModal && (
+        <ManageProductsModal onClose={() => setShowProductsModal(false)} />
       )}
 
       <Tabs defaultValue="sales" className="space-y-6">

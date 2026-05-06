@@ -1,18 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { X, Plus, Trash2, CirclePlus } from "lucide-react";
+import React, { useState } from "react";
+import { X, Trash2, CirclePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-
-const PRODUCTS = [
-  "Produto A",
-  "Produto B",
-  "Produto C",
-  "Produto D",
-  "Outro",
-];
 
 function emptyItem() {
   return { product: "", qty: 1, unitPrice: 0 };
@@ -20,6 +12,12 @@ function emptyItem() {
 
 export default function RegisterSaleModal({ sellers, onClose }) {
   const queryClient = useQueryClient();
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => base44.entities.Product.list("name", 100),
+  });
+
   const [tab, setTab] = useState("sale"); // sale | exit
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [customerName, setCustomerName] = useState("");
@@ -34,6 +32,15 @@ export default function RegisterSaleModal({ sellers, onClose }) {
     setItems((prev) => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  }
+
+  function selectProduct(idx, productName) {
+    const found = products.find((p) => p.name === productName);
+    setItems((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], product: productName, unitPrice: found ? found.default_price : 0 };
       return next;
     });
   }
@@ -154,12 +161,12 @@ export default function RegisterSaleModal({ sellers, onClose }) {
                 <div className="flex items-center gap-2">
                   <select
                     value={item.product}
-                    onChange={(e) => updateItem(idx, "product", e.target.value)}
+                    onChange={(e) => selectProduct(idx, e.target.value)}
                     className="flex-1 h-9 rounded-md bg-muted/20 border border-border text-foreground text-sm px-3 focus:outline-none focus:ring-1 focus:ring-ring"
                   >
                     <option value="">Selecione o produto</option>
-                    {PRODUCTS.map((p) => (
-                      <option key={p} value={p}>{p}</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
                     ))}
                   </select>
                   {items.length > 1 && (
