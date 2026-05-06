@@ -1,7 +1,11 @@
 export function getCategory(eventType) {
   if (!eventType) return "other";
   if (eventType.includes("whatsapp")) return "whatsapp";
-  if (eventType.includes("call")) return "call";
+  // Tipos 3C explícitos primeiro (evitar conflito com whatsapp_call)
+  if (eventType === "call.answered" || eventType === "call.no_answer" || eventType === "call.attempt" ||
+      eventType === "call.ended" || eventType === "call_answered" || eventType === "call_attempted" ||
+      eventType === "call-history-was-created") return "call";
+  if (eventType.startsWith("call.")) return "call";
   if (eventType.includes("stage_changed")) return "stage";
   if (eventType === "lead.won") return "won";
   if (eventType === "lead.lost") return "lost";
@@ -12,8 +16,9 @@ export function getCategory(eventType) {
 
 export function isEffectiveContact(event) {
   const cat = getCategory(event.event_type);
-  // Para 3C: conta ligações atendidas
+  // Para 3C: ligação atendida pelo event_type OU pelo payload.result
   if (cat === "call") {
+    if (event.event_type === "call.answered" || event.event_type === "call_answered") return true;
     try {
       const p = event.payload ? JSON.parse(event.payload) : {};
       return p.result === "answered";
@@ -60,7 +65,7 @@ export function getQualificationLabel(qualification) {
 export function isCallAttempt(event) {
   // Conta apenas chamadas 3C
   if (event.source !== "3c") return false;
-  const types = ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt"];
+  const types = ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt", "call_answered", "call_attempted"];
   return types.includes(event.event_type);
 }
 

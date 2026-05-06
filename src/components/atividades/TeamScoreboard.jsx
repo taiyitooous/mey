@@ -41,7 +41,7 @@ function ScoreCard({ value, label, meta, status, icon: Icon }) {
 }
 
 export default function TeamScoreboard({ events }) {
-  const dedupedCalls = deduplicateCallEvents(events.filter((e) => e.source === "3c" && ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt"].includes(e.event_type)));
+  const dedupedCalls = deduplicateCallEvents(events.filter((e) => e.source === "3c" && ["call.ended", "call-history-was-created", "call.answered", "call.no_answer", "call.attempt", "call_answered", "call_attempted"].includes(e.event_type)));
   const total = events.length;
   const sellers = new Set(events.filter((e) => e.user_name && e.user_name !== "Sistema").map((e) => e.user_name)).size;
   const calls = dedupedCalls.length;
