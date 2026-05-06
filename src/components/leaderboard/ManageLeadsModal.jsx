@@ -9,6 +9,7 @@ export default function ManageLeadsModal({ onClose }) {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState(null);
   const [editCount, setEditCount] = useState("");
+  const [editDate, setEditDate] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
 
@@ -28,7 +29,7 @@ export default function ManageLeadsModal({ onClose }) {
   async function handleSave(record) {
     const count = parseInt(editCount);
     if (isNaN(count) || count < 0) return;
-    await base44.entities.LeadDailyCount.update(record.id, { lead_count: count });
+    await base44.entities.LeadDailyCount.update(record.id, { lead_count: count, date: editDate });
     queryClient.invalidateQueries({ queryKey: ["lead_daily_counts_all"] });
     queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
     setEditingId(null);
@@ -93,14 +94,20 @@ export default function ManageLeadsModal({ onClose }) {
               </div>
 
               {editingId === record.id ? (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                  <Input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-36 h-8 bg-muted/20 border-border text-foreground text-sm"
+                    autoFocus
+                  />
                   <Input
                     type="number"
                     min={0}
                     value={editCount}
                     onChange={(e) => setEditCount(e.target.value)}
                     className="w-20 h-8 bg-muted/20 border-border text-foreground text-sm text-center"
-                    autoFocus
                   />
                   <Button size="sm" className="h-8 w-8 p-0 bg-primary" onClick={() => handleSave(record)}>
                     <Check className="w-3.5 h-3.5" />
@@ -119,7 +126,7 @@ export default function ManageLeadsModal({ onClose }) {
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                    onClick={() => { setEditingId(record.id); setEditCount(record.lead_count); setDeletingId(null); }}
+                    onClick={() => { setEditingId(record.id); setEditCount(record.lead_count); setEditDate(record.date); setDeletingId(null); }}
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
