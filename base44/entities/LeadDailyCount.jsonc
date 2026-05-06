@@ -1,0 +1,25 @@
+{
+  "name": "LeadDailyCount",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do registro"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "lead_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de leads recebidos no dia"
+    }
+  },
+  "required": [
+    "date",
+    "seller_name",
+    "lead_count"
+  ]
+}

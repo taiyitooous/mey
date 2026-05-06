@@ -1,0 +1,46 @@
+{
+  "name": "SaleRecord",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data da venda"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "items": {
+      "type": "string",
+      "description": "JSON com itens da venda [{product, qty, unit_price}]"
+    },
+    "total": {
+      "type": "number",
+      "description": "Valor total da venda (R$)"
+    },
+    "payment_done": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pagamento j\u00e1 realizado"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "sale",
+        "exit"
+      ],
+      "default": "sale",
+      "description": "Tipo: venda ou sa\u00edda"
+    }
+  },
+  "required": [
+    "date",
+    "seller_name",
+    "total"
+  ]
+}

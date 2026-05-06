@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Users, TrendingUp, DollarSign, Target, PhoneCall, Calendar } from "lucide-react";
-import { isCallAttempt, deduplicateCallEvents } from "@/lib/eventUtils";
+import { Trophy, TrendingUp, DollarSign, PlusCircle, Users } from "lucide-react";
+import { deduplicateCallEvents } from "@/lib/eventUtils";
 import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
 import LeaderboardPodium from "@/components/leaderboard/LeaderboardPodium";
 import LeaderboardTable from "@/components/leaderboard/LeaderboardTable";
 import LeaderboardCharts from "@/components/leaderboard/LeaderboardCharts";
+import RegisterSaleModal from "@/components/leaderboard/RegisterSaleModal";
+import RegisterLeadsModal from "@/components/leaderboard/RegisterLeadsModal";
 import { getDateRange, PERIOD_OPTIONS, SALES_CRITERIA, COLLECTION_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -19,6 +21,8 @@ export default function Leaderboard() {
   const [customEnd, setCustomEnd] = useState("");
   const [salesCriteria, setSalesCriteria] = useState("conversion");
   const [collectionCriteria, setCollectionCriteria] = useState("payment_rate");
+  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [showLeadsModal, setShowLeadsModal] = useState(false);
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -30,14 +34,19 @@ export default function Leaderboard() {
     queryFn: () => base44.entities.Event.list("-created_date", 2000),
   });
 
-  const { data: leads = [] } = useQuery({
-    queryKey: ["leaderboard_leads"],
-    queryFn: () => base44.entities.Lead.list("-created_date", 2000),
-  });
-
   const { data: orders = [] } = useQuery({
     queryKey: ["leaderboard_orders"],
     queryFn: () => base44.entities.Order.list("-created_date", 2000),
+  });
+
+  const { data: saleRecords = [] } = useQuery({
+    queryKey: ["sale_records"],
+    queryFn: () => base44.entities.SaleRecord.list("-created_date", 2000),
+  });
+
+  const { data: leadCounts = [] } = useQuery({
+    queryKey: ["lead_daily_counts"],
+    queryFn: () => base44.entities.LeadDailyCount.list("-date", 500),
   });
 
   // Filter events by period
@@ -49,19 +58,63 @@ export default function Leaderboard() {
     });
   }, [events, start, end]);
 
-  // Build sales sellers data
+  // Filter sale records by period
+  const filteredSaleRecords = useMemo(() => {
+    if (!start || !end) return saleRecords;
+    return saleRecords.filter((r) => {
+      const d = new Date(r.date + "T12:00:00");
+      return d >= start && d <= end;
+    });
+  }, [saleRecords, start, end]);
+
+  // Filter lead daily counts by period
+  const filteredLeadCounts = useMemo(() => {
+    if (!start || !end) return leadCounts;
+    return leadCounts.filter((r) => {
+      const d = new Date(r.date + "T12:00:00");
+      return d >= start && d <= end;
+    });
+  }, [leadCounts, start, end]);
+
+  // All known sellers (from sale records + lead counts) for modal selects
+  const allSellers = useMemo(() => {
+    const names = new Set();
+    saleRecords.forEach((r) => r.seller_name && names.add(r.seller_name));
+    leadCounts.forEach((r) => r.seller_name && names.add(r.seller_name));
+    filteredEvents.forEach((e) => e.user_name && names.add(e.user_name.trim()));
+    return Array.from(names).sort();
+  }, [saleRecords, leadCounts, filteredEvents]);
+
+  // Build sales sellers data (events + manual records)
   const salesData = useMemo(() => {
     const sellers = {};
 
+    const ensure = (name) => {
+      if (!sellers[name]) sellers[name] = { name, leadsSet: new Set(), manualLeads: 0, wins: 0, manualWins: 0, calls: 0, callsAnswered: 0, whatsapp: 0 };
+    };
+
+    // From events
     filteredEvents.forEach((e) => {
       if (!e.user_name) return;
       const name = e.user_name.trim();
-      if (!sellers[name]) {
-        sellers[name] = { name, leads: new Set(), wins: 0, calls: 0, callsAnswered: 0, whatsapp: 0 };
-      }
-      if (e.entity_type === "lead" && e.entity_id) sellers[name].leads.add(e.entity_id);
+      ensure(name);
+      if (e.entity_type === "lead" && e.entity_id) sellers[name].leadsSet.add(e.entity_id);
       if (e.event_type === "lead.won") sellers[name].wins++;
       if (e.event_type === "whatsapp_sent" || e.event_type === "lead.whatsapp_sent") sellers[name].whatsapp++;
+    });
+
+    // From manual sale records
+    filteredSaleRecords.forEach((r) => {
+      if (!r.seller_name || r.type === "exit") return;
+      ensure(r.seller_name);
+      sellers[r.seller_name].manualWins++;
+    });
+
+    // From manual lead counts (daily, one per seller per day)
+    filteredLeadCounts.forEach((r) => {
+      if (!r.seller_name) return;
+      ensure(r.seller_name);
+      sellers[r.seller_name].manualLeads += r.lead_count || 0;
     });
 
     // Dedup calls
@@ -69,7 +122,7 @@ export default function Leaderboard() {
     dedupedCalls.forEach((e) => {
       if (!e.user_name) return;
       const name = e.user_name.trim();
-      if (!sellers[name]) sellers[name] = { name, leads: new Set(), wins: 0, calls: 0, callsAnswered: 0, whatsapp: 0 };
+      ensure(name);
       sellers[name].calls++;
       try {
         const p = e.payload ? JSON.parse(e.payload) : {};
@@ -78,18 +131,22 @@ export default function Leaderboard() {
     });
 
     return Object.values(sellers)
-      .filter((s) => s.leads.size > 0 || s.wins > 0 || s.calls > 0)
-      .map((s) => ({
-        name: s.name,
-        leads: s.leads.size,
-        wins: s.wins,
-        calls: s.calls,
-        callsAnswered: s.callsAnswered,
-        whatsapp: s.whatsapp,
-        conversion: s.leads.size > 0 ? ((s.wins / s.leads.size) * 100).toFixed(1) : "0.0",
-        answerRate: s.calls > 0 ? ((s.callsAnswered / s.calls) * 100).toFixed(1) : "0.0",
-      }));
-  }, [filteredEvents]);
+      .filter((s) => s.leadsSet.size > 0 || s.manualLeads > 0 || s.wins > 0 || s.manualWins > 0 || s.calls > 0)
+      .map((s) => {
+        const leads = s.leadsSet.size + s.manualLeads;
+        const wins = s.wins + s.manualWins;
+        return {
+          name: s.name,
+          leads,
+          wins,
+          calls: s.calls,
+          callsAnswered: s.callsAnswered,
+          whatsapp: s.whatsapp,
+          conversion: leads > 0 ? ((wins / leads) * 100).toFixed(1) : "0.0",
+          answerRate: s.calls > 0 ? ((s.callsAnswered / s.calls) * 100).toFixed(1) : "0.0",
+        };
+      });
+  }, [filteredEvents, filteredSaleRecords, filteredLeadCounts]);
 
   // Build collection data
   const collectionData = useMemo(() => {
@@ -147,14 +204,42 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
-      <LeaderboardHeader
-        period={period}
-        setPeriod={setPeriod}
-        customStart={customStart}
-        customEnd={customEnd}
-        setCustomStart={setCustomStart}
-        setCustomEnd={setCustomEnd}
-      />
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <LeaderboardHeader
+          period={period}
+          setPeriod={setPeriod}
+          customStart={customStart}
+          customEnd={customEnd}
+          setCustomStart={setCustomStart}
+          setCustomEnd={setCustomEnd}
+        />
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLeadsModal(true)}
+            className="border-border gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <Users className="w-4 h-4" />
+            Registrar Leads
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setShowSaleModal(true)}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Registrar Venda
+          </Button>
+        </div>
+      </div>
+
+      {showSaleModal && (
+        <RegisterSaleModal sellers={allSellers} onClose={() => setShowSaleModal(false)} />
+      )}
+      {showLeadsModal && (
+        <RegisterLeadsModal sellers={allSellers} onClose={() => setShowLeadsModal(false)} />
+      )}
 
       <Tabs defaultValue="sales" className="space-y-6">
         <TabsList className="bg-card border border-border">
