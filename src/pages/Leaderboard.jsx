@@ -76,28 +76,37 @@ export default function Leaderboard() {
 
   // Build sales data from manual records only
   const salesData = useMemo(() => {
+    // key = trimmed lowercase name for case-insensitive matching
     const sellers = {};
+    // stores the canonical display name (first occurrence wins)
+    const displayNames = {};
+
+    const key = (name) => name.trim().toLowerCase();
 
     const ensure = (name) => {
-      if (!sellers[name]) sellers[name] = { name, leads: 0, wins: 0 };
+      const k = key(name);
+      if (!sellers[k]) {
+        sellers[k] = { leads: 0, wins: 0 };
+        displayNames[k] = name.trim();
+      }
     };
 
     filteredSaleRecords.forEach((r) => {
       if (!r.seller_name || r.type === "exit") return;
       ensure(r.seller_name);
-      sellers[r.seller_name].wins++;
+      sellers[key(r.seller_name)].wins++;
     });
 
     filteredLeadCounts.forEach((r) => {
       if (!r.seller_name) return;
       ensure(r.seller_name);
-      sellers[r.seller_name].leads += r.lead_count || 0;
+      sellers[key(r.seller_name)].leads += r.lead_count || 0;
     });
 
-    return Object.values(sellers)
-      .filter((s) => s.leads > 0 || s.wins > 0)
-      .map((s) => ({
-        name: s.name,
+    return Object.entries(sellers)
+      .filter(([, s]) => s.leads > 0 || s.wins > 0)
+      .map(([k, s]) => ({
+        name: displayNames[k],
         leads: s.leads,
         wins: s.wins,
         conversion: s.leads > 0 ? ((s.wins / s.leads) * 100).toFixed(1) : "0.0",
