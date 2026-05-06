@@ -1,0 +1,18 @@
+{
+  "name": "Seller",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Vendedor ativo"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

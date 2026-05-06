@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, TrendingUp, DollarSign, PlusCircle, Users, Package } from "lucide-react";
+import { Trophy, TrendingUp, DollarSign, PlusCircle, Users, Package, UserCog } from "lucide-react";
 import { deduplicateCallEvents } from "@/lib/eventUtils";
 import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
@@ -14,6 +14,7 @@ import LeaderboardCharts from "@/components/leaderboard/LeaderboardCharts";
 import RegisterSaleModal from "@/components/leaderboard/RegisterSaleModal";
 import RegisterLeadsModal from "@/components/leaderboard/RegisterLeadsModal";
 import ManageProductsModal from "@/components/leaderboard/ManageProductsModal";
+import ManageSellersModal from "@/components/leaderboard/ManageSellersModal";
 import { getDateRange, PERIOD_OPTIONS, SALES_CRITERIA, COLLECTION_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -25,6 +26,7 @@ export default function Leaderboard() {
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showLeadsModal, setShowLeadsModal] = useState(false);
   const [showProductsModal, setShowProductsModal] = useState(false);
+  const [showSellersModal, setShowSellersModal] = useState(false);
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -44,6 +46,11 @@ export default function Leaderboard() {
   const { data: saleRecords = [] } = useQuery({
     queryKey: ["sale_records"],
     queryFn: () => base44.entities.SaleRecord.list("-created_date", 2000),
+  });
+
+  const { data: registeredSellers = [] } = useQuery({
+    queryKey: ["sellers"],
+    queryFn: () => base44.entities.Seller.list("name", 200),
   });
 
   const { data: leadCounts = [] } = useQuery({
@@ -78,14 +85,15 @@ export default function Leaderboard() {
     });
   }, [leadCounts, start, end]);
 
-  // All known sellers (from sale records + lead counts) for modal selects
+  // All known sellers: registered sellers take priority, then fallback from events/records
   const allSellers = useMemo(() => {
     const names = new Set();
+    registeredSellers.forEach((s) => s.name && names.add(s.name));
     saleRecords.forEach((r) => r.seller_name && names.add(r.seller_name));
     leadCounts.forEach((r) => r.seller_name && names.add(r.seller_name));
     filteredEvents.forEach((e) => e.user_name && names.add(e.user_name.trim()));
     return Array.from(names).sort();
-  }, [saleRecords, leadCounts, filteredEvents]);
+  }, [registeredSellers, saleRecords, leadCounts, filteredEvents]);
 
   // Build sales sellers data (events + manual records)
   const salesData = useMemo(() => {
@@ -219,6 +227,15 @@ export default function Leaderboard() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setShowSellersModal(true)}
+            className="border-border gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <UserCog className="w-4 h-4" />
+            Vendedores
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowProductsModal(true)}
             className="border-border gap-2 text-muted-foreground hover:text-foreground"
           >
@@ -253,6 +270,9 @@ export default function Leaderboard() {
       )}
       {showProductsModal && (
         <ManageProductsModal onClose={() => setShowProductsModal(false)} />
+      )}
+      {showSellersModal && (
+        <ManageSellersModal onClose={() => setShowSellersModal(false)} />
       )}
 
       <Tabs defaultValue="sales" className="space-y-6">
