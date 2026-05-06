@@ -2,8 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, LineChart, Line, ComposedChart, Area,
-  RadialBarChart, RadialBar, Cell,
+  CartesianGrid, Legend, Line, ComposedChart,
 } from "recharts";
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -41,26 +40,11 @@ function SalesCharts({ data }) {
     Vendas: d.wins,
   }));
 
-  const callData = data.map((d) => ({
-    name: shortName(d.name),
-    Ligações: d.calls,
-    Atendidas: d.callsAnswered,
-    "Tx. Atend. %": parseFloat(d.answerRate),
-  }));
-
   const convData = data.map((d) => ({
     name: shortName(d.name),
     "Conversão %": parseFloat(d.conversion),
     Vendas: d.wins,
-    Leads: d.leads,
   })).sort((a, b) => b["Conversão %"] - a["Conversão %"]);
-
-  const topN = data.slice(0, 8);
-  const radialData = topN.map((d, i) => ({
-    name: shortName(d.name),
-    value: parseFloat(d.conversion),
-    fill: i === 0 ? CHART_COLORS.primary : i === 1 ? CHART_COLORS.chart2 : i === 2 ? CHART_COLORS.chart3 : CHART_COLORS.muted,
-  }));
 
   return (
     <div className="space-y-3">
@@ -112,83 +96,6 @@ function SalesCharts({ data }) {
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </Card>
-
-        {/* 3. Ligações × Atendidas + Taxa */}
-        <Card className="p-4 bg-card border-border">
-          <p className="text-xs font-semibold text-muted-foreground mb-4">Ligações × Atendidas + Taxa de Atendimento %</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <ComposedChart data={callData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-              <YAxis yAxisId="cnt" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-              <YAxis
-                yAxisId="pct"
-                orientation="right"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                tickFormatter={(v) => `${v}%`}
-                domain={[0, 100]}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar yAxisId="cnt" dataKey="Ligações" fill={CHART_COLORS.chart3} radius={[3, 3, 0, 0]} />
-              <Bar yAxisId="cnt" dataKey="Atendidas" fill={CHART_COLORS.primary} radius={[3, 3, 0, 0]} />
-              <Line
-                yAxisId="pct"
-                type="monotone"
-                dataKey="Tx. Atend. %"
-                stroke={CHART_COLORS.chart2}
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                strokeDasharray="4 2"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* 4. Conversão radial top vendedores */}
-        <Card className="p-4 bg-card border-border">
-          <p className="text-xs font-semibold text-muted-foreground mb-4">Conversão % — Top colaboradores</p>
-          <div className="flex items-center gap-4">
-            <ResponsiveContainer width="55%" height={200}>
-              <RadialBarChart
-                cx="50%"
-                cy="50%"
-                innerRadius="25%"
-                outerRadius="90%"
-                data={radialData}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <RadialBar dataKey="value" background={{ fill: "hsl(var(--muted))" }} cornerRadius={4}>
-                  {radialData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </RadialBar>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-lg">
-                        <p className="font-semibold">{d.name}</p>
-                        <p className="text-primary">{d.value}% conversão</p>
-                      </div>
-                    );
-                  }}
-                />
-              </RadialBarChart>
-            </ResponsiveContainer>
-            <div className="flex-1 space-y-2">
-              {radialData.map((d, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.fill }} />
-                  <span className="text-xs text-muted-foreground truncate flex-1">{d.name}</span>
-                  <span className="text-xs font-bold text-foreground">{d.value}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </Card>
       </div>
     </div>

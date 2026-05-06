@@ -10,11 +10,9 @@ export const PERIOD_OPTIONS = [
 ];
 
 export const SALES_CRITERIA = [
-  { value: "conversion", label: "Maior Conversão %" },
   { value: "wins", label: "Maior número de vendas" },
+  { value: "conversion", label: "Maior Conversão %" },
   { value: "leads", label: "Maior número de leads" },
-  { value: "calls", label: "Maior número de ligações" },
-  { value: "answer_rate", label: "Maior taxa de atendimento" },
 ];
 
 export const COLLECTION_CRITERIA = [
@@ -59,8 +57,6 @@ export function getCriteriaValue(row, criteria, type) {
     if (criteria === "conversion") return `${row.conversion}%`;
     if (criteria === "wins") return `${row.wins} vendas`;
     if (criteria === "leads") return `${row.leads} leads`;
-    if (criteria === "calls") return `${row.calls} lig.`;
-    if (criteria === "answer_rate") return `${row.answerRate}%`;
   }
   if (type === "collection") {
     if (criteria === "payment_rate") return `${row.paymentRate}%`;

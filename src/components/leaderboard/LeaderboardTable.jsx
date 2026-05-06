@@ -46,7 +46,7 @@ export default function LeaderboardTable({ data, criteria, type, loading }) {
     );
   }
 
-  const salesCols = ["Leads", "Vendas", "Conversão %", "Ligações", "Atendidas", "Taxa Atend."];
+  const salesCols = ["Leads", "Vendas", "Conversão %"];
   const collectionCols = ["Pedidos", "Tentativas", "Promessas", "Pagamentos", "Taxa Pgto."];
 
   return (
@@ -118,9 +118,6 @@ export default function LeaderboardTable({ data, criteria, type, loading }) {
                           <td className="px-4 py-3 text-right text-muted-foreground">{row.leads}</td>
                           <td className="px-4 py-3 text-right text-muted-foreground">{row.wins}</td>
                           <td className="px-4 py-3 text-right text-muted-foreground">{row.conversion}%</td>
-                          <td className="px-4 py-3 text-right text-muted-foreground">{row.calls}</td>
-                          <td className="px-4 py-3 text-right text-muted-foreground">{row.callsAnswered}</td>
-                          <td className="px-4 py-3 text-right text-muted-foreground">{row.answerRate}%</td>
                         </>
                       )}
 
