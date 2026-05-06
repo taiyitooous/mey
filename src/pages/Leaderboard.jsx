@@ -14,6 +14,7 @@ import RegisterLeadsModal from "@/components/leaderboard/RegisterLeadsModal";
 import ManageProductsModal from "@/components/leaderboard/ManageProductsModal";
 import ManageSellersModal from "@/components/leaderboard/ManageSellersModal";
 import ManageSalesModal from "@/components/leaderboard/ManageSalesModal";
+import ManageLeadsModal from "@/components/leaderboard/ManageLeadsModal";
 import { getDateRange, SALES_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -26,6 +27,7 @@ export default function Leaderboard() {
   const [showProductsModal, setShowProductsModal] = useState(false);
   const [showSellersModal, setShowSellersModal] = useState(false);
   const [showManageSalesModal, setShowManageSalesModal] = useState(false);
+  const [showManageLeadsModal, setShowManageLeadsModal] = useState(false);
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -164,6 +166,15 @@ export default function Leaderboard() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setShowManageLeadsModal(true)}
+            className="border-border gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Gerenciar Leads
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowLeadsModal(true)}
             className="border-border gap-2 text-muted-foreground hover:text-foreground"
           >
@@ -186,6 +197,9 @@ export default function Leaderboard() {
       )}
       {showManageSalesModal && (
         <ManageSalesModal sellers={allSellers} onClose={() => setShowManageSalesModal(false)} />
+      )}
+      {showManageLeadsModal && (
+        <ManageLeadsModal onClose={() => setShowManageLeadsModal(false)} />
       )}
       {showLeadsModal && (
         <RegisterLeadsModal sellers={allSellers} onClose={() => setShowLeadsModal(false)} />
