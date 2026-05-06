@@ -41,25 +41,21 @@ export default function Sidebar({ collapsed, onToggle }) {
   });
 
   return (
-    <aside
-      className={`fixed top-0 left-0 z-40 h-screen flex flex-col bg-card border-r border-border transition-all duration-300 ease-in-out ${
-        collapsed ? "w-[72px]" : "w-[240px]"
-      }`}
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-border shrink-0">
-        <img
-          src="https://media.base44.com/images/public/user_68fbb6f1a06149abf6635095/ff0e387d5_image.png"
-          alt="MEY"
-          className="w-9 h-9 rounded-lg object-cover"
-        />
-        {!collapsed && (
-          <span className="text-xl font-bold tracking-tight text-foreground">MEY</span>
-        )}
-      </div>
+    <>
+      {/* Floating Sidebar */}
+      <aside className="fixed left-3 top-1/2 -translate-y-1/4 z-40 flex flex-col items-center gap-1 bg-card/90 backdrop-blur-md border border-border rounded-2xl py-3 px-1.5 shadow-2xl">
+        {/* Logo */}
+        <div className="mb-2 px-1">
+          <img
+            src="https://media.base44.com/images/public/user_68fbb6f1a06149abf6635095/ff0e387d5_image.png"
+            alt="MEY"
+            className="w-8 h-8 rounded-lg object-cover"
+          />
+        </div>
 
-      {/* Nav */}
-      <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
+        <div className="w-6 h-px bg-border mb-1" />
+
+        {/* Nav */}
         {NAV_ITEMS.map((item) => {
           const isActive =
             location.pathname === item.path ||
@@ -72,100 +68,63 @@ export default function Sidebar({ collapsed, onToggle }) {
               to={item.path}
               onMouseEnter={() => setHoveredPath(item.path)}
               onMouseLeave={() => setHoveredPath(null)}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group overflow-hidden ${
+              className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 group ${
                 isActive
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary/20 text-primary"
                   : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
               }`}
             >
-              {/* Active indicator bar */}
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
-              )}
-
               <item.icon
                 className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
                   isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                 } ${isHovered && !isActive ? "scale-110" : ""}`}
               />
-
-              {!collapsed && (
-                <span className="transition-opacity duration-200">{item.label}</span>
-              )}
-
-              {/* Tooltip when collapsed */}
-              {collapsed && (
-                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-popover border border-border text-foreground text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-                  {item.label}
-                </span>
-              )}
+              {/* Tooltip */}
+              <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-popover border border-border text-foreground text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
+                {item.label}
+              </span>
             </Link>
           );
         })}
-      </nav>
 
-      {/* Footer */}
-      <div className="p-2 border-t border-border space-y-1">
-        {/* User Profile */}
+        <div className="w-6 h-px bg-border mt-1 mb-1" />
+
+        {/* User */}
         {user && (
           <button
             onClick={() => setOpenEditProfile(true)}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-muted/70 transition-all duration-200 group"
+            className="relative flex items-center justify-center w-10 h-10 rounded-xl hover:bg-muted/70 transition-all duration-200 group"
           >
-            <div className="relative shrink-0">
-              {user.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.full_name}
-                  className="w-8 h-8 rounded-lg object-cover ring-2 ring-transparent group-hover:ring-primary/30 transition-all duration-200"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center ring-2 ring-transparent group-hover:ring-primary/30 transition-all duration-200">
-                  <User className="w-4 h-4 text-primary" />
-                </div>
-              )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-card" />
-            </div>
-            {!collapsed && (
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{user.full_name || "Usuário"}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt={user.full_name} className="w-7 h-7 rounded-lg object-cover" />
+            ) : (
+              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+                <User className="w-4 h-4 text-primary" />
               </div>
             )}
+            <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-popover border border-border text-foreground text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
+              {user.full_name || "Perfil"}
+            </span>
           </button>
         )}
 
         {/* Logout */}
         <button
           onClick={() => base44.auth.logout()}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full group"
+          className="relative flex items-center justify-center w-10 h-10 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
         >
-          <LogOut className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
-          {!collapsed && <span>Sair</span>}
-          {collapsed && (
-            <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-popover border border-border text-foreground text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-              Sair
-            </span>
-          )}
+          <LogOut className="w-4 h-4" />
+          <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-popover border border-border text-foreground text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
+            Sair
+          </span>
         </button>
-
-        {/* Toggle */}
-        <button
-          onClick={onToggle}
-          className="flex items-center justify-center w-full py-2 rounded-lg text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all duration-200"
-        >
-          {collapsed
-            ? <ChevronRight className="w-4 h-4" />
-            : <ChevronLeft className="w-4 h-4" />
-          }
-        </button>
-      </div>
+      </aside>
 
       {/* Edit Profile Dialog */}
       {openEditProfile && user && (
         <EditProfileDialog user={user} onClose={() => setOpenEditProfile(false)} />
       )}
-    </aside>
+    </>
   );
 }
 

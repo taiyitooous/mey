@@ -22,11 +22,7 @@ export default function AppLayout() {
     <GlobalFiltersProvider>
       <div className="min-h-screen bg-background">
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
-        <main
-          className={`transition-all duration-300 ${
-            collapsed ? "ml-[72px]" : "ml-[240px]"
-          }`}
-        >
+        <main className="ml-[72px]">
           <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
             <GlobalHeader />
             <Outlet />
