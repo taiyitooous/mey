@@ -128,7 +128,7 @@ function OrderCard({ order, onClick, delay }) {
           <span className="text-[10px] truncate" style={{ color: payStatusColor }}>{order.payment_status || '—'}</span>
         </div>
         <p className="text-sm font-bold text-white tabular-nums shrink-0">
-          {formatCurrency((order.total_price || 0) / 100)}
+          {formatCurrency((Number(order.total_price) || 0) / 100)}
         </p>
       </div>
 
@@ -216,7 +216,7 @@ function CustomerCard({ customer, onClick, delay }) {
                 >
                   <span style={{ color: pay.color }}>{pay.label}</span>
                   <span style={{ color: payColor }}>{o.payment_status || '—'}</span>
-                  <span className="font-bold text-white">{formatCurrency((o.total_price || 0) / 100)}</span>
+                  <span className="font-bold text-white">{formatCurrency((Number(o.total_price) || 0) / 100)}</span>
                 </button>
               )
             })}
@@ -267,7 +267,7 @@ function CustomerCard({ customer, onClick, delay }) {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-xs font-bold text-white tabular-nums">{formatCurrency((o.total_price || 0) / 100)}</p>
+                      <p className="text-xs font-bold text-white tabular-nums">{formatCurrency((Number(o.total_price) || 0) / 100)}</p>
                       <p className="text-[10px] text-faint">{o.started_at ? timeAgo(o.started_at) : '—'}</p>
                     </div>
                     <ChevronRight size={12} className="text-faint shrink-0" />
@@ -312,7 +312,7 @@ function OrderModal({ order, onClose }) {
             <StatusIcon size={14} style={{ color: status.color }} />
             <p className="text-sm font-semibold" style={{ color: status.color }}>{status.label}</p>
           </div>
-          <p className="text-sm font-bold text-white">{formatCurrency((order.total_price || 0) / 100)}</p>
+          <p className="text-sm font-bold text-white">{formatCurrency((Number(order.total_price) || 0) / 100)}</p>
         </div>
 
         <div className="p-3 rounded-lg space-y-2"
@@ -462,7 +462,7 @@ export default function Skale() {
       }
       const c = map.get(key)
       c.orders.push(o)
-      c.totalSpent += o.total_price || 0
+      c.totalSpent += Number(o.total_price) || 0
       if (['Pago', 'Confirmado'].includes(o.payment_status)) c.paidCount++
       const d = o.started_at ? new Date(o.started_at) : null
       if (d && (!c.latestDate || d > new Date(c.latestDate))) {
@@ -480,7 +480,7 @@ export default function Skale() {
   // ── Stats ──────────────────────────────────────────────
   const statsPaid  = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).length
   const statsPend  = orders.filter(o => ['Aguardando Pagamento', 'Pendente'].includes(o.payment_status)).length
-  const statsRev   = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).reduce((s, o) => s + (o.total_price || 0), 0)
+  const statsRev   = orders.filter(o => ['Pago', 'Confirmado'].includes(o.payment_status)).reduce((s, o) => s + (Number(o.total_price) || 0), 0)
   const uniqueCustomers = useMemo(() => {
     const phones = new Set()
     const names  = new Set()
