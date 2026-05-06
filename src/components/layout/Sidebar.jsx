@@ -12,6 +12,7 @@ import {
   Shield,
   Database,
   User,
+  Trophy,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -19,6 +20,7 @@ import { base44 } from "@/api/base44Client";
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Atividades", icon: Activity, path: "/atividades" },
+  { label: "Leaderboard", icon: Trophy, path: "/leaderboard" },
   { label: "DataCrazy", icon: Database, path: "/datacrazy" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
   { label: "Coordenadores", icon: Shield, path: "/coordenadores" },

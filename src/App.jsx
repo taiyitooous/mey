@@ -16,6 +16,7 @@ import Integracoes from '@/pages/Integracoes';
 import Coordenadores from '@/pages/Coordenadores';
 import ImportarCSV from '@/pages/ImportarCSV';
 import DataCrazy from '@/pages/DataCrazy';
+import Leaderboard from '@/pages/Leaderboard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
         <Route path="/coordenadores" element={<Coordenadores />} />
         <Route path="/integracoes" element={<Integracoes />} />
         <Route path="/importar-csv" element={<ImportarCSV />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
