@@ -1,18 +1,17 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Cell, LabelList,
+  CartesianGrid, Legend, LabelList,
 } from "recharts";
 
-// Qualificações conhecidas (payload.qualification)
 const QUALS = [
-  { key: "mudo",           label: "Mudo",                    color: "#6E9FA3" },
-  { key: "caixa_postal",   label: "Caixa Postal",            color: "#B97A56" },
-  { key: "sem_resposta",   label: "Sem Resposta",            color: "#B85C5C" },
-  { key: "atendida",       label: "Atendida",                color: "#4F8F63" },
-  { key: "ocupado",        label: "Ocupado",                 color: "#C8A94D" },
-  { key: "outros",         label: "Outros",                  color: "#8A8A8A" },
+  { key: "atendida",     label: "Atendida",       color: "#4F8F63" },
+  { key: "mudo",         label: "Mudo",            color: "#6E9FA3" },
+  { key: "caixa_postal", label: "Caixa Postal",    color: "#B97A56" },
+  { key: "sem_resposta", label: "Sem Resposta",    color: "#B85C5C" },
+  { key: "ocupado",      label: "Ocupado",         color: "#C8A94D" },
+  { key: "outros",       label: "Outros",          color: "#8A8A8A" },
 ];
 
 function classifyQual(raw) {
@@ -20,141 +19,142 @@ function classifyQual(raw) {
   const q = raw.toLowerCase();
   if (q.includes("mudo")) return "mudo";
   if (q.includes("caixa") || q.includes("postal") || q.includes("voicemail")) return "caixa_postal";
-  if (q.includes("sem resposta") || q.includes("no_answer") || q.includes("nao atend")) return "sem_resposta";
+  if (q.includes("sem resposta") || q.includes("no_answer") || q.includes("nao atend") || q === "no_answer") return "sem_resposta";
   if (q === "answered" || q.includes("atend")) return "atendida";
   if (q.includes("ocupado") || q === "busy") return "ocupado";
   return "outros";
 }
 
 function getHourSP(dateStr) {
-  const raw = dateStr;
-  const iso = raw && !raw.endsWith("Z") && !raw.includes("+") ? raw + "Z" : raw;
+  const iso = dateStr && !dateStr.endsWith("Z") && !dateStr.includes("+") ? dateStr + "Z" : dateStr;
   const d = new Date(iso);
   return new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
 }
 
-const CustomTooltip = ({ active, payload, label, selectedQual }) => {
+const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
-  const d = payload[0]?.payload;
-  if (!d) return null;
+  const total = payload.reduce((a, p) => a + (p.value || 0), 0);
   return (
-    <div className="bg-card border border-border rounded-xl p-3 text-xs shadow-2xl min-w-[140px]">
+    <div className="bg-card border border-border rounded-xl p-3 text-xs shadow-2xl min-w-[160px]">
       <p className="font-bold text-foreground mb-2">{label}</p>
-      <div className="flex items-center gap-2">
-        <div className="w-2.5 h-2.5 rounded-full" style={{ background: payload[0]?.fill }} />
-        <span className="text-muted-foreground">Qtd:</span>
-        <span className="font-bold text-foreground">{d.count}</span>
-      </div>
-      <div className="flex items-center gap-2 mt-1">
-        <div className="w-2.5 h-2.5 rounded-full bg-transparent" />
-        <span className="text-muted-foreground">% do total:</span>
-        <span className="font-bold text-foreground">{d.pct}%</span>
-      </div>
-      <div className="flex items-center gap-2 mt-1">
-        <div className="w-2.5 h-2.5 rounded-full bg-transparent" />
-        <span className="text-muted-foreground">Total hora:</span>
-        <span className="font-bold text-foreground">{d.totalHour}</span>
+      {payload.map((p) => p.value > 0 && (
+        <div key={p.dataKey} className="flex items-center gap-2 mt-1">
+          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.fill }} />
+          <span className="text-muted-foreground flex-1">{p.name}:</span>
+          <span className="font-bold text-foreground">{p.value}</span>
+          <span className="text-muted-foreground">({total > 0 ? Math.round((p.value / total) * 100) : 0}%)</span>
+        </div>
+      ))}
+      <div className="border-t border-border mt-2 pt-2 flex justify-between">
+        <span className="text-muted-foreground">Total:</span>
+        <span className="font-bold text-foreground">{total}</span>
       </div>
     </div>
   );
 };
 
 export default function QualificacoesPorHorario({ events = [] }) {
-  const [selectedQual, setSelectedQual] = useState("mudo");
+  const { chartData, totals, totalAll } = useMemo(() => {
+    // Apenas eventos de cobrança da 3C com qualificação no payload
+    const collectionEvents = events.filter((e) => {
+      if (e.source !== "3c") return false;
+      const et = e.event_type || "";
+      return et.startsWith("collection.") || et === "call-history-was-created" || et.startsWith("call.");
+    });
 
-  const qual = QUALS.find((q) => q.key === selectedQual) || QUALS[0];
+    // Mas filtra só quem tem payload de cobrança (collection_status ou usamos todos os 3c que têm qualification)
+    // Estratégia: qualquer evento 3c que tenha qualification no payload
+    const eventsWithQual = events.filter((e) => {
+      if (e.source !== "3c") return false;
+      if (!e.payload) return false;
+      try {
+        const p = typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload;
+        return !!(p.qualification || p.result);
+      } catch { return false; }
+    });
 
-  // Construir dados por hora
-  const chartData = useMemo(() => {
-    // Total de calls com qualificação por hora
-    const hourTotals = {};
-    const hourQual = {};
+    const hours = {};
     for (let h = 7; h <= 20; h++) {
-      hourTotals[h] = 0;
-      hourQual[h] = 0;
+      hours[h] = { hour: `${h}h` };
+      QUALS.forEach((q) => { hours[h][q.key] = 0; });
     }
 
-    events.forEach((e) => {
-      if (!e.payload) return;
+    const totalsByQual = {};
+    QUALS.forEach((q) => { totalsByQual[q.key] = 0; });
+
+    eventsWithQual.forEach((e) => {
       try {
         const p = typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload;
         const rawQual = p.qualification || p.result;
-        if (!rawQual) return;
-
+        const key = classifyQual(rawQual);
         const h = getHourSP(e.created_date);
         if (h < 7 || h > 20) return;
-
-        hourTotals[h]++;
-        if (classifyQual(rawQual) === selectedQual) {
-          hourQual[h]++;
-        }
+        hours[h][key]++;
+        totalsByQual[key]++;
       } catch {}
     });
 
-    const grandTotal = Object.values(hourQual).reduce((a, b) => a + b, 0);
+    const grandTotal = Object.values(totalsByQual).reduce((a, b) => a + b, 0);
 
-    return Array.from({ length: 20 - 7 + 1 }, (_, i) => i + 7).map((h) => ({
-      hour: `${h}h`,
-      count: hourQual[h],
-      totalHour: hourTotals[h],
-      pct: grandTotal > 0 ? Math.round((hourQual[h] / grandTotal) * 100) : 0,
-      pctOfHour: hourTotals[h] > 0 ? Math.round((hourQual[h] / hourTotals[h]) * 100) : 0,
-    }));
-  }, [events, selectedQual]);
+    return {
+      chartData: Object.values(hours),
+      totals: totalsByQual,
+      totalAll: grandTotal,
+    };
+  }, [events]);
 
-  const totalQual = chartData.reduce((a, d) => a + d.count, 0);
-  const peakHour = chartData.reduce((best, d) => (d.count > best.count ? d : best), { count: -1, hour: "—" });
+  const peakHour = chartData.reduce((best, d) => {
+    const sum = QUALS.reduce((a, q) => a + (d[q.key] || 0), 0);
+    return sum > best.sum ? { hour: d.hour, sum } : best;
+  }, { hour: "—", sum: -1 });
 
   return (
     <Card className="p-5 bg-card border-border">
+      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Qualificações por Horário</h2>
+          <h2 className="text-sm font-semibold text-foreground">Qualificações por Horário — Cobrança (3C)</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Distribuição horária da qualificação selecionada
+            Distribuição horária de todas as qualificações de ligações da 3C
           </p>
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {QUALS.map((q) => (
-            <button
+      </div>
+
+      {/* KPIs totais por qualificação */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {QUALS.map((q) => (
+          totals[q.key] > 0 && (
+            <div
               key={q.key}
-              onClick={() => setSelectedQual(q.key)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all border ${
-                selectedQual === q.key
-                  ? "text-white border-transparent"
-                  : "bg-transparent text-muted-foreground border-border hover:text-foreground"
-              }`}
-              style={selectedQual === q.key ? { background: q.color, borderColor: q.color } : {}}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-muted/10 text-xs"
             >
-              {q.label}
-            </button>
-          ))}
-        </div>
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: q.color }} />
+              <span className="text-muted-foreground">{q.label}:</span>
+              <span className="font-bold text-foreground">{totals[q.key]}</span>
+              <span className="text-muted-foreground">
+                ({totalAll > 0 ? Math.round((totals[q.key] / totalAll) * 100) : 0}%)
+              </span>
+            </div>
+          )
+        ))}
+        {totalAll > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/5 text-xs ml-auto">
+            <span className="text-muted-foreground">Total:</span>
+            <span className="font-bold text-foreground">{totalAll}</span>
+            {peakHour.sum > 0 && (
+              <span className="text-muted-foreground ml-2">· pico: <span className="font-bold text-foreground">{peakHour.hour}</span></span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* KPIs */}
-      <div className="flex items-center gap-6 mb-4 flex-wrap">
-        <div>
-          <span className="text-2xl font-black text-foreground">{totalQual}</span>
-          <span className="text-xs text-muted-foreground ml-2">ocorrências</span>
-        </div>
-        <div>
-          <span className="text-sm font-bold" style={{ color: qual.color }}>{peakHour.count > 0 ? peakHour.hour : "—"}</span>
-          <span className="text-xs text-muted-foreground ml-1">horário de pico</span>
-        </div>
-        <div>
-          <span className="text-sm font-bold text-foreground">{peakHour.count > 0 ? peakHour.count : 0}</span>
-          <span className="text-xs text-muted-foreground ml-1">no pico</span>
-        </div>
-      </div>
-
-      {totalQual === 0 ? (
+      {totalAll === 0 ? (
         <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-          Nenhuma ocorrência de "{qual.label}" no período.
+          Nenhuma qualificação de cobrança encontrada no período.
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData} margin={{ top: 22, right: 10, left: -20, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={chartData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="hour"
@@ -163,41 +163,24 @@ export default function QualificacoesPorHorario({ events = [] }) {
               tickLine={false}
             />
             <YAxis hide />
-            <Tooltip content={<CustomTooltip selectedQual={selectedQual} />} cursor={{ fill: "hsl(var(--muted)/0.15)" }} />
-            <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={36}>
-              <LabelList
-                dataKey="count"
-                position="top"
-                formatter={(v) => (v > 0 ? v : "")}
-                style={{ fontSize: 10, fontWeight: 700, fill: "hsl(var(--foreground))" }}
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.1)" }} />
+            <Legend
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+              formatter={(value) => QUALS.find((q) => q.key === value)?.label || value}
+            />
+            {QUALS.map((q) => (
+              <Bar
+                key={q.key}
+                dataKey={q.key}
+                name={q.label}
+                stackId="a"
+                fill={q.color}
+                radius={q.key === QUALS[QUALS.length - 1].key ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                maxBarSize={40}
               />
-              {chartData.map((entry, idx) => (
-                <Cell
-                  key={idx}
-                  fill={qual.color}
-                  fillOpacity={entry.count === 0 ? 0.15 : entry.count === peakHour.count ? 1 : 0.65}
-                />
-              ))}
-            </Bar>
+            ))}
           </BarChart>
         </ResponsiveContainer>
-      )}
-
-      {/* % por hora — mini tabela */}
-      {totalQual > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {chartData.filter((d) => d.count > 0).map((d) => (
-            <div
-              key={d.hour}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs border border-border bg-muted/10"
-            >
-              <span className="font-bold text-foreground">{d.hour}</span>
-              <span className="text-muted-foreground">·</span>
-              <span style={{ color: qual.color }} className="font-bold">{d.count}</span>
-              <span className="text-muted-foreground">({d.pct}%)</span>
-            </div>
-          ))}
-        </div>
       )}
     </Card>
   );
