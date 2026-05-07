@@ -245,7 +245,7 @@ Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramen
 
         {/* AI Duplicates Panel */}
         {showAiPanel && (
-          <div className="mx-6 mt-4 rounded-xl border border-warning/30 bg-warning/5">
+          <div className="mx-6 mt-4 rounded-xl border border-warning/30 bg-warning/5 flex-shrink-0">
             <div className="flex items-center justify-between px-4 py-3 border-b border-warning/10">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-warning" />
@@ -261,7 +261,7 @@ Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramen
               </button>
             </div>
 
-            <div className="px-4 py-3">
+            <div className="px-4 py-3 overflow-y-auto max-h-60">
               {aiChecking && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                   <div className="w-4 h-4 border-2 border-warning border-t-transparent rounded-full animate-spin" />
