@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Nome do vendedor"
     },
+    "team_id": {
+      "type": "string",
+      "description": "ID da equipe vinculada"
+    },
     "active": {
       "type": "boolean",
       "default": true,

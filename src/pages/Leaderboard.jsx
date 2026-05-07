@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, PlusCircle, Users, Package, UserCog, ClipboardList } from "lucide-react";
+import { TrendingUp, PlusCircle, Users, Package, UserCog, ClipboardList, UsersRound } from "lucide-react";
 import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
 import LeaderboardPodium from "@/components/leaderboard/LeaderboardPodium";
@@ -15,6 +15,8 @@ import ManageProductsModal from "@/components/leaderboard/ManageProductsModal";
 import ManageSellersModal from "@/components/leaderboard/ManageSellersModal";
 import ManageSalesModal from "@/components/leaderboard/ManageSalesModal";
 import ManageLeadsModal from "@/components/leaderboard/ManageLeadsModal";
+import ManageTeamsModal from "@/components/leaderboard/ManageTeamsModal";
+import TeamView from "@/components/leaderboard/TeamView";
 import { getDateRange, SALES_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -28,6 +30,8 @@ export default function Leaderboard() {
   const [showSellersModal, setShowSellersModal] = useState(false);
   const [showManageSalesModal, setShowManageSalesModal] = useState(false);
   const [showManageLeadsModal, setShowManageLeadsModal] = useState(false);
+  const [showTeamsModal, setShowTeamsModal] = useState(false);
+  const [viewMode, setViewMode] = useState("individual"); // "individual" | "teams"
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -148,6 +152,15 @@ export default function Leaderboard() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setShowTeamsModal(true)}
+            className="border-border gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <UsersRound className="w-4 h-4" />
+            Equipes
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowSellersModal(true)}
             className="border-border gap-2 text-muted-foreground hover:text-foreground"
           >
@@ -201,6 +214,9 @@ export default function Leaderboard() {
       {showManageLeadsModal && (
         <ManageLeadsModal onClose={() => setShowManageLeadsModal(false)} />
       )}
+      {showTeamsModal && (
+        <ManageTeamsModal onClose={() => setShowTeamsModal(false)} />
+      )}
       {showLeadsModal && (
         <RegisterLeadsModal sellers={allSellers} onClose={() => setShowLeadsModal(false)} />
       )}
@@ -211,29 +227,56 @@ export default function Leaderboard() {
         <ManageSellersModal onClose={() => setShowSellersModal(false)} />
       )}
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <p className="text-sm font-semibold text-foreground">Ranking de Vendas</p>
-          </div>
-          <Select value={salesCriteria} onValueChange={setSalesCriteria}>
-            <SelectTrigger className="w-56 bg-card border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SALES_CRITERIA.map((c) => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <LeaderboardKPIs data={sortedSales} type="sales" />
-        {sortedSales.length > 0 && <LeaderboardPodium data={sortedSales} criteria={salesCriteria} type="sales" />}
-        <LeaderboardCharts data={sortedSales} type="sales" />
-        <LeaderboardTable data={sortedSales} criteria={salesCriteria} type="sales" loading={loadingSales} />
+      {/* View Mode Tabs */}
+      <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setViewMode("individual")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${viewMode === "individual" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          Individual
+        </button>
+        <button
+          onClick={() => setViewMode("teams")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${viewMode === "teams" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <UsersRound className="w-4 h-4" />
+          Por Equipe
+        </button>
       </div>
+
+      {viewMode === "individual" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Ranking de Vendas</p>
+            </div>
+            <Select value={salesCriteria} onValueChange={setSalesCriteria}>
+              <SelectTrigger className="w-56 bg-card border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SALES_CRITERIA.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <LeaderboardKPIs data={sortedSales} type="sales" />
+          {sortedSales.length > 0 && <LeaderboardPodium data={sortedSales} criteria={salesCriteria} type="sales" />}
+          <LeaderboardCharts data={sortedSales} type="sales" />
+          <LeaderboardTable data={sortedSales} criteria={salesCriteria} type="sales" loading={loadingSales} />
+        </div>
+      )}
+
+      {viewMode === "teams" && (
+        <TeamView
+          filteredSaleRecords={filteredSaleRecords}
+          filteredLeadCounts={filteredLeadCounts}
+        />
+      )}
     </div>
   );
 }

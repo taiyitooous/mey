@@ -1,0 +1,28 @@
+{
+  "name": "Team",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da equipe"
+    },
+    "leader_name": {
+      "type": "string",
+      "description": "Nome da l\u00edder da equipe"
+    },
+    "color": {
+      "type": "string",
+      "description": "Cor hex da equipe para visualiza\u00e7\u00e3o",
+      "default": "#4F8F63"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Equipe ativa"
+    }
+  },
+  "required": [
+    "name",
+    "leader_name"
+  ]
+}
