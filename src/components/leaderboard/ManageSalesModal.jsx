@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp, Sparkles, AlertTriangle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
@@ -140,6 +140,48 @@ export default function ManageSalesModal({ sellers, onClose }) {
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [aiChecking, setAiChecking] = useState(false);
+  const [aiResult, setAiResult] = useState(null); // { groups: [{names, ids, reason}] }
+  const [showAiPanel, setShowAiPanel] = useState(false);
+
+  async function checkDuplicatesWithAI() {
+    setAiChecking(true);
+    setAiResult(null);
+    setShowAiPanel(true);
+
+    // Build a compact list of customers with their sale IDs
+    const customerList = saleRecords
+      .filter((r) => r.customer_name && r.type !== "exit")
+      .map((r) => ({ id: r.id, name: r.customer_name.trim(), date: r.date, seller: r.seller_name }));
+
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `Você é um assistente de vendas. Analise a lista de clientes abaixo e identifique possíveis duplicatas — nomes que parecem ser a mesma pessoa (variações de grafia, abreviações, erros de digitação, nome parcial, etc).
+
+Lista de clientes (JSON):
+${JSON.stringify(customerList, null, 2)}
+
+Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramente diferentes.`,
+      response_json_schema: {
+        type: "object",
+        properties: {
+          groups: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                names: { type: "array", items: { type: "string" } },
+                ids: { type: "array", items: { type: "string" } },
+                reason: { type: "string" }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    setAiResult(result);
+    setAiChecking(false);
+  }
 
   const { data: saleRecords = [], isLoading } = useQuery({
     queryKey: ["sale_records"],
@@ -185,10 +227,86 @@ export default function ManageSalesModal({ sellers, onClose }) {
             <h2 className="text-lg font-bold text-foreground">Gerenciar Vendas</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Edite ou exclua vendas registradas.</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={checkDuplicatesWithAI}
+              disabled={aiChecking || isLoading}
+              className="border-border gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-warning" />
+              {aiChecking ? "Analisando..." : "Verificar duplicatas"}
+            </Button>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {/* AI Duplicates Panel */}
+        {showAiPanel && (
+          <div className="mx-6 mt-4 rounded-xl border border-warning/30 bg-warning/5 overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              onClick={() => setShowAiPanel((v) => !v)}
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-warning" />
+                <span className="text-sm font-semibold text-foreground">Análise de Duplicatas</span>
+                {aiResult && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${aiResult.groups?.length > 0 ? "bg-warning/20 text-warning" : "bg-primary/10 text-primary"}`}>
+                    {aiResult.groups?.length > 0 ? `${aiResult.groups.length} grupo(s) suspeito(s)` : "Nenhuma duplicata encontrada"}
+                  </span>
+                )}
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+
+            {aiChecking && (
+              <div className="px-4 pb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-warning border-t-transparent rounded-full animate-spin" />
+                Analisando nomes de clientes com IA...
+              </div>
+            )}
+
+            {aiResult && aiResult.groups?.length === 0 && (
+              <div className="px-4 pb-4 text-sm text-primary flex items-center gap-2">
+                ✓ Nenhuma duplicata suspeita encontrada.
+              </div>
+            )}
+
+            {aiResult && aiResult.groups?.length > 0 && (
+              <div className="px-4 pb-4 space-y-3">
+                {aiResult.groups.map((group, idx) => (
+                  <div key={idx} className="bg-card border border-warning/20 rounded-lg p-3">
+                    <div className="flex items-start gap-2 mb-1">
+                      <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground">{group.reason}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {group.ids?.map((id) => {
+                        const sale = saleRecords.find((s) => s.id === id);
+                        if (!sale) return null;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => { setSearch(sale.customer_name); setShowAiPanel(false); }}
+                            className="text-xs bg-warning/10 hover:bg-warning/20 text-warning border border-warning/20 rounded-lg px-2 py-1 transition-colors text-left"
+                          >
+                            <span className="font-semibold">{sale.customer_name}</span>
+                            <span className="text-warning/70 ml-1">• {sale.date} • {sale.seller_name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <p className="text-[10px] text-muted-foreground">Clique em um nome para filtrar e revisar as vendas.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-6 py-3 border-b border-border">
