@@ -241,56 +241,18 @@ export default function TeamView({ filteredSaleRecords, filteredLeadCounts }) {
           <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Comparativo entre equipes</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-            {/* Leads chart — each team its own color */}
-            <Card className="p-5 bg-card border-border">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Total de Leads por equipe</p>
-              <p className="text-2xl font-black text-foreground mb-4">
-                {comparisonData.reduce((a, d) => a + d.Leads, 0).toLocaleString("pt-BR")}
-                <span className="text-sm font-normal text-muted-foreground ml-2">leads no período</span>
-              </p>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={comparisonData} margin={{ top: 24, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                  <Bar dataKey="Leads" radius={[6, 6, 0, 0]} maxBarSize={80}>
-                    <LabelList content={<BarLabel />} />
-                    {comparisonData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} fillOpacity={0.9} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Vendas chart */}
-            <Card className="p-5 bg-card border-border">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Total de Vendas por equipe</p>
-              <p className="text-2xl font-black text-foreground mb-4">
-                {comparisonData.reduce((a, d) => a + d.Vendas, 0)}
-                <span className="text-sm font-normal text-muted-foreground ml-2">vendas no período</span>
-              </p>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={comparisonData} margin={{ top: 24, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                  <Bar dataKey="Vendas" radius={[6, 6, 0, 0]} maxBarSize={80}>
-                    <LabelList content={<BarLabel />} />
-                    {comparisonData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} fillOpacity={0.75} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Conversão chart */}
+            {/* Leads + Vendas + Conversão — tudo em um gráfico */}
             <Card className="p-5 bg-card border-border lg:col-span-2">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Taxa de Conversão % por equipe</p>
-              <div className="flex items-end gap-6 mb-4 flex-wrap">
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Leads × Vendas × Conversão % por equipe</p>
+              <div className="flex items-end gap-8 mb-4 flex-wrap">
+                <div>
+                  <span className="text-2xl font-black text-foreground">{comparisonData.reduce((a, d) => a + d.Leads, 0).toLocaleString("pt-BR")}</span>
+                  <span className="text-sm font-normal text-muted-foreground ml-2">leads</span>
+                </div>
+                <div>
+                  <span className="text-2xl font-black text-foreground">{comparisonData.reduce((a, d) => a + d.Vendas, 0)}</span>
+                  <span className="text-sm font-normal text-muted-foreground ml-2">vendas</span>
+                </div>
                 {comparisonData.map((d) => (
                   <div key={d.name} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ background: d.color }} />
@@ -299,20 +261,47 @@ export default function TeamView({ filteredSaleRecords, filteredLeadCounts }) {
                   </div>
                 ))}
               </div>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={comparisonData} margin={{ top: 24, right: 20, left: -20, bottom: 0 }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={comparisonData} margin={{ top: 28, right: 20, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <YAxis hide tickFormatter={(v) => `${v}%`} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                  <Bar dataKey="Conversão %" radius={[6, 6, 0, 0]} maxBarSize={100}>
+                  <YAxis yAxisId="cnt" hide />
+                  <YAxis yAxisId="pct" orientation="right" hide />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.2)" }} />
+                  <Bar yAxisId="cnt" dataKey="Leads" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                    <LabelList content={<BarLabel />} />
+                    {comparisonData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} fillOpacity={0.4} />
+                    ))}
+                  </Bar>
+                  <Bar yAxisId="cnt" dataKey="Vendas" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                    <LabelList content={<BarLabel />} />
+                    {comparisonData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} fillOpacity={0.9} />
+                    ))}
+                  </Bar>
+                  <Bar yAxisId="pct" dataKey="Conversão %" radius={[4, 4, 0, 0]} maxBarSize={60}>
                     <LabelList content={<BarLabel formatter={(v) => `${v}%`} />} />
                     {comparisonData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} />
+                      <Cell key={idx} fill={entry.color} fillOpacity={1} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              {/* Legend */}
+              <div className="flex items-center gap-6 mt-3 flex-wrap justify-center">
+                {comparisonData.map((d) => (
+                  <div key={d.name} className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ background: d.color }} />
+                    <span className="text-xs text-muted-foreground">{d.name}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-3 ml-4 border-l border-border pl-4">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-foreground/20" /> Leads</span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-foreground/70" /> Vendas</span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-foreground" /> Conversão %</span>
+                </div>
+              </div>
             </Card>
 
           </div>
