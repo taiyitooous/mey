@@ -12,6 +12,11 @@ import Integracoes from './pages/Integracoes'
 import Skale from './pages/Skale'
 import TresC from './pages/TresC'
 import DataCrazy from './pages/DataCrazy'
+import Leaderboard from './pages/Leaderboard'
+import Eventos from './pages/Eventos'
+import LeadDetail from './pages/LeadDetail'
+import ImportarCSV from './pages/ImportarCSV'
+import Coordenadores from './pages/Coordenadores'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +44,11 @@ export default function App() {
             <Route path="/skale" element={<ErrorBoundary><Skale /></ErrorBoundary>} />
             <Route path="/tresc" element={<ErrorBoundary><TresC /></ErrorBoundary>} />
             <Route path="/datacrazy" element={<ErrorBoundary><DataCrazy /></ErrorBoundary>} />
+            <Route path="/leaderboard" element={<ErrorBoundary><Leaderboard /></ErrorBoundary>} />
+            <Route path="/eventos" element={<ErrorBoundary><Eventos /></ErrorBoundary>} />
+            <Route path="/leads/:id" element={<ErrorBoundary><LeadDetail /></ErrorBoundary>} />
+            <Route path="/importar" element={<ErrorBoundary><ImportarCSV /></ErrorBoundary>} />
+            <Route path="/coordenadores" element={<ErrorBoundary><Coordenadores /></ErrorBoundary>} />
           </Route>
         </Routes>
       </BrowserRouter>

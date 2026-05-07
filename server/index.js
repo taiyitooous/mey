@@ -2,6 +2,7 @@ import express from 'express'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { pool, initDB } from './db.js'
+import entitiesRouter from './entities.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -9,6 +10,9 @@ const PORT = process.env.PORT || 3000
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// ── Entities CRUD (base44 compat) ──────────────────────────
+app.use('/api/entities', entitiesRouter)
 
 // ── Health / diagnóstico ───────────────────────────────────
 

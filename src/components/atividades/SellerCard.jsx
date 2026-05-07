@@ -1,0 +1,252 @@
+import React, { useMemo, useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAnswered, getCallQualification } from "@/lib/eventUtils";
+import SellerAvatarEditor from "./SellerAvatarEditor";
+
+function buildSparkline(events) {
+  const hourly = {};
+  for (let h = 7; h <= 20; h++) hourly[h] = { h, v: 0 };
+  events.forEach((e) => {
+    const h = getHours(new Date(e.created_date));
+    if (hourly[h]) hourly[h].v++;
+  });
+  return Object.values(hourly);
+}
+
+
+
+export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, onConfigUpdated, selectedChannel }) {
+  const { name, email, events } = seller;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [config, setConfig] = useState(sellerConfig);
+  const queryClient = useQueryClient();
+  const normalizedSellerKey = name ? name.split(" ")[0].toLowerCase().trim() : email?.toLowerCase().trim() || "sistema";
+  const displayName = config?.display_name || name;
+  
+  // Auto-create config se não existir
+  React.useEffect(() => {
+    if (!config && name) {
+      const createConfig = async () => {
+        const newConfig = await base44.entities.SellerConfig.create({
+          seller_key: normalizedSellerKey
+        });
+        setConfig(newConfig);
+      };
+      createConfig();
+    }
+  }, [config, name, normalizedSellerKey]);
+  const sorted = [...events].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+  const lastEvent = sorted[0];
+  const lastDate = lastEvent ? new Date(lastEvent.created_date) : null;
+  const minsAgo = lastDate ? differenceInMinutes(new Date(), lastDate) : null;
+
+  const isActive = minsAgo !== null && minsAgo < 15;
+  const isIdle = minsAgo !== null && minsAgo >= 60;
+
+  const calls = events.filter(isCallAttempt).length;
+  const wins = events.filter((e) => e.event_type === "lead.won").length;
+  const losses = events.filter((e) => e.event_type === "lead.lost").length;
+  const effective = events.filter((e) => isCallAttempt(e) && isEffectiveContact(e)).length;
+  const contactRate = calls > 0 ? Math.round(effective / calls * 100) : 0;
+  
+  // Qualificações das ligações 3C
+  const qualifications = {};
+  events.filter(isCallAttempt).forEach((e) => {
+    const q = getCallQualification(e);
+    if (q) {
+      qualifications[q] = (qualifications[q] || 0) + 1;
+    }
+  });
+
+  // WhatsApp Wavoip: mostrar sempre se filtro é WhatsApp, caso contrário apenas se tem 3C
+  const whatsappCalls = selectedChannel === "whatsapp" 
+    ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length
+    : calls > 0 ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length : 0;
+  const whatsappAnswered = selectedChannel === "whatsapp"
+    ? events.filter((e) => e.event_type === "whatsapp_call_received").length
+    : calls > 0 ? events.filter((e) => e.event_type === "whatsapp_call_received").length : 0;
+
+  // Calculate status and time
+  const statusInfo = useMemo(() => {
+    if (!lastDate) return { status: "Offline", color: "bg-gray-400", time: "00:00:00" };
+
+    const lastCallType = lastEvent?.payload ? JSON.parse(lastEvent.payload)?.source : null;
+    let status = "Manual";
+    let color = "bg-orange-500";
+
+    if (isActive) {
+      status = "Falando";
+      color = "bg-green-500";
+    } else if (isIdle) {
+      status = "Ocioso";
+      color = "bg-red-500";
+    } else if (minsAgo && minsAgo < 60) {
+      status = "Manual";
+      color = "bg-orange-500";
+    } else if (minsAgo && minsAgo >= 60) {
+      status = "Offline";
+      color = "bg-gray-400";
+    }
+
+    // Calculate total time (duration of all calls in HH:MM:SS)
+    let totalSeconds = 0;
+    events.forEach((e) => {
+      if (e.payload) {
+        try {
+          const payload = typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload;
+          const speakingTime = payload?.speaking_time;
+          if (typeof speakingTime === "string") {
+            const parts = speakingTime.split(":").map(Number);
+            const h = parts[0] || 0;
+            const m = parts[1] || 0;
+            const s = parts[2] || 0;
+            totalSeconds += h * 3600 + m * 60 + s;
+          }
+        } catch (_) {}
+      }
+    });
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor(totalSeconds % 3600 / 60);
+    const secs = totalSeconds % 60;
+    const time = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+    return { status, color, time };
+  }, [lastDate, lastEvent, isActive, isIdle, minsAgo, events]);
+
+  const sparkData = buildSparkline(events);
+
+  const initials = displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  
+
+
+  const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
+  const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
+
+  const handleDelete = async () => {
+    if (!config?.id) {
+      console.log("Sem ID do seller config:", config);
+      return;
+    }
+    try {
+      console.log("Deletando seller config ID:", config.id);
+      await base44.entities.SellerConfig.delete(config.id);
+      queryClient.invalidateQueries({ queryKey: ["seller_configs"] });
+      setConfig(null);
+      setShowDeleteConfirm(false);
+      console.log("Deletado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao deletar:", err);
+    }
+  };
+
+  // Não renderizar se config foi deletado
+  if (config === null && sellerConfig !== null) {
+    return null;
+  }
+
+  return (
+    <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor} border`} onClick={onClick}>
+      {/* Header with status */}
+      <div className="flex items-start justify-between gap-3" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <SellerAvatarEditor
+            sellerKey={normalizedSellerKey}
+            displayName={config?.display_name}
+            avatarUrl={config?.avatar_url || avatarUrl}
+            onUpdated={onConfigUpdated}
+            size="sm" />
+          
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{displayName}</p>
+            <p className="text-xs text-muted-foreground truncate">{calls + whatsappCalls} ligações totais</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+
+
+        </div>
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-4 gap-1.5">
+        {[
+        { icon: Phone, value: calls, label: "3C" },
+        { icon: MessageCircle, value: whatsappCalls, label: "WhatsApp" },
+        { label: "WA Atendidas", value: `${whatsappAnswered}/${whatsappCalls}`, plain: true },
+        { label: "Contato", value: `${contactRate}%`, plain: true }].
+        map(({ icon: Icon, value, label, plain }) =>
+        <div key={label} className="text-center bg-muted/50 rounded-lg py-2">
+            {Icon && !plain ? <Icon className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-0.5" /> : null}
+            <p className="text-sm font-bold leading-tight">{value}</p>
+            <p className="text-[10px] text-muted-foreground">{label}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Sparkline */}
+      {events.length > 0 &&
+      <div className="h-10">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={sparkData}>
+              <Line type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={1.5} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      }
+
+      {/* Qualificações */}
+      {Object.keys(qualifications).length > 0 && (
+        <div className="text-xs space-y-1 pt-1 border-t border-border">
+          {Object.entries(qualifications).map(([q, count]) => (
+            <div key={q} className="flex justify-between">
+              <span className="text-muted-foreground capitalize">{q}:</span>
+              <span className="font-semibold">{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex gap-1 flex-wrap">
+          {wins > 0 && <Badge className="bg-success/10 text-success border-0 text-xs">{wins} ganhos</Badge>}
+          {losses > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-xs">{losses} perdidos</Badge>}
+          {minsAgo !== null && (
+            <Badge className={`border-0 text-xs ${isActive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+              {isActive ? "ativo agora" : minsAgo >= 60 ? `${Math.floor(minsAgo / 60)}h${minsAgo % 60 > 0 ? `${minsAgo % 60}min` : ""} sem ação` : `${minsAgo}min sem ação`}
+            </Badge>
+          )}
+        </div>
+        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+          {showDeleteConfirm ? (
+            <>
+              <Button variant="destructive" size="sm" className="text-xs h-6 px-2" onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
+                Confirma?
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }}>
+                Cancelar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
+                <Trash2 className="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0" onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...config}); }}>
+                Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </Card>);
+
+}

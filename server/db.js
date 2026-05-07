@@ -71,5 +71,114 @@ export async function initDB() {
       payload    JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS sellers (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name       TEXT NOT NULL,
+      team_id    TEXT,
+      active     BOOLEAN DEFAULT true,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS sale_records (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      date          DATE NOT NULL,
+      seller_name   TEXT NOT NULL,
+      customer_name TEXT,
+      items         TEXT,
+      total         NUMERIC DEFAULT 0,
+      payment_done  BOOLEAN DEFAULT false,
+      type          TEXT DEFAULT 'sale',
+      created_date  TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS lead_daily_counts (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      date        DATE NOT NULL,
+      seller_name TEXT NOT NULL,
+      lead_count  INTEGER DEFAULT 0,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS teams (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name         TEXT NOT NULL,
+      leader_name  TEXT NOT NULL,
+      color        TEXT DEFAULT '#4F8F63',
+      active       BOOLEAN DEFAULT true,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS products (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name          TEXT NOT NULL,
+      default_price NUMERIC DEFAULT 0,
+      active        BOOLEAN DEFAULT true,
+      created_date  TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS mey_events (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      event_type   TEXT,
+      user_name    TEXT,
+      user_email   TEXT,
+      entity_type  TEXT,
+      entity_id    TEXT,
+      source       TEXT,
+      payload      TEXT,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS leads (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name         TEXT,
+      phone        TEXT,
+      email        TEXT,
+      seller_name  TEXT,
+      status       TEXT DEFAULT 'open',
+      stage        INTEGER DEFAULT 1,
+      notes        TEXT,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title        TEXT NOT NULL,
+      entity_type  TEXT,
+      entity_id    TEXT,
+      action       TEXT,
+      due_date     DATE,
+      status       TEXT DEFAULT 'pending',
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS seller_configs (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      seller_key   TEXT UNIQUE NOT NULL,
+      meta_json    TEXT,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS wavoip_configs (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_name    TEXT,
+      phone        TEXT,
+      active       BOOLEAN DEFAULT true,
+      created_date TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS lead_snapshots (
+      id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      snapshot_date       DATE NOT NULL,
+      total_leads         INTEGER DEFAULT 0,
+      leads_by_stage      TEXT,
+      leads_by_seller     TEXT,
+      leads_by_status     TEXT,
+      total_expected_value NUMERIC DEFAULT 0,
+      new_leads_count     INTEGER DEFAULT 0,
+      won_leads_count     INTEGER DEFAULT 0,
+      lost_leads_count    INTEGER DEFAULT 0,
+      created_date        TIMESTAMPTZ DEFAULT NOW()
+    );
   `)
 }

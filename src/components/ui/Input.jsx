@@ -1,42 +1,19 @@
-import { cn } from '../../lib/utils'
+import * as React from "react"
 
-export function Input({ className, ...props }) {
+import { cn } from "@/lib/utils"
+
+const Input = React.forwardRef(({ className, type, ...props }, ref) => {
   return (
-    <input
+    (<input
+      type={type}
       className={cn(
-        'w-full h-9 px-3 text-sm bg-surface border border-border rounded text-text',
-        'placeholder:text-faint focus:outline-none focus:border-subtle transition-colors',
+        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
         className
       )}
-      {...props}
-    />
-  )
-}
+      ref={ref}
+      {...props} />)
+  );
+})
+Input.displayName = "Input"
 
-export function Select({ children, className, ...props }) {
-  return (
-    <select
-      className={cn(
-        'h-9 px-3 text-sm bg-surface border border-border rounded text-text',
-        'focus:outline-none focus:border-subtle transition-colors',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </select>
-  )
-}
-
-export function Textarea({ className, ...props }) {
-  return (
-    <textarea
-      className={cn(
-        'w-full px-3 py-2 text-sm bg-surface border border-border rounded text-text',
-        'placeholder:text-faint focus:outline-none focus:border-subtle transition-colors resize-none',
-        className
-      )}
-      {...props}
-    />
-  )
-}
+export { Input }

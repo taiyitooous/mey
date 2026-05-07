@@ -5,6 +5,49 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --font-inter: 'Inter', sans-serif;
+    --background: 150 17% 6%;
+    --foreground: 120 11% 96%;
+    --card: 150 14% 9%;
+    --card-foreground: 120 11% 96%;
+    --popover: 150 14% 9%;
+    --popover-foreground: 120 11% 96%;
+    --primary: 142 29% 43%;
+    --primary-foreground: 120 11% 96%;
+    --secondary: 150 16% 11%;
+    --secondary-foreground: 120 11% 96%;
+    --muted: 142 11% 18%;
+    --muted-foreground: 138 5% 67%;
+    --accent: 150 16% 11%;
+    --accent-foreground: 142 22% 55%;
+    --destructive: 0 45% 53%;
+    --destructive-foreground: 120 11% 96%;
+    --border: 142 11% 18%;
+    --input: 142 11% 18%;
+    --ring: 142 29% 43%;
+    --chart-1: 142 29% 43%;
+    --chart-2: 43 52% 54%;
+    --chart-3: 186 19% 54%;
+    --chart-4: 25 37% 53%;
+    --chart-5: 0 35% 54%;
+    --radius: 0.75rem;
+    --sidebar-background: 150 14% 9%;
+    --sidebar-foreground: 120 11% 96%;
+    --sidebar-primary: 142 29% 43%;
+    --sidebar-primary-foreground: 120 11% 96%;
+    --sidebar-accent: 142 11% 15%;
+    --sidebar-accent-foreground: 142 22% 55%;
+    --sidebar-border: 142 11% 18%;
+    --sidebar-ring: 142 29% 43%;
+    --success: 142 29% 43%;
+    --success-foreground: 120 11% 96%;
+    --warning: 43 52% 54%;
+    --warning-foreground: 150 17% 6%;
+  }
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {

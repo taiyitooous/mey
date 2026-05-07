@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  LayoutDashboard, Activity, Settings, Zap, Radio, ShoppingCart, Phone, BarChart2
+  LayoutDashboard, Activity, Settings, Zap, Radio, ShoppingCart, Phone, BarChart2,
+  Trophy, Calendar, Package, DollarSign, ListChecks, Users, FileUp
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { use3cStatus } from '../../hooks/use3c'
@@ -9,9 +10,16 @@ import { use3cStatus } from '../../hooks/use3c'
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/atividades', label: 'Atividades', icon: Activity },
+  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/skale', label: 'Skale', icon: ShoppingCart },
   { to: '/tresc', label: '3C Plus', icon: Phone },
   { to: '/datacrazy', label: 'DataCrazy', icon: BarChart2 },
+  { to: '/vendas', label: 'Vendas', icon: Users },
+  { to: '/hoje', label: 'Hoje', icon: Calendar },
+  { to: '/eventos', label: 'Eventos', icon: ListChecks },
+  { to: '/cobranca', label: 'Cobrança', icon: DollarSign },
+  { to: '/logistica', label: 'Logística', icon: Package },
+  { to: '/importar', label: 'Importar CSV', icon: FileUp },
 ]
 
 function StatusDot({ ok, loading }) {
@@ -88,13 +96,13 @@ export function Sidebar() {
             key={to}
             initial={{ opacity: 0, x: -14 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.05 * i + 0.1, duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ delay: 0.03 * i + 0.1, duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
           >
             <NavLink
               to={to}
               end={end}
               className={({ isActive }) => cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group relative',
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group relative',
                 isActive ? 'text-black font-semibold' : 'text-text-secondary hover:text-text'
               )}
               style={({ isActive }) => isActive ? {

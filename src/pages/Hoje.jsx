@@ -1,268 +1,298 @@
-import { useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, MessageSquare, CheckSquare, Square, Plus, CalendarCheck } from 'lucide-react'
-import { Modal } from '../components/ui/Modal'
-import { Input } from '../components/ui/Input'
-import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { useTasks, useSellers } from '../lib/store'
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  Clock,
+  Package,
+  Flag,
+  Phone,
+  MapPin,
+  XCircle,
+  ArrowRight,
+} from "lucide-react";
+import { isToday, isPast, differenceInDays } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const TYPE_CONFIG = {
-  call:    { label: 'Ligação',   icon: Phone },
-  message: { label: 'WhatsApp',  icon: MessageSquare },
-  check:   { label: 'Verificar', icon: CheckSquare },
-}
-const PRIORITY_CONFIG = {
-  high:   { label: 'Alta',   color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.2)'   },
-  medium: { label: 'Média',  color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.2)'  },
-  low:    { label: 'Baixa',  color: '#555',    bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)' },
-}
+const ACTION_LABELS = {
+  call: "Ligar",
+  whatsapp: "WhatsApp",
+  meeting: "Reunião",
+  wait: "Aguardar",
+  follow_up: "Follow-up",
+  other: "Outro",
+};
 
-function TaskRow({ task, onToggle, onDelete, delay }) {
-  const type = TYPE_CONFIG[task.type] || TYPE_CONFIG.check
-  const pri = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.low
-  const Icon = type.icon
-
+function Section({ icon: Icon, title, colorClass, borderClass, bgClass, items, renderItem }) {
+  if (items.length === 0) return null;
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: task.done ? 0.45 : 1, x: 0 }}
-      exit={{ opacity: 0, x: 8 }}
-      transition={{ delay, duration: 0.25 }}
-      className="flex items-center gap-3 py-3"
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-    >
-      <button onClick={() => onToggle(task.id)} className="shrink-0 transition-colors">
-        {task.done
-          ? <CheckSquare size={16} className="text-success" />
-          : <Square size={16} className="text-faint hover:text-text" />}
-      </button>
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm ${task.done ? 'line-through text-faint' : 'text-white'}`}>{task.title}</p>
-        {task.phone && <p className="text-xs text-faint mt-0.5">{task.phone}</p>}
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon className={`w-4 h-4 ${colorClass}`} />
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <Badge variant="secondary" className="text-xs">{items.length}</Badge>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-          style={{ background: pri.bg, border: `1px solid ${pri.border}`, color: pri.color }}>
-          {pri.label}
-        </span>
-        <Icon size={12} className="text-faint" />
-        <button onClick={() => onDelete(task.id)} className="text-faint hover:text-destructive transition-colors ml-1">
-          <Square size={12} />
-        </button>
+      <div className="space-y-1.5">
+        {items.map((item) => renderItem(item, borderClass, bgClass))}
       </div>
-    </motion.div>
-  )
-}
-
-function AddTaskModal({ open, onClose, onAdd, sellers }) {
-  const [form, setForm] = useState({ title: '', type: 'call', priority: 'medium', phone: '', seller_key: '' })
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!form.title.trim()) return
-    onAdd({ ...form, done: false })
-    setForm({ title: '', type: 'call', priority: 'medium', phone: '', seller_key: '' })
-    onClose()
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title="Nova tarefa" className="max-w-sm mx-4">
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div>
-          <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">Título</p>
-          <Input placeholder="Ligar para cliente X" required value={form.title} onChange={e => set('title', e.target.value)} />
-        </div>
-        <div>
-          <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">Telefone</p>
-          <Input placeholder="(11) 99999-9999" value={form.phone} onChange={e => set('phone', e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">Tipo</p>
-            <select value={form.type} onChange={e => set('type', e.target.value)}
-              className="w-full h-9 px-3 text-sm rounded text-text"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              {Object.entries(TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">Prioridade</p>
-            <select value={form.priority} onChange={e => set('priority', e.target.value)}
-              className="w-full h-9 px-3 text-sm rounded text-text"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </div>
-        </div>
-        {sellers.length > 0 && (
-          <div>
-            <p className="text-[10px] text-faint uppercase tracking-wider mb-1.5">Vendedor</p>
-            <select value={form.seller_key} onChange={e => set('seller_key', e.target.value)}
-              className="w-full h-9 px-3 text-sm rounded text-text"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <option value="">Todos</option>
-              {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-        )}
-        <button type="submit"
-          className="w-full py-2.5 rounded-xl text-sm font-medium mt-2"
-          style={{ background: 'white', color: 'black' }}>
-          Criar tarefa
-        </button>
-      </form>
-    </Modal>
-  )
+    </div>
+  );
 }
 
 export default function Hoje() {
-  const { items: tasks, add, update, remove } = useTasks()
-  const { items: sellers } = useSellers()
-  const [addOpen, setAddOpen] = useState(false)
-  const [sellerFilter, setSellerFilter] = useState('all')
+  const navigate = useNavigate();
 
-  const filtered = useMemo(() => {
-    if (sellerFilter === 'all') return tasks
-    return tasks.filter(t => t.seller_key === sellerFilter)
-  }, [tasks, sellerFilter])
+  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => base44.entities.Task.filter({ status: "pending" }),
+  });
 
-  const done = filtered.filter(t => t.done).length
-  const pending = filtered.filter(t => !t.done).length
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => base44.entities.Order.list("-created_date", 500),
+  });
 
-  const byPriority = useMemo(() => ({
-    high: filtered.filter(t => !t.done && t.priority === 'high'),
-    medium: filtered.filter(t => !t.done && t.priority === 'medium'),
-    low: filtered.filter(t => !t.done && t.priority === 'low'),
-    done: filtered.filter(t => t.done),
-  }), [filtered])
+  const { data: leads = [], isLoading: loadingLeads } = useQuery({
+    queryKey: ["leads"],
+    queryFn: () => base44.entities.Lead.list("-created_date", 500),
+  });
 
-  const handleToggle = (id) => {
-    const task = tasks.find(t => t.id === id)
-    if (task) update(id, { done: !task.done })
-  }
+  const isLoading = loadingTasks || loadingOrders || loadingLeads;
 
-  return (
-    <div className="p-6 space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.42, ease: [0.23, 1, 0.32, 1] }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Hoje</h1>
-          <p className="text-xs text-faint mt-0.5">{pending} tarefas pendentes · {done} concluídas</p>
-        </div>
-        <button onClick={() => setAddOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
-          style={{ background: 'white', color: 'black' }}>
-          <Plus size={14} />
-          Nova tarefa
-        </button>
-      </motion.div>
+  const overdueTasks = tasks.filter(
+    (t) => t.scheduled_at && isPast(new Date(t.scheduled_at)) && !isToday(new Date(t.scheduled_at))
+  );
+  const todayTasks = tasks.filter(
+    (t) => t.scheduled_at && isToday(new Date(t.scheduled_at))
+  );
+  const deliveredToday = orders.filter(
+    (o) => o.delivered_at && isToday(new Date(o.delivered_at)) && o.payment_status !== "paid"
+  );
+  const finalFunnel = leads.filter((l) => l.stage === 5 && l.status === "open");
+  const aging9plus = orders.filter((o) => {
+    if (o.logistics_status !== "delivered" || o.payment_status === "paid" || !o.delivered_at)
+      return false;
+    return differenceInDays(new Date(), new Date(o.delivered_at)) >= 9;
+  });
+  const pickupWaiting = orders.filter((o) => o.logistics_status === "pickup_waiting");
+  const failedDelivery = orders.filter((o) => o.logistics_status === "failed");
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Pendentes', value: pending, color: '#f0f0f0' },
-          { label: 'Concluídas', value: done, color: '#22c55e' },
-          { label: 'Total', value: filtered.length, color: '#555' },
-        ].map(({ label, value, color }, i) => (
-          <motion.div key={label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07, ease: [0.23, 1, 0.32, 1] }}
-            className="rounded-xl p-4 hover-glow"
-            style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <p className="text-[10px] text-faint uppercase tracking-wider mb-2">{label}</p>
-            <p className="text-2xl font-bold tabular-nums" style={{ color }}>
-              <AnimatedNumber value={value} />
-            </p>
-          </motion.div>
+  const getLeadForTask = (task) => leads.find((l) => l.id === task.entity_id);
+
+  const totalItems =
+    overdueTasks.length + todayTasks.length + deliveredToday.length +
+    finalFunnel.length + aging9plus.length + pickupWaiting.length + failedDelivery.length;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {Array(4).fill(0).map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full rounded-lg" />
         ))}
       </div>
+    );
+  }
 
-      {/* Filters */}
-      {sellers.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setSellerFilter('all')}
-            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-            style={sellerFilter === 'all'
-              ? { background: 'white', color: 'black' }
-              : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#555' }}>
-            Todos
-          </button>
-          {sellers.map(s => (
-            <button key={s.id} onClick={() => setSellerFilter(s.id)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-              style={sellerFilter === s.id
-                ? { background: 'white', color: 'black' }
-                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#555' }}>
-              {s.name.split(' ')[0]}
-            </button>
-          ))}
+  const renderTaskItem = (task, borderClass, bgClass) => {
+    const lead = getLeadForTask(task);
+    return (
+      <Card key={task.id} className={`p-3 ${borderClass} ${bgClass}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">
+              {ACTION_LABELS[task.action_type]} · {lead?.name || task.entity_id}
+            </p>
+            {task.assignee_name && (
+              <p className="text-xs text-muted-foreground">{task.assignee_name}</p>
+            )}
+            {task.notes && (
+              <p className="text-xs text-muted-foreground truncate">{task.notes}</p>
+            )}
+          </div>
+          {task.entity_type === "lead" && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate(`/lead/${task.entity_id}`)}
+              className="gap-1 shrink-0"
+            >
+              Abrir <ArrowRight className="w-3 h-3" />
+            </Button>
+          )}
         </div>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Hoje</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {totalItems === 0
+            ? "Tudo em dia! ✅"
+            : `${totalItems} item${totalItems !== 1 ? "s" : ""} precisam de atenção`}
+        </p>
+      </div>
+
+      {totalItems === 0 && (
+        <Card className="p-10 text-center text-muted-foreground">
+          <p className="text-2xl mb-2">🎉</p>
+          <p className="font-medium">Nenhuma pendência para hoje!</p>
+          <p className="text-sm mt-1">Aproveite para prospectar ou treinar a equipe.</p>
+        </Card>
       )}
 
-      {/* Empty */}
-      {tasks.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-24 gap-4"
-        >
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <CalendarCheck size={20} className="text-faint" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-white mb-1">Nenhuma tarefa para hoje</p>
-            <p className="text-xs text-faint">Crie tarefas de acompanhamento para sua equipe.</p>
-          </div>
-          <button onClick={() => setAddOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-            style={{ background: 'white', color: 'black' }}>
-            <Plus size={13} />
-            Criar tarefa
-          </button>
-        </motion.div>
-      ) : (
-        <div className="space-y-4">
-          {[
-            { key: 'high', label: 'Prioridade Alta', color: '#ef4444' },
-            { key: 'medium', label: 'Prioridade Média', color: '#f59e0b' },
-            { key: 'low', label: 'Prioridade Baixa', color: '#555' },
-            { key: 'done', label: 'Concluídas', color: '#333' },
-          ].filter(({ key }) => byPriority[key].length > 0).map(({ key, label, color }) => (
-            <motion.div key={key}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ease: [0.23, 1, 0.32, 1] }}
-              className="rounded-xl px-5 py-4 hover-glow"
-              style={{ background: 'rgba(12,12,12,0.92)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color }}>{label}</p>
-                <span className="text-[10px] text-faint">({byPriority[key].length})</span>
+      <div className="space-y-6">
+        <Section
+          icon={AlertTriangle}
+          title="Ações Atrasadas"
+          colorClass="text-destructive"
+          borderClass="border-destructive/20"
+          bgClass="bg-destructive/5"
+          items={overdueTasks}
+          renderItem={renderTaskItem}
+        />
+
+        <Section
+          icon={Clock}
+          title="Vence Hoje"
+          colorClass="text-warning"
+          borderClass="border-warning/20"
+          bgClass="bg-warning/5"
+          items={todayTasks}
+          renderItem={renderTaskItem}
+        />
+
+        <Section
+          icon={Package}
+          title="Entregue Hoje — Cobrar Agora"
+          colorClass="text-primary"
+          borderClass=""
+          bgClass=""
+          items={deliveredToday}
+          renderItem={(order, borderClass, bgClass) => (
+            <Card key={order.id} className={`p-3 ${borderClass} ${bgClass}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{order.customer_name || order.order_id}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {order.order_id} · R$ {order.amount?.toLocaleString("pt-BR") || "—"}
+                  </p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => navigate("/cobranca")} className="gap-1 shrink-0">
+                  Cobrar <ArrowRight className="w-3 h-3" />
+                </Button>
               </div>
-              <AnimatePresence mode="sync">
-                {byPriority[key].map((task, i) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    onToggle={handleToggle}
-                    onDelete={remove}
-                    delay={i * 0.04}
-                  />
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          ))}
-        </div>
-      )}
+            </Card>
+          )}
+        />
 
-      <AddTaskModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={add} sellers={sellers} />
+        <Section
+          icon={Flag}
+          title="Final do Funil — Fechar Agora"
+          colorClass="text-success"
+          borderClass=""
+          bgClass=""
+          items={finalFunnel}
+          renderItem={(lead, borderClass, bgClass) => (
+            <Card key={lead.id} className={`p-3 ${borderClass} ${bgClass}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{lead.name}</p>
+                  {lead.value_expected && (
+                    <p className="text-xs text-muted-foreground">
+                      R$ {lead.value_expected.toLocaleString("pt-BR")}
+                    </p>
+                  )}
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/lead/${lead.id}`)} className="gap-1 shrink-0">
+                  Abrir <ArrowRight className="w-3 h-3" />
+                </Button>
+              </div>
+            </Card>
+          )}
+        />
+
+        <Section
+          icon={Phone}
+          title="9+ dias — Cobrança Urgente"
+          colorClass="text-destructive"
+          borderClass="border-destructive/20"
+          bgClass=""
+          items={aging9plus}
+          renderItem={(order, borderClass, bgClass) => {
+            const days = order.delivered_at
+              ? differenceInDays(new Date(), new Date(order.delivered_at))
+              : 0;
+            return (
+              <Card key={order.id} className={`p-3 ${borderClass} ${bgClass}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{order.customer_name || order.order_id}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {days} dias · R$ {order.amount?.toLocaleString("pt-BR") || "—"}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => navigate("/cobranca")} className="gap-1 shrink-0">
+                    Cobrar <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </Card>
+            );
+          }}
+        />
+
+        <Section
+          icon={MapPin}
+          title="Aguardando Retirada"
+          colorClass="text-warning"
+          borderClass=""
+          bgClass=""
+          items={pickupWaiting}
+          renderItem={(order, borderClass, bgClass) => (
+            <Card key={order.id} className={`p-3 ${borderClass} ${bgClass}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{order.customer_name || order.order_id}</p>
+                  <p className="text-xs text-muted-foreground">{order.city}/{order.state}</p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => navigate("/logistica")} className="gap-1 shrink-0">
+                  Ver <ArrowRight className="w-3 h-3" />
+                </Button>
+              </div>
+            </Card>
+          )}
+        />
+
+        <Section
+          icon={XCircle}
+          title="Falha na Entrega"
+          colorClass="text-destructive"
+          borderClass="border-destructive/20"
+          bgClass=""
+          items={failedDelivery}
+          renderItem={(order, borderClass, bgClass) => (
+            <Card key={order.id} className={`p-3 ${borderClass} ${bgClass}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{order.customer_name || order.order_id}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {order.carrier} · {order.city}/{order.state}
+                  </p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => navigate("/logistica")} className="gap-1 shrink-0">
+                  Ver <ArrowRight className="w-3 h-3" />
+                </Button>
+              </div>
+            </Card>
+          )}
+        />
+      </div>
     </div>
-  )
+  );
 }
