@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { getHours } from 'date-fns'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { Avatar } from '../components/ui/Avatar'
+import { Avatar } from '../components/ui/avatar'
 import { formatCurrency, formatSeconds } from '../lib/utils'
 import { use3cStats, use3cCalls, useAgents } from '../hooks/use3c'
 import { useSkaleStats, useSkaleOrders } from '../hooks/useSkale'

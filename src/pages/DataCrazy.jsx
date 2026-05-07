@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { Avatar } from '../components/ui/Avatar'
+import { Avatar } from '../components/ui/avatar'
 import { formatCurrency, timeAgo } from '../lib/utils'
 import { useDCLeads, useDCBusinesses, useDCStats, useDCConversations } from '../hooks/useDC'
 import { useSkaleOrders } from '../hooks/useSkale'

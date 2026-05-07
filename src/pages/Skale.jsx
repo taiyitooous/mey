@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { Modal } from '../components/ui/Modal'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { Avatar } from '../components/ui/Avatar'
+import { Avatar } from '../components/ui/avatar'
 import { useSkaleOrders } from '../hooks/useSkale'
 import { formatCurrency, timeAgo } from '../lib/utils'
 

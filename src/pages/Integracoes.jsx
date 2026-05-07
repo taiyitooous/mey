@@ -6,7 +6,7 @@ import {
   RefreshCw, ExternalLink, ChevronDown, ChevronUp,
   Package, DollarSign, Activity,
 } from 'lucide-react'
-import { Input } from '../components/ui/Input'
+import { Input } from '../components/ui/input'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { use3cStatus, useAgents, useCampaigns } from '../hooks/use3c'
 import { useSkaleOrders, useSkaleStats } from '../hooks/useSkale'
