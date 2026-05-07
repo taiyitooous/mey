@@ -141,15 +141,24 @@ export default function ManageSalesModal({ sellers, onClose }) {
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
   const [aiChecking, setAiChecking] = useState(false);
-  const [aiResult, setAiResult] = useState(null); // { groups: [{names, ids, reason}] }
+  const [aiResult, setAiResult] = useState(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
+
+  const { data: saleRecords = [], isLoading } = useQuery({
+    queryKey: ["sale_records"],
+    queryFn: () => base44.entities.SaleRecord.list("-date", 500),
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => base44.entities.Product.list("name", 100),
+  });
 
   async function checkDuplicatesWithAI() {
     setAiChecking(true);
     setAiResult(null);
     setShowAiPanel(true);
 
-    // Build a compact list of customers with their sale IDs
     const customerList = saleRecords
       .filter((r) => r.customer_name && r.type !== "exit")
       .map((r) => ({ id: r.id, name: r.customer_name.trim(), date: r.date, seller: r.seller_name }));
@@ -160,7 +169,7 @@ export default function ManageSalesModal({ sellers, onClose }) {
 Lista de clientes (JSON):
 ${JSON.stringify(customerList, null, 2)}
 
-Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramente diferentes.`,
+Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramente diferentes. Para cada grupo, inclua os IDs exatos da lista acima.`,
       response_json_schema: {
         type: "object",
         properties: {
@@ -182,16 +191,6 @@ Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramen
     setAiResult(result);
     setAiChecking(false);
   }
-
-  const { data: saleRecords = [], isLoading } = useQuery({
-    queryKey: ["sale_records"],
-    queryFn: () => base44.entities.SaleRecord.list("-date", 500),
-  });
-
-  const { data: products = [] } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => base44.entities.Product.list("name", 100),
-  });
 
   const filtered = useMemo(() => {
     if (!search.trim()) return saleRecords;
@@ -246,65 +245,69 @@ Retorne apenas grupos onde há suspeita real de duplicata. Ignore nomes claramen
 
         {/* AI Duplicates Panel */}
         {showAiPanel && (
-          <div className="mx-6 mt-4 rounded-xl border border-warning/30 bg-warning/5 overflow-hidden">
-            <button
-              className="w-full flex items-center justify-between px-4 py-3 text-left"
-              onClick={() => setShowAiPanel((v) => !v)}
-            >
+          <div className="mx-6 mt-4 rounded-xl border border-warning/30 bg-warning/5">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-warning/10">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-warning" />
-                <span className="text-sm font-semibold text-foreground">Análise de Duplicatas</span>
+                <span className="text-sm font-semibold text-foreground">Análise de Duplicatas pela IA</span>
                 {aiResult && (
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${aiResult.groups?.length > 0 ? "bg-warning/20 text-warning" : "bg-primary/10 text-primary"}`}>
-                    {aiResult.groups?.length > 0 ? `${aiResult.groups.length} grupo(s) suspeito(s)` : "Nenhuma duplicata encontrada"}
+                    {aiResult.groups?.length > 0 ? `${aiResult.groups.length} grupo(s) suspeito(s)` : "Tudo limpo"}
                   </span>
                 )}
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
+              <button onClick={() => setShowAiPanel(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            {aiChecking && (
-              <div className="px-4 pb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-4 h-4 border-2 border-warning border-t-transparent rounded-full animate-spin" />
-                Analisando nomes de clientes com IA...
-              </div>
-            )}
+            <div className="px-4 py-3">
+              {aiChecking && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <div className="w-4 h-4 border-2 border-warning border-t-transparent rounded-full animate-spin" />
+                  Analisando nomes de clientes com IA...
+                </div>
+              )}
 
-            {aiResult && aiResult.groups?.length === 0 && (
-              <div className="px-4 pb-4 text-sm text-primary flex items-center gap-2">
-                ✓ Nenhuma duplicata suspeita encontrada.
-              </div>
-            )}
+              {aiResult && aiResult.groups?.length === 0 && (
+                <div className="text-sm text-primary flex items-center gap-2 py-2">
+                  ✓ Nenhuma duplicata suspeita encontrada.
+                </div>
+              )}
 
-            {aiResult && aiResult.groups?.length > 0 && (
-              <div className="px-4 pb-4 space-y-3">
-                {aiResult.groups.map((group, idx) => (
-                  <div key={idx} className="bg-card border border-warning/20 rounded-lg p-3">
-                    <div className="flex items-start gap-2 mb-1">
-                      <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">{group.reason}</p>
+              {aiResult && aiResult.groups?.length > 0 && (
+                <div className="space-y-3">
+                  {aiResult.groups.map((group, idx) => (
+                    <div key={idx} className="bg-card border border-warning/20 rounded-lg p-3">
+                      <div className="flex items-start gap-2 mb-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">{group.reason}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {group.ids?.map((id) => {
+                          const sale = saleRecords.find((s) => s.id === id);
+                          const name = sale?.customer_name ?? group.names?.[group.ids.indexOf(id)] ?? id;
+                          const date = sale?.date ?? "";
+                          const seller = sale?.seller_name ?? "";
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => setSearch(name)}
+                              className="text-xs bg-warning/10 hover:bg-warning/20 text-warning border border-warning/20 rounded-lg px-2 py-1 transition-colors text-left"
+                            >
+                              <span className="font-semibold">{name}</span>
+                              {date && <span className="text-warning/70 ml-1">• {date}</span>}
+                              {seller && <span className="text-warning/70 ml-1">• {seller}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {group.ids?.map((id) => {
-                        const sale = saleRecords.find((s) => s.id === id);
-                        if (!sale) return null;
-                        return (
-                          <button
-                            key={id}
-                            onClick={() => { setSearch(sale.customer_name); setShowAiPanel(false); }}
-                            className="text-xs bg-warning/10 hover:bg-warning/20 text-warning border border-warning/20 rounded-lg px-2 py-1 transition-colors text-left"
-                          >
-                            <span className="font-semibold">{sale.customer_name}</span>
-                            <span className="text-warning/70 ml-1">• {sale.date} • {sale.seller_name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                <p className="text-[10px] text-muted-foreground">Clique em um nome para filtrar e revisar as vendas.</p>
-              </div>
-            )}
+                  ))}
+                  <p className="text-[10px] text-muted-foreground pb-1">Clique em um nome para filtrar a lista abaixo.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
