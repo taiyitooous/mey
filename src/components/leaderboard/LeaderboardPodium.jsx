@@ -1,43 +1,55 @@
 import React from "react";
-import { Trophy, Medal } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Trophy, Medal, Star } from "lucide-react";
 import { getCriteriaValue } from "@/lib/leaderboardUtils";
 
-const PODIUM_STYLES = [
-  { // 2nd
-    order: 2,
-    height: "h-24",
-    bg: "bg-gradient-to-b from-muted to-card",
-    border: "border-muted-foreground/30",
-    icon: <Medal className="w-5 h-5 text-muted-foreground" />,
-    badge: "bg-muted-foreground/20 text-muted-foreground",
+const GOLD   = "#F5C842";
+const SILVER = "#9BADB7";
+const BRONZE = "#CD7F54";
+
+const PODIUM_CONFIG = [
+  {
+    // 2nd place
+    rank: 2,
+    barHeight: 96,
+    avatarSize: "w-14 h-14 text-base",
+    ringColor: SILVER,
+    barGrad: `linear-gradient(180deg, #9BADB733 0%, #9BADB710 100%)`,
+    barBorder: `${SILVER}50`,
+    shadow: `0 0 20px ${SILVER}22`,
+    icon: <Medal className="w-4 h-4" style={{ color: SILVER }} />,
     label: "#2",
-    size: "text-base",
+    labelColor: SILVER,
   },
-  { // 1st
-    order: 1,
-    height: "h-32",
-    bg: "bg-gradient-to-b from-primary/20 to-card",
-    border: "border-primary/50",
-    icon: <Trophy className="w-6 h-6 text-primary" />,
-    badge: "bg-primary/20 text-primary",
+  {
+    // 1st place
+    rank: 1,
+    barHeight: 140,
+    avatarSize: "w-16 h-16 text-xl",
+    ringColor: GOLD,
+    barGrad: `linear-gradient(180deg, #F5C84233 0%, #F5C84210 100%)`,
+    barBorder: `${GOLD}60`,
+    shadow: `0 0 32px ${GOLD}33`,
+    icon: <Trophy className="w-5 h-5" style={{ color: GOLD }} />,
     label: "#1",
-    size: "text-lg",
-    glow: true,
+    labelColor: GOLD,
+    crown: true,
   },
-  { // 3rd
-    order: 3,
-    height: "h-16",
-    bg: "bg-gradient-to-b from-muted/50 to-card",
-    border: "border-muted/40",
-    icon: <Medal className="w-4 h-4 text-muted-foreground/60" />,
-    badge: "bg-muted/30 text-muted-foreground/70",
+  {
+    // 3rd place
+    rank: 3,
+    barHeight: 64,
+    avatarSize: "w-12 h-12 text-sm",
+    ringColor: BRONZE,
+    barGrad: `linear-gradient(180deg, #CD7F5433 0%, #CD7F5410 100%)`,
+    barBorder: `${BRONZE}40`,
+    shadow: `0 0 16px ${BRONZE}18`,
+    icon: <Medal className="w-4 h-4" style={{ color: BRONZE }} />,
     label: "#3",
-    size: "text-sm",
+    labelColor: BRONZE,
   },
 ];
 
-// Display order: 2nd, 1st, 3rd
+// Display order: 2nd (index 1), 1st (index 0), 3rd (index 2)
 const DISPLAY_ORDER = [1, 0, 2];
 
 export default function LeaderboardPodium({ data, criteria, type }) {
@@ -46,45 +58,88 @@ export default function LeaderboardPodium({ data, criteria, type }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
         <Trophy className="w-4 h-4 text-primary" /> Pódio
       </h2>
 
-      <div className="flex items-end justify-center gap-3 py-4">
-        {DISPLAY_ORDER.map((idx) => {
-          const person = top3[idx];
-          if (!person) return <div key={idx} className="w-32" />;
-          const style = PODIUM_STYLES[idx];
+      <div
+        className="rounded-2xl border border-border p-6"
+        style={{ background: "linear-gradient(160deg, hsl(150 14% 9%), hsl(150 17% 7%))" }}
+      >
+        <div className="flex items-end justify-center gap-4">
+          {DISPLAY_ORDER.map((idx) => {
+            const person = top3[idx];
+            const cfg = PODIUM_CONFIG[idx];
+            if (!person) return <div key={idx} className="w-28 sm:w-36" />;
 
-          return (
-            <div key={idx} className="flex flex-col items-center gap-2 w-32 sm:w-40">
-              {/* Avatar */}
-              <div className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 ${style.border} ${style.bg}`}>
-                <span className={`font-bold ${style.size} text-foreground`}>
-                  {person.name.charAt(0).toUpperCase()}
-                </span>
-                {style.glow && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center">
-                    <Trophy className="w-2.5 h-2.5 text-primary" />
-                  </div>
+            return (
+              <div key={idx} className="flex flex-col items-center gap-2 w-28 sm:w-36">
+                {/* Crown for 1st */}
+                {cfg.crown && (
+                  <Star className="w-5 h-5 mb-0.5" style={{ color: GOLD, fill: GOLD }} />
                 )}
-              </div>
 
-              {/* Info */}
-              <div className="text-center">
-                <p className={`font-semibold ${style.size} truncate w-full max-w-[120px]`}>{person.name}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${style.badge}`}>
-                  {getCriteriaValue(person, criteria, type)}
-                </span>
-              </div>
+                {/* Avatar */}
+                <div
+                  className={`relative ${cfg.avatarSize} rounded-full flex items-center justify-center font-extrabold text-foreground`}
+                  style={{
+                    border: `2.5px solid ${cfg.ringColor}`,
+                    background: `radial-gradient(circle, ${cfg.ringColor}22, ${cfg.ringColor}08)`,
+                    boxShadow: cfg.shadow,
+                  }}
+                >
+                  {person.name.charAt(0).toUpperCase()}
+                  {/* rank badge */}
+                  <div
+                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    style={{
+                      background: cfg.ringColor + "25",
+                      border: `1px solid ${cfg.ringColor}60`,
+                      color: cfg.ringColor,
+                    }}
+                  >
+                    {cfg.label}
+                  </div>
+                </div>
 
-              {/* Podium bar */}
-              <Card className={`w-full ${style.height} ${style.bg} border ${style.border} flex flex-col items-center justify-end pb-2`}>
-                <div className={`text-xs font-bold ${style.badge} px-2 py-0.5 rounded-full`}>{style.label}</div>
-              </Card>
-            </div>
-          );
-        })}
+                {/* Name + score */}
+                <div className="text-center mt-2">
+                  <p className="font-semibold text-sm text-foreground truncate max-w-[110px]">{person.name}</p>
+                  <div
+                    className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold"
+                    style={{
+                      background: cfg.ringColor + "20",
+                      color: cfg.ringColor,
+                      border: `1px solid ${cfg.ringColor}40`,
+                    }}
+                  >
+                    {cfg.icon}
+                    {getCriteriaValue(person, criteria, type)}
+                  </div>
+                </div>
+
+                {/* Podium bar */}
+                <div
+                  className="w-full rounded-t-xl flex items-end justify-center pb-3 transition-all duration-700"
+                  style={{
+                    height: cfg.barHeight,
+                    background: cfg.barGrad,
+                    border: `1px solid ${cfg.barBorder}`,
+                    borderBottom: "none",
+                    boxShadow: cfg.shadow,
+                  }}
+                >
+                  <span
+                    className="text-xs font-extrabold tracking-wider"
+                    style={{ color: cfg.labelColor }}
+                  >
+                    {cfg.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
