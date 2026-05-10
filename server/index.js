@@ -319,6 +319,55 @@ app.post('/api/webhooks/3c', async (req, res) => {
       `, [call_id, agent_name, phone, duration, result, campaign, started_at])
     }
 
+    // Salva em mey_events para Atividades
+    if (event_type === 'call-history-was-created' && agent_name) {
+      const ch2       = eventData.callHistory || eventData
+      const speaking  = Number(ch2.speaking_with_agent_time || ch2.speaking_time || duration || 0)
+      const qualName  = ch2.qualification?.name || result || ''
+      const mappedEvt = speaking > 0 ? 'call.answered' : (duration > 0 ? 'call.answered' : 'call.no_answer')
+
+      // Resolve agent mapping
+      const agentId   = String(ch2.agent?.id || '')
+      let resolvedName = agent_name
+      let resolvedEmail = ''
+      if (agentId) {
+        const { rows: ag } = await pool.query(
+          `SELECT user_name, user_email FROM threec_agents WHERE agent_id = $1 AND active = true LIMIT 1`,
+          [agentId]
+        ).catch(() => ({ rows: [] }))
+        if (ag.length) { resolvedName = ag[0].user_name || agent_name; resolvedEmail = ag[0].user_email || '' }
+      }
+
+      await pool.query(`
+        INSERT INTO mey_events (event_type, user_name, user_email, entity_type, entity_id, source, payload)
+        VALUES ($1,$2,$3,'lead',$4,'3c',$5)
+      `, [
+        mappedEvt,
+        resolvedName,
+        resolvedEmail,
+        ch2.telephony_id || ch2._id || call_id || 'unknown',
+        JSON.stringify({
+          result: mappedEvt.split('.')[1],
+          duration: ch2.calling_time || duration || 0,
+          speaking_time: speaking,
+          phone: phone || ch2.number,
+          campaign: campaign || ch2.campaign?.name,
+          qualification: qualName,
+          agent_id: agentId,
+          call_id,
+        }),
+      ]).catch(e => console.error('[mey_events 3c]', e.message))
+
+      // Detecta ganho por qualificação
+      const WIN_QUALS = ['venda','vendido','fechou','ganho','convertido','comprou','pedido realizado']
+      if (qualName && WIN_QUALS.some(w => qualName.toLowerCase().includes(w))) {
+        await pool.query(`
+          INSERT INTO mey_events (event_type, user_name, user_email, entity_type, entity_id, source, payload)
+          VALUES ('lead.won',$1,$2,'lead',$3,'3c',$4)
+        `, [resolvedName, resolvedEmail, call_id || 'unknown', JSON.stringify({ qualification: qualName })]).catch(() => {})
+      }
+    }
+
     res.json({ ok: true, event_type, call_id })
   } catch (err) {
     console.error('[3c webhook error]', err)
@@ -376,7 +425,8 @@ app.post('/api/webhooks/skale', async (req, res) => {
         carrier          = EXCLUDED.carrier,
         seller_name      = EXCLUDED.seller_name,
         note             = EXCLUDED.note,
-        paid_at          = EXCLUDED.paid_at,
+        paid_at          = COALESCE(EXCLUDED.paid_at, skale_orders.paid_at),
+        delivered_at     = CASE WHEN EXCLUDED.status = 'delivered' THEN NOW() ELSE skale_orders.delivered_at END,
         updated_at       = NOW()
     `, [
       external_id,
@@ -619,6 +669,208 @@ app.get('/api/dc/stats', async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err.message })
   }
+})
+
+// ── Atualizar collection_status de um pedido ───────────────
+app.patch('/api/skale/orders/:id/collection', async (req, res) => {
+  try {
+    const { collection_status, user_name } = req.body
+    if (!collection_status) return res.status(400).json({ error: 'collection_status required' })
+    await pool.query(
+      `UPDATE skale_orders SET collection_status = $1, updated_at = NOW() WHERE external_id = $2 OR id::text = $2`,
+      [collection_status, req.params.id]
+    )
+    // Registra evento
+    await pool.query(`
+      INSERT INTO mey_events (event_type, user_name, entity_type, entity_id, source, payload)
+      VALUES ($1, $2, 'order', $3, 'mey', $4)
+    `, [
+      `collection.${collection_status}`,
+      user_name || 'Sistema',
+      req.params.id,
+      JSON.stringify({ collection_status }),
+    ])
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Webhook Wavoip (Evolution API / chamadas WhatsApp) ─────
+
+app.get('/api/webhooks/wavoip', (req, res) => res.json({ ok: true, endpoint: 'wavoip' }))
+
+app.post('/api/webhooks/wavoip', async (req, res) => {
+  try {
+    const body     = req.body || {}
+    const event    = body.event          // "CALL"
+    const instance = body.instance || ''
+    const apikey   = body.apikey || body.api_key || ''
+    const data     = body.data || {}
+
+    console.log(`[wavoip] event=${event} instance=${instance}`)
+
+    if (event !== 'CALL') return res.json({ ok: true, ignored: true, event })
+
+    // Busca config pelo device_token ou nome
+    let userName = 'WhatsApp', userEmail = ''
+    if (apikey || instance) {
+      const { rows } = await pool.query(`
+        SELECT user_name, user_email FROM wavoip_configs
+        WHERE (device_token = $1 OR device_name = $2) AND active = true LIMIT 1
+      `, [apikey || '', instance || '']).catch(() => ({ rows: [] }))
+      if (rows.length) { userName = rows[0].user_name || userName; userEmail = rows[0].user_email || '' }
+    }
+
+    const callStatus = data.status || ''
+    const eventType  = callStatus === 'accepted'            ? 'whatsapp_call_received'
+                     : callStatus === 'rejected' || callStatus === 'timeout' ? 'whatsapp_call_ended'
+                     : 'whatsapp_call_started'
+    const phone      = data.from || data.to || ''
+    const callId     = data.id || `${instance}_${Date.now()}`
+
+    await pool.query(`
+      INSERT INTO mey_events (event_type, user_name, user_email, entity_type, entity_id, source, payload)
+      VALUES ($1,$2,$3,'lead',$4,'whatsapp',$5)
+    `, [
+      eventType, userName, userEmail, `wavoip_${callId}`,
+      JSON.stringify({ phone, call_id: callId, call_status: callStatus, instance, duration: data.duration || 0 }),
+    ])
+
+    res.json({ ok: true, event_type: eventType, user: userName })
+  } catch (err) {
+    console.error('[wavoip webhook]', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Webhook DataCrazy (leads, pedidos, pagamentos) ─────────
+
+app.get('/api/webhooks/datacrazyleads', (req, res) => res.json({ ok: true, endpoint: 'datacrazyleads' }))
+
+app.post('/api/webhooks/datacrazyleads', async (req, res) => {
+  try {
+    const body       = req.body || {}
+    const dataType   = body.type || 'lead'
+    const data       = body.lead || body.data || body
+
+    console.log(`[datacrazyleads] type=${dataType} data=${JSON.stringify(data).slice(0,200)}`)
+
+    if (dataType === 'lead') {
+      const dcId       = data.id || data.lead_id || ''
+      const name       = data.name || 'Sem nome'
+      const phone      = data.rawPhone || data.phone || ''
+      const sellerName = data.attendant?.name || data.seller?.name || ''
+      const sellerEmail= data.attendant?.email || data.seller?.email || ''
+      const campaign   = data.sourceReferral?.sourceId || data.campaignName || ''
+
+      if (!name && !phone) return res.json({ ok: true, ignored: true, reason: 'no_name_or_phone' })
+
+      // Upsert lead
+      const { rows: existing } = await pool.query(
+        `SELECT id FROM leads WHERE notes ILIKE $1 LIMIT 1`,
+        [`%dc:${dcId}%`]
+      ).catch(() => ({ rows: [] }))
+
+      let leadId
+      if (existing.length) {
+        leadId = existing[0].id
+        await pool.query(`UPDATE leads SET name=$1, phone=$2, seller_name=$3 WHERE id=$4`,
+          [name, phone, sellerName || null, leadId])
+        await pool.query(`INSERT INTO mey_events (event_type,user_name,user_email,entity_type,entity_id,source,payload) VALUES ('lead.updated',$1,$2,'lead',$3,'datacrazy',$4)`,
+          [sellerName||'DataCrazy', sellerEmail, leadId, JSON.stringify({ dcId, campaign, phone })])
+      } else {
+        const { rows } = await pool.query(
+          `INSERT INTO leads (name, phone, seller_name, status, stage, notes) VALUES ($1,$2,$3,'open',1,$4) RETURNING id`,
+          [name, phone, sellerName||null, `dc:${dcId}`]
+        )
+        leadId = rows[0].id
+        await pool.query(`INSERT INTO mey_events (event_type,user_name,user_email,entity_type,entity_id,source,payload) VALUES ('lead.created',$1,$2,'lead',$3,'datacrazy',$4)`,
+          [sellerName||'DataCrazy', sellerEmail, leadId, JSON.stringify({ dcId, campaign, phone })])
+      }
+
+      return res.json({ ok: true, lead_id: leadId, name })
+    }
+
+    if (dataType === 'event') {
+      await pool.query(`INSERT INTO mey_events (event_type,user_name,user_email,entity_type,entity_id,source,payload) VALUES ($1,$2,$3,$4,$5,'datacrazy',$6)`,
+        [data.event_type||'event', data.user_name||'DataCrazy', data.user_email||'', data.entity_type||'lead', data.entity_id||'', JSON.stringify(data.payload||data)])
+      return res.json({ ok: true })
+    }
+
+    res.json({ ok: true, ignored: true, dataType })
+  } catch (err) {
+    console.error('[datacrazyleads]', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── ThreeC Agents (mapeamento de agentes) ──────────────────
+
+app.get('/api/3c/agents-map', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`SELECT * FROM threec_agents ORDER BY agent_name_3c`)
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/3c/agents-map', async (req, res) => {
+  try {
+    const { agent_id, agent_name_3c, user_name, user_email, active } = req.body
+    const { rows } = await pool.query(`
+      INSERT INTO threec_agents (agent_id, agent_name_3c, user_name, user_email, active)
+      VALUES ($1,$2,$3,$4,$5)
+      ON CONFLICT (agent_id) DO UPDATE SET agent_name_3c=$2, user_name=$3, user_email=$4, active=$5
+      RETURNING *
+    `, [agent_id, agent_name_3c||'', user_name||'', user_email||'', active !== false])
+    res.json(rows[0])
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/3c/agents-map/:id', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM threec_agents WHERE id=$1`, [req.params.id])
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ── WavoipConfig CRUD ──────────────────────────────────────
+
+app.get('/api/wavoip/devices', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`SELECT * FROM wavoip_configs ORDER BY created_date`)
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.post('/api/wavoip/devices', async (req, res) => {
+  try {
+    const { device_name, device_token, user_name, user_email, active } = req.body
+    const { rows } = await pool.query(`
+      INSERT INTO wavoip_configs (device_name, device_token, user_name, user_email, active)
+      VALUES ($1,$2,$3,$4,$5)
+      ON CONFLICT (device_token) DO UPDATE SET device_name=$1, user_name=$3, user_email=$4, active=$5
+      RETURNING *
+    `, [device_name||'', device_token||'', user_name||'', user_email||'', active !== false])
+    res.json(rows[0])
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+app.delete('/api/wavoip/devices/:id', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM wavoip_configs WHERE id=$1`, [req.params.id])
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ── mey_events query (para Atividades/Eventos) ─────────────
+
+app.get('/api/events', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit||'2000'), 5000)
+    const { rows } = await pool.query(`SELECT * FROM mey_events ORDER BY created_date DESC LIMIT $1`, [limit])
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ── Serve React app (static) ───────────────────────────────

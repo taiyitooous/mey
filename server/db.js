@@ -180,5 +180,35 @@ export async function initDB() {
       lost_leads_count    INTEGER DEFAULT 0,
       created_date        TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS threec_agents (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      agent_id       TEXT UNIQUE NOT NULL,
+      agent_name_3c  TEXT,
+      user_name      TEXT,
+      user_email     TEXT,
+      active         BOOLEAN DEFAULT true,
+      created_date   TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS wavoip_configs_full (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      device_name   TEXT,
+      device_token  TEXT UNIQUE,
+      user_name     TEXT,
+      user_email    TEXT,
+      active        BOOLEAN DEFAULT true,
+      created_date  TIMESTAMPTZ DEFAULT NOW()
+    );
   `)
+
+  // Add columns that may not exist yet (safe migrations)
+  await pool.query(`
+    ALTER TABLE skale_orders ADD COLUMN IF NOT EXISTS collection_status TEXT;
+    ALTER TABLE skale_orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+    ALTER TABLE skale_orders ADD COLUMN IF NOT EXISTS amount NUMERIC GENERATED ALWAYS AS (total_price) STORED;
+    ALTER TABLE wavoip_configs ADD COLUMN IF NOT EXISTS device_name TEXT;
+    ALTER TABLE wavoip_configs ADD COLUMN IF NOT EXISTS device_token TEXT;
+    ALTER TABLE wavoip_configs ADD COLUMN IF NOT EXISTS user_email TEXT;
+  `).catch(() => {})
 }

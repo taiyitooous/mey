@@ -54,15 +54,57 @@ function buildWhere(entity, query) {
   return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', values }
 }
 
+// Normalized orders query for Dashboard compatibility
+const ORDERS_NORMALIZED_SQL = `
+  SELECT
+    id::text,
+    external_id,
+    customer_name,
+    seller_name,
+    seller_key,
+    platform,
+    tracking_code,
+    carrier,
+    status        AS logistics_status,
+    CASE
+      WHEN payment_status ILIKE 'pago'        THEN 'paid'
+      WHEN payment_status ILIKE 'confirmado'  THEN 'paid'
+      WHEN payment_status ILIKE 'aprovado'    THEN 'paid'
+      ELSE LOWER(COALESCE(payment_status, 'pending'))
+    END           AS payment_status,
+    COALESCE(collection_status, '') AS collection_status,
+    total_price   AS amount,
+    paid_at,
+    delivered_at,
+    started_at    AS created_date,
+    updated_at
+  FROM skale_orders
+  WHERE is_test = FALSE
+`
+
 // LIST / FILTER
 router.get('/:entity', async (req, res) => {
   const cfg = ENTITY_MAP[req.params.entity]
   if (!cfg) return res.status(404).json({ error: 'Unknown entity' })
 
   const { order, limit = 1000, ...filters } = req.query
+  const lim = Math.min(parseInt(limit) || 1000, 5000)
+
+  // Special normalized view for orders (Dashboard compat)
+  if (cfg.table === 'skale_orders') {
+    try {
+      const { col, dir } = parseOrder(order, 'started_at')
+      const { rows } = await pool.query(
+        `${ORDERS_NORMALIZED_SQL} ORDER BY ${col} ${dir} LIMIT $1`, [lim]
+      )
+      return res.json(rows)
+    } catch (err) {
+      return res.status(500).json({ error: err.message })
+    }
+  }
+
   const { col, dir } = parseOrder(order, cfg.orderCol)
   const { where, values } = buildWhere(cfg.table, filters)
-  const lim = Math.min(parseInt(limit) || 1000, 5000)
 
   try {
     const { rows } = await pool.query(
