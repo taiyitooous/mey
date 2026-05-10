@@ -70,6 +70,9 @@ const ORDERS_NORMALIZED_SQL = `
       WHEN payment_status ILIKE 'pago'        THEN 'paid'
       WHEN payment_status ILIKE 'confirmado'  THEN 'paid'
       WHEN payment_status ILIKE 'aprovado'    THEN 'paid'
+      WHEN payment_status ILIKE 'after pay'   THEN 'paid'
+      WHEN payment_status ILIKE 'after%pay%'  THEN 'paid'
+      WHEN payment_status ILIKE 'paid'        THEN 'paid'
       ELSE LOWER(COALESCE(payment_status, 'pending'))
     END           AS payment_status,
     COALESCE(collection_status, '') AS collection_status,
