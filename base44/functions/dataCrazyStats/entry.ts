@@ -1,5 +1,3 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-
 const DC_API = 'https://api.g1.datacrazy.io/api/v1';
 const DC_TOKEN = Deno.env.get('DATACRAZY');
 
@@ -45,10 +43,6 @@ async function countLeadsByAttendant(attendantId) {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
     if (!DC_TOKEN) {
       return Response.json({ error: 'DATACRAZY secret não configurada' }, { status: 500 });
     }
