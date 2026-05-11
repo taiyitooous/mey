@@ -27,6 +27,7 @@ const TIME_RANGES = [
   { key: "ontem", label: "Ontem", getStart: () => startOfDaySP(subDays(new Date(), 1)), getEnd: () => endOfDaySP(subDays(new Date(), 1)) },
   { key: "7d", label: "7 dias", getStart: () => startOfDaySP(subDays(new Date(), 6)) },
   { key: "30d", label: "30 dias", getStart: () => startOfDaySP(subDays(new Date(), 29)) },
+  { key: "custom", label: "Personalizado" },
 ];
 
 const CHANNELS = [
@@ -50,10 +51,18 @@ export default function Atividades() {
   const [timeRange, setTimeRange] = useState("hoje");
   const [selectedChannel, setSelectedChannel] = useState("all");
   const [resultOnly, setResultOnly] = useState(false);
+  const [customStart, setCustomStart] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
+  const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
   const queryClient = useQueryClient();
 
   // Filtro de período
   const getDateRange = () => {
+    if (timeRange === "custom") {
+      return {
+        startDate: new Date(customStart + "T00:00:00-03:00").getTime(),
+        endDate: new Date(customEnd + "T23:59:59.999-03:00").getTime(),
+      };
+    }
     const range = TIME_RANGES.find(r => r.key === timeRange);
     return {
       startDate: range.getStart(),
@@ -62,7 +71,7 @@ export default function Atividades() {
   };
 
   const { data: events = [] } = useQuery({
-    queryKey: ["events_atividades", timeRange],
+    queryKey: ["events_atividades", timeRange, customStart, customEnd],
     queryFn: async () => {
       const { startDate, endDate } = getDateRange();
       const all = await base44.entities.Event.list("-created_date", 2000);
@@ -87,10 +96,10 @@ export default function Atividades() {
     return unsubscribe;
   }, [queryClient]);
 
-  // Force refetch quando timeRange muda
+  // Force refetch quando timeRange ou datas customizadas mudam
   useEffect(() => {
     queryClient.refetchQueries({ queryKey: ["events_atividades"] });
-  }, [timeRange, queryClient]);
+  }, [timeRange, customStart, customEnd, queryClient]);
 
   const { data: users = [] } = useQuery({
     queryKey: ["users_all"],
@@ -269,7 +278,7 @@ export default function Atividades() {
           </div>
           
           {/* Filtros de período */}
-          <div className="flex gap-2 flex-wrap justify-end">
+          <div className="flex gap-2 flex-wrap justify-end items-center">
             {TIME_RANGES.map((range) => (
               <button
                 key={range.key}
@@ -283,6 +292,25 @@ export default function Atividades() {
                 {range.label}
               </button>
             ))}
+            {timeRange === "custom" && (
+              <div className="flex items-center gap-1.5 bg-secondary rounded-lg px-2 py-1">
+                <input
+                  type="date"
+                  value={customStart}
+                  max={customEnd}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="text-xs bg-transparent text-foreground border-none outline-none w-32 cursor-pointer"
+                />
+                <span className="text-muted-foreground text-xs">→</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  min={customStart}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="text-xs bg-transparent text-foreground border-none outline-none w-32 cursor-pointer"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
