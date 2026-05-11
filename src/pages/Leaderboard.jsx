@@ -17,6 +17,7 @@ import ManageSalesModal from "@/components/leaderboard/ManageSalesModal";
 import ManageLeadsModal from "@/components/leaderboard/ManageLeadsModal";
 import ManageTeamsModal from "@/components/leaderboard/ManageTeamsModal";
 import TeamView from "@/components/leaderboard/TeamView";
+import TrendChart from "@/components/leaderboard/TrendChart";
 import { getDateRange, SALES_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -248,6 +249,7 @@ export default function Leaderboard() {
 
       {viewMode === "individual" && (
         <div className="space-y-6">
+          <TrendChart saleRecords={saleRecords} leadCounts={leadCounts} />
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
