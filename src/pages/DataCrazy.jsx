@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Database, Copy, Check, RefreshCw, Search, Users, TrendingUp } from "lucide-react";
-import DCStatsPanel from "@/components/datacrazy/DCStatsPanel";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -193,9 +192,6 @@ export default function DataCrazy() {
           )}
         </Card>
       </div>
-
-      {/* Stats ao vivo via API */}
-      <DCStatsPanel />
 
       {/* Webhook Config */}
       <Card className="p-6 space-y-5">
