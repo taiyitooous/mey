@@ -53,23 +53,24 @@ export default function Leaderboard() {
     queryFn: () => base44.entities.LeadDailyCount.list("-date", 500),
   });
 
-  // Filter sale records by period
+  // Helper: convert a Date to "yyyy-MM-dd" string in SP timezone
+  const toSPDateStr = (date) =>
+    date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+
+  const startDateStr = start ? toSPDateStr(start) : null;
+  const endDateStr = end ? toSPDateStr(end) : null;
+
+  // Filter sale records by period (compare date strings directly, no TZ issues)
   const filteredSaleRecords = useMemo(() => {
-    if (!start || !end) return saleRecords;
-    return saleRecords.filter((r) => {
-      const d = new Date(r.date + "T12:00:00");
-      return d >= start && d <= end;
-    });
-  }, [saleRecords, start, end]);
+    if (!startDateStr || !endDateStr) return saleRecords;
+    return saleRecords.filter((r) => r.date >= startDateStr && r.date <= endDateStr);
+  }, [saleRecords, startDateStr, endDateStr]);
 
   // Filter lead daily counts by period
   const filteredLeadCounts = useMemo(() => {
-    if (!start || !end) return leadCounts;
-    return leadCounts.filter((r) => {
-      const d = new Date(r.date + "T12:00:00");
-      return d >= start && d <= end;
-    });
-  }, [leadCounts, start, end]);
+    if (!startDateStr || !endDateStr) return leadCounts;
+    return leadCounts.filter((r) => r.date >= startDateStr && r.date <= endDateStr);
+  }, [leadCounts, startDateStr, endDateStr]);
 
   // All known sellers: registered sellers first, then from records
   const allSellers = useMemo(() => {

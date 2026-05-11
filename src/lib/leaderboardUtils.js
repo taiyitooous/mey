@@ -23,33 +23,45 @@ export const COLLECTION_CRITERIA = [
   { value: "conversion", label: "Maior conversão %" },
 ];
 
+// Returns today's date string in SP timezone as "yyyy-MM-dd"
+function todaySP() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+// Returns a date object at midnight local for a given "yyyy-MM-dd" string
+function dateFromStr(str) {
+  return new Date(str + "T00:00:00");
+}
+
 export function getDateRange(period, customStart, customEnd) {
-  const now = new Date();
-  const spNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const todayStr = todaySP();
+  const todayDate = dateFromStr(todayStr);
 
   if (period === "today") {
-    return { start: startOfDay(spNow), end: endOfDay(spNow) };
+    return { start: startOfDay(todayDate), end: endOfDay(todayDate) };
   }
   if (period === "yesterday") {
-    const yesterday = subDays(spNow, 1);
-    return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+    const yStr = subDays(todayDate, 1).toLocaleDateString("en-CA");
+    const y = dateFromStr(yStr);
+    return { start: startOfDay(y), end: endOfDay(y) };
   }
   if (period === "this_week") {
-    return { start: startOfWeek(spNow, { weekStartsOn: 1 }), end: endOfWeek(spNow, { weekStartsOn: 1 }) };
+    return { start: startOfWeek(todayDate, { weekStartsOn: 1 }), end: endOfWeek(todayDate, { weekStartsOn: 1 }) };
   }
   if (period === "last_week") {
-    const lastWeek = subWeeks(spNow, 1);
+    const lastWeek = subWeeks(todayDate, 1);
     return { start: startOfWeek(lastWeek, { weekStartsOn: 1 }), end: endOfWeek(lastWeek, { weekStartsOn: 1 }) };
   }
   if (period === "this_month") {
-    const start = new Date(spNow.getFullYear(), spNow.getMonth(), 1);
-    const end = new Date(spNow.getFullYear(), spNow.getMonth() + 1, 0, 23, 59, 59);
+    const d = dateFromStr(todayStr);
+    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
     return { start, end };
   }
   if (period === "custom" && customStart && customEnd) {
-    return { start: startOfDay(new Date(customStart)), end: endOfDay(new Date(customEnd)) };
+    return { start: startOfDay(dateFromStr(customStart)), end: endOfDay(dateFromStr(customEnd)) };
   }
-  return { start: startOfDay(spNow), end: endOfDay(spNow) };
+  return { start: startOfDay(todayDate), end: endOfDay(todayDate) };
 }
 
 export function getCriteriaValue(row, criteria, type) {
