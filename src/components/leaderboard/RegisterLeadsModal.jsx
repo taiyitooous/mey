@@ -9,6 +9,7 @@ import { format } from "date-fns";
 export default function RegisterLeadsModal({ sellers, onClose }) {
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
+  const [selectedDate, setSelectedDate] = useState(today);
   const [entries, setEntries] = useState(
     sellers.map((s) => ({ seller: s, count: "" }))
   );
@@ -28,7 +29,7 @@ export default function RegisterLeadsModal({ sellers, onClose }) {
     setSaving(true);
 
     // For each seller, upsert the daily count (delete existing + create new)
-    const existing = await base44.entities.LeadDailyCount.filter({ date: today });
+    const existing = await base44.entities.LeadDailyCount.filter({ date: selectedDate });
 
     for (const entry of toSave) {
       const existingRecord = existing.find((r) => r.seller_name === entry.seller);
@@ -38,7 +39,7 @@ export default function RegisterLeadsModal({ sellers, onClose }) {
         });
       } else {
         await base44.entities.LeadDailyCount.create({
-          date: today,
+          date: selectedDate,
           seller_name: entry.seller,
           lead_count: parseInt(entry.count),
         });
@@ -60,15 +61,27 @@ export default function RegisterLeadsModal({ sellers, onClose }) {
         <div className="flex items-start justify-between p-6 pb-4">
           <div>
             <h2 className="text-lg font-bold text-foreground">Registrar Leads do Dia</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Quantidade de leads recebidos hoje — {format(new Date(), "dd/MM/yyyy")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Informe a data e a quantidade de leads recebidos</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Date picker */}
+        <div className="px-6 pb-3">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Data</label>
+          <input
+            type="date"
+            value={selectedDate}
+            max={today}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full h-9 rounded-lg border border-border bg-muted/20 px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+          />
+        </div>
+
         {/* Body */}
-        <div className="px-6 pb-4 space-y-3 max-h-80 overflow-y-auto">
+        <div className="px-6 pb-4 space-y-3 max-h-72 overflow-y-auto">
           {entries.map((entry, idx) => (
             <div key={entry.seller} className="flex items-center gap-4">
               <div className="flex items-center gap-2 flex-1">
