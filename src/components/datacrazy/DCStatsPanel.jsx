@@ -160,9 +160,15 @@ export default function DCStatsPanel() {
       ) : data && (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <StatCard icon={Layers} label="Total de leads (histórico)" value={data.totalLeads} sub="Todos os leads cadastrados" />
-            <StatCard icon={Layers} label="Negócios em andamento" value={totalBusinesses} sub="Apenas os ativos no funil" />
+            <StatCard icon={Layers} label="Leads em andamento" value={totalBusinesses} sub="Ativos no funil" />
+            <StatCard
+              icon={Layers}
+              label="Leads na 1ª etapa"
+              value={data.byStage?.filter((s) => s.stageIndex === 0 && s.count > 0).reduce((acc, s) => acc + s.count, 0) ?? 0}
+              sub="stageIndex = 0 em todos os pipelines"
+            />
             <StatCard icon={Users} label="Atendentes com leads" value={data.bySeller?.filter((s) => s.count > 0).length} />
           </div>
 
