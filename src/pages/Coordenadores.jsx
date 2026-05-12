@@ -10,9 +10,10 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function Coordenadores() {
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ user_email: "", user_name: "" });
+  const [formData, setFormData] = useState({ user_email: "", user_name: "", role: "user" });
   const [invitingId, setInvitingId] = useState(null);
   const [inviteInForm, setInviteInForm] = useState(false);
+  const [inviteRoles, setInviteRoles] = useState({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -45,11 +46,11 @@ export default function Coordenadores() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.user_email || !formData.user_name) return;
-    createMutation.mutate(formData);
+    createMutation.mutate({ user_email: formData.user_email, user_name: formData.user_name });
     if (inviteInForm) {
       try {
-        await base44.users.inviteUser(formData.user_email, "user");
-        toast({ title: "Convite enviado!", description: `${formData.user_email} foi convidado para o app.` });
+        await base44.users.inviteUser(formData.user_email, formData.role);
+        toast({ title: "Convite enviado!", description: `${formData.user_email} foi convidado como ${formData.role === "admin" ? "Administrador" : "Usuário"}.` });
       } catch {
         toast({ title: "Coordenador criado", description: "Não foi possível enviar o convite agora.", variant: "destructive" });
       }
@@ -58,9 +59,10 @@ export default function Coordenadores() {
 
   const handleInvite = async (coord) => {
     setInvitingId(coord.id);
+    const role = inviteRoles[coord.id] || "user";
     try {
-      await base44.users.inviteUser(coord.user_email, "user");
-      toast({ title: "Convite enviado!", description: `${coord.user_email} recebeu o convite para o app.` });
+      await base44.users.inviteUser(coord.user_email, role);
+      toast({ title: "Convite enviado!", description: `${coord.user_email} convidado como ${role === "admin" ? "Administrador" : "Usuário"}.` });
     } catch {
       toast({ title: "Erro ao convidar", description: "Não foi possível enviar o convite.", variant: "destructive" });
     } finally {
@@ -102,6 +104,24 @@ export default function Coordenadores() {
                 className="mt-1"
               />
             </div>
+            <div>
+              <label className="text-xs font-semibold">Permissão no app</label>
+              <div className="flex gap-2 mt-1">
+                {[{ value: "user", label: "Usuário" }, { value: "admin", label: "Administrador" }].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: opt.value })}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold border transition-all"
+                    style={formData.role === opt.value
+                      ? { background: "#4F8F63", color: "#F3F6F2", borderColor: "#4F8F63" }
+                      : { background: "transparent", color: "#6F7A72", borderColor: "#2A342D" }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center gap-2 flex-wrap justify-between">
               <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <input
@@ -138,8 +158,26 @@ export default function Coordenadores() {
                 <p className="font-medium">{coord.user_name}</p>
                 <p className="text-xs text-muted-foreground">{coord.user_email}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 {coord.active && <Badge className="bg-success/10 text-success">Ativo</Badge>}
+                <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: "#2A342D" }}>
+                  {[{ value: "user", label: "Usuário" }, { value: "admin", label: "Admin" }].map(opt => {
+                    const selected = (inviteRoles[coord.id] || "user") === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setInviteRoles(r => ({ ...r, [coord.id]: opt.value }))}
+                        className="px-2.5 py-1 text-[11px] font-semibold transition-all"
+                        style={selected
+                          ? { background: "#4F8F63", color: "#F3F6F2" }
+                          : { background: "transparent", color: "#6F7A72" }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
