@@ -119,8 +119,8 @@ Deno.serve(async (req) => {
 
       saved.push({ event_type: eventType, agent: userName });
 
-      // Se a ligação foi atendida, fazer upsert no registro de avaliação por telefone
-      if (eventType === "call.answered" && speakingTime > 30 && phone) {
+      // Se a ligação foi atendida com tempo mínimo de fala, fazer upsert no registro de avaliação
+      if (eventType === "call.answered" && speakingTime >= 30 && phone) {
         const callId = ch._id || ch.id || entityId;
         const audioUrl = ch.recording_url || ch.audio_url || ch.record_url || "";
         const transcript = ch.transcript || ch.transcription || "";
