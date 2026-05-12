@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Trophy, Medal, Search } from "lucide-react";
 import { getCriteriaValue } from "@/lib/leaderboardUtils";
@@ -132,12 +133,13 @@ export default function LeaderboardTable({ data, criteria, type, loading }) {
                           >
                             {row.name.charAt(0).toUpperCase()}
                           </div>
-                          <span
-                            className="font-semibold"
+                          <Link
+                            to={`/seller-profile?seller=${encodeURIComponent(row.name)}`}
+                            className="font-semibold hover:underline underline-offset-2 transition-opacity hover:opacity-80"
                             style={{ color: isTop3 ? rankColor : "hsl(var(--foreground))" }}
                           >
                             {row.name}
-                          </span>
+                          </Link>
                         </div>
                       </td>
 
