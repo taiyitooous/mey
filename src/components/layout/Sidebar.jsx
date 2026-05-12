@@ -13,6 +13,7 @@ import {
   Database,
   User,
   Trophy,
+  PhoneCall,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { label: "DataCrazy", icon: Database, path: "/datacrazy" },
   { label: "Eventos", icon: ScrollText, path: "/eventos" },
   { label: "Coordenadores", icon: Shield, path: "/coordenadores" },
+  { label: "Avaliação IA", icon: PhoneCall, path: "/avaliacao-ligacoes" },
   { label: "Integrações", icon: Settings, path: "/integracoes" },
 ];
 

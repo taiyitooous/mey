@@ -19,6 +19,7 @@ import DataCrazy from '@/pages/DataCrazy';
 import Leaderboard from '@/pages/Leaderboard';
 import SellerProfile from '@/pages/SellerProfile';
 import SellerComparison from '@/pages/SellerComparison';
+import AvaliacaoLigacoes from '@/pages/AvaliacaoLigacoes';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -62,6 +63,7 @@ const AuthenticatedApp = () => {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/seller-profile" element={<SellerProfile />} />
         <Route path="/seller-comparison" element={<SellerComparison />} />
+        <Route path="/avaliacao-ligacoes" element={<AvaliacaoLigacoes />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

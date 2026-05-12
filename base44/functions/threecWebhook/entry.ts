@@ -119,6 +119,38 @@ Deno.serve(async (req) => {
 
       saved.push({ event_type: eventType, agent: userName });
 
+      // Se a ligação foi atendida, criar registro de avaliação e disparar IA
+      if (eventType === "call.answered" && speakingTime > 30) {
+        const callId = ch._id || ch.id || entityId;
+        const audioUrl = ch.recording_url || ch.audio_url || ch.record_url || "";
+        const transcript = ch.transcript || ch.transcription || "";
+
+        const evalRecord = await db.CallEvaluation.create({
+          agent_name: userName,
+          agent_id: agentId,
+          call_id: callId,
+          contact_name: contactData.Nome || contactData.nome || "",
+          phone,
+          campaign: campaign.name || "",
+          speaking_time: speakingTime,
+          qualification: qualificationName,
+          audio_url: audioUrl,
+          transcript,
+          evaluation_status: "pending",
+          called_at: new Date().toISOString(),
+        });
+
+        // Disparar avaliação assíncrona
+        try {
+          base44.asServiceRole.functions.invoke("evaluateCall", { evaluation_id: evalRecord.id });
+        } catch (e) {
+          console.log("[3C] could not trigger evaluation:", e.message);
+        }
+
+        console.log(`[3C] evaluation created: ${evalRecord.id} for agent ${userName}`);
+        saved.push({ event_type: "call.evaluation_created", agent: userName, eval_id: evalRecord.id });
+      }
+
       if (isWinQualification(qualificationName)) {
         console.log(`[3C] WIN detected: "${qualificationName}"`);
         await db.Event.create({

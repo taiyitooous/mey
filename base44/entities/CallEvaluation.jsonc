@@ -1,0 +1,106 @@
+{
+  "name": "CallEvaluation",
+  "type": "object",
+  "properties": {
+    "agent_name": {
+      "type": "string",
+      "description": "Nome do agente/vendedor"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "ID do agente na 3C"
+    },
+    "call_id": {
+      "type": "string",
+      "description": "ID da liga\u00e7\u00e3o na 3C"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Nome do contato/lead"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone do contato"
+    },
+    "campaign": {
+      "type": "string",
+      "description": "Campanha da liga\u00e7\u00e3o"
+    },
+    "speaking_time": {
+      "type": "number",
+      "description": "Tempo de fala em segundos"
+    },
+    "qualification": {
+      "type": "string",
+      "description": "Qualifica\u00e7\u00e3o registrada na 3C"
+    },
+    "audio_url": {
+      "type": "string",
+      "description": "URL do \u00e1udio gravado"
+    },
+    "transcript": {
+      "type": "string",
+      "description": "Transcri\u00e7\u00e3o da liga\u00e7\u00e3o (se dispon\u00edvel)"
+    },
+    "score": {
+      "type": "number",
+      "description": "Pontua\u00e7\u00e3o geral de 0 a 10"
+    },
+    "score_tone": {
+      "type": "number",
+      "description": "Pontua\u00e7\u00e3o de tom/abordagem (0-10)"
+    },
+    "score_objections": {
+      "type": "number",
+      "description": "Pontua\u00e7\u00e3o de tratamento de obje\u00e7\u00f5es (0-10)"
+    },
+    "score_pitch": {
+      "type": "number",
+      "description": "Pontua\u00e7\u00e3o do pitch de vendas (0-10)"
+    },
+    "feedback_tone": {
+      "type": "string",
+      "description": "Feedback sobre tom e abordagem"
+    },
+    "feedback_objections": {
+      "type": "string",
+      "description": "Feedback sobre obje\u00e7\u00f5es tratadas"
+    },
+    "feedback_pitch": {
+      "type": "string",
+      "description": "Feedback sobre pitch de vendas"
+    },
+    "feedback_summary": {
+      "type": "string",
+      "description": "Resumo geral da avalia\u00e7\u00e3o"
+    },
+    "strengths": {
+      "type": "string",
+      "description": "Pontos fortes da liga\u00e7\u00e3o (JSON array)"
+    },
+    "improvements": {
+      "type": "string",
+      "description": "Pontos a melhorar (JSON array)"
+    },
+    "evaluation_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "done",
+        "error"
+      ],
+      "default": "pending",
+      "description": "Status da avalia\u00e7\u00e3o IA"
+    },
+    "called_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da liga\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "agent_name",
+    "call_id"
+  ]
+}
