@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Phone, Clock, CheckCircle2, AlertCircle, Loader
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import ScoreRing from "./ScoreRing";
+import AgentOverallSummary from "./AgentOverallSummary";
 
 const C = {
   oficial: "#4F8F63",
@@ -243,11 +244,14 @@ export default function AgentProfileCard({ agentName, evaluations }) {
 
       {/* Call list */}
       {open && (
-        <div className="px-4 pb-4 space-y-2 border-t" style={{ borderColor: C.border }}>
-          <p className="text-[10px] font-bold uppercase tracking-widest pt-3 pb-1" style={{ color: C.neutro }}>
+        <div className="pb-4 space-y-2 border-t" style={{ borderColor: C.border }}>
+          <AgentOverallSummary agentName={agentName} evaluations={evaluations} />
+          <p className="text-[10px] font-bold uppercase tracking-widest pt-1 pb-1 px-4" style={{ color: C.neutro }}>
             Ligações por contato
           </p>
-          {evaluations.map(ev => <CallRow key={ev.id} ev={ev} />)}
+          <div className="px-4 space-y-2">
+            {evaluations.map(ev => <CallRow key={ev.id} ev={ev} />)}
+          </div>
         </div>
       )}
     </div>
