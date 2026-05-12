@@ -59,11 +59,15 @@ Deno.serve(async (req) => {
     }
 
     // Mapear status da Skale para o sistema
-    const skaleStatus = body.status || body.skaletracking?.status_pagamento;
+    // O status real do pagamento vem em transaction.payment_status ou skaletracking.status_pagamento
+    const skalePaymentStatus = body.transaction?.payment_status || body.skaletracking?.status_pagamento || '';
     let paymentStatus = 'pending';
-    if (skaleStatus === 'paid' || skaleStatus === 'Pago') paymentStatus = 'paid';
-    else if (skaleStatus === 'refunded' || skaleStatus === 'Estornado') paymentStatus = 'refunded';
-    else if (skaleStatus === 'canceled' || skaleStatus === 'Cancelado') paymentStatus = 'canceled';
+    const ps = skalePaymentStatus.toLowerCase();
+    if (ps === 'pago' || ps === 'paid') paymentStatus = 'paid';
+    else if (ps === 'estornado' || ps === 'refunded') paymentStatus = 'refunded';
+    else if (ps === 'cancelado' || ps === 'canceled') paymentStatus = 'canceled';
+
+    console.log('[Skale] payment_status mapeado:', skalePaymentStatus, '->', paymentStatus);
 
     let logisticsStatus = 'created';
     const deliveryStatus = body.skaletracking?.status_entrega || '';
