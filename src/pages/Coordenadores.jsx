@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, Mail } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Coordenadores() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ user_email: "", user_name: "" });
+  const [invitingId, setInvitingId] = useState(null);
+  const [inviteInForm, setInviteInForm] = useState(false);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: coordinators = [] } = useQuery({
     queryKey: ["coordinators"],
@@ -38,10 +42,30 @@ export default function Coordenadores() {
     },
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.user_email || !formData.user_name) return;
     createMutation.mutate(formData);
+    if (inviteInForm) {
+      try {
+        await base44.users.inviteUser(formData.user_email, "user");
+        toast({ title: "Convite enviado!", description: `${formData.user_email} foi convidado para o app.` });
+      } catch {
+        toast({ title: "Coordenador criado", description: "Não foi possível enviar o convite agora.", variant: "destructive" });
+      }
+    }
+  };
+
+  const handleInvite = async (coord) => {
+    setInvitingId(coord.id);
+    try {
+      await base44.users.inviteUser(coord.user_email, "user");
+      toast({ title: "Convite enviado!", description: `${coord.user_email} recebeu o convite para o app.` });
+    } catch {
+      toast({ title: "Erro ao convidar", description: "Não foi possível enviar o convite.", variant: "destructive" });
+    } finally {
+      setInvitingId(null);
+    }
   };
 
   return (
@@ -78,14 +102,25 @@ export default function Coordenadores() {
                 className="mt-1"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowForm(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                <Check className="w-4 h-4 mr-1" />
-                Adicionar
-              </Button>
+            <div className="flex items-center gap-2 flex-wrap justify-between">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={inviteInForm}
+                  onChange={(e) => setInviteInForm(e.target.checked)}
+                  className="rounded"
+                />
+                Convidar para o app ao adicionar
+              </label>
+              <div className="flex gap-2">
+                <Button variant="outline" type="button" onClick={() => setShowForm(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  <Check className="w-4 h-4 mr-1" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
           </form>
         </Card>
@@ -103,8 +138,18 @@ export default function Coordenadores() {
                 <p className="font-medium">{coord.user_name}</p>
                 <p className="text-xs text-muted-foreground">{coord.user_email}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {coord.active && <Badge className="bg-success/10 text-success">Ativo</Badge>}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleInvite(coord)}
+                  disabled={invitingId === coord.id}
+                  className="gap-1 text-xs"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  {invitingId === coord.id ? "Enviando..." : "Convidar"}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
