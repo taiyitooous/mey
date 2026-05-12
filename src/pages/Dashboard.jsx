@@ -14,6 +14,7 @@ import {
   format, subDays, eachDayOfInterval, eachWeekOfInterval, isToday, differenceInDays,
 } from "date-fns";
 import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
+import SkaleSalesPanel from "@/components/dashboard/SkaleSalesPanel";
 import { ptBR } from "date-fns/locale";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -502,6 +503,9 @@ export default function Dashboard() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* ── Vendas Skale ─────────────────────────────────────────── */}
+      <SkaleSalesPanel />
 
       {/* ── Calculadora de Projeção ──────────────────────────────── */}
       <ProjectionCalculator />
