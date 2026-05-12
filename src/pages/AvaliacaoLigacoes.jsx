@@ -1,11 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Phone, TrendingUp, Star, RefreshCw, Filter } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phone, TrendingUp, Star, RefreshCw, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import CallEvaluationCard from "@/components/avaliacoes/CallEvaluationCard";
-import ScoreRing from "@/components/avaliacoes/ScoreRing";
+import AgentProfileCard from "@/components/avaliacoes/AgentProfileCard";
 
 const C = {
   oficial: "#4F8F63",
@@ -14,7 +12,6 @@ const C = {
   muted: "#17211B",
   border: "#2A342D",
   fg: "#F3F6F2",
-  dimmed: "#A7B0A9",
   warn: "#C8A94D",
 };
 
@@ -35,15 +32,46 @@ function KpiCard({ label, value, icon: Icon, color, sub }) {
 
 export default function AvaliacaoLigacoes() {
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterAgent, setFilterAgent] = useState("all");
-  const queryClient = useQueryClient();
 
   const { data: evaluations = [], isFetching, refetch } = useQuery({
     queryKey: ["call_evaluations"],
     queryFn: () => base44.entities.CallEvaluation.list("-created_date", 200),
-    refetchInterval: 15000, // auto-refresh a cada 15s para pegar avaliações concluídas
+    refetchInterval: 15000,
   });
+
+  // Agrupar por agente
+  const agentGroups = useMemo(() => {
+    const map = {};
+    evaluations.forEach(ev => {
+      const name = ev.agent_name || "Desconhecido";
+      if (!map[name]) map[name] = [];
+      map[name].push(ev);
+    });
+    // Ordenar agentes pela média de score (maiores primeiro)
+    return Object.entries(map)
+      .map(([name, evs]) => {
+        const done = evs.filter(e => e.evaluation_status === "done");
+        const avg = done.length > 0 ? done.reduce((s, e) => s + (e.score || 0), 0) / done.length : -1;
+        return { name, evaluations: evs, avg };
+      })
+      .sort((a, b) => b.avg - a.avg);
+  }, [evaluations]);
+
+  const filteredGroups = useMemo(() => {
+    if (!search) return agentGroups;
+    const q = search.toLowerCase();
+    return agentGroups
+      .filter(g => g.name.toLowerCase().includes(q) ||
+        g.evaluations.some(e => e.contact_name?.toLowerCase().includes(q) || e.phone?.includes(q)))
+      .map(g => ({
+        ...g,
+        evaluations: g.evaluations.filter(e =>
+          g.name.toLowerCase().includes(q) ||
+          e.contact_name?.toLowerCase().includes(q) ||
+          e.phone?.includes(q)
+        )
+      }));
+  }, [agentGroups, search]);
 
   const doneEvals = useMemo(() => evaluations.filter(e => e.evaluation_status === "done"), [evaluations]);
   const avgScore = useMemo(() => {
@@ -51,32 +79,7 @@ export default function AvaliacaoLigacoes() {
     return doneEvals.reduce((s, e) => s + (e.score || 0), 0) / doneEvals.length;
   }, [doneEvals]);
 
-  const agents = useMemo(() => {
-    const names = [...new Set(evaluations.map(e => e.agent_name).filter(Boolean))].sort();
-    return names;
-  }, [evaluations]);
-
-  const agentRanking = useMemo(() => {
-    const map = {};
-    doneEvals.forEach(e => {
-      if (!map[e.agent_name]) map[e.agent_name] = { name: e.agent_name, total: 0, count: 0 };
-      map[e.agent_name].total += e.score || 0;
-      map[e.agent_name].count++;
-    });
-    return Object.values(map)
-      .map(a => ({ ...a, avg: a.total / a.count }))
-      .sort((a, b) => b.avg - a.avg)
-      .slice(0, 5);
-  }, [doneEvals]);
-
-  const filtered = useMemo(() => {
-    return evaluations.filter(e => {
-      const matchSearch = !search || e.agent_name?.toLowerCase().includes(search.toLowerCase()) || e.contact_name?.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = filterStatus === "all" || e.evaluation_status === filterStatus;
-      const matchAgent = filterAgent === "all" || e.agent_name === filterAgent;
-      return matchSearch && matchStatus && matchAgent;
-    });
-  }, [evaluations, search, filterStatus, filterAgent]);
+  const totalCalls = useMemo(() => evaluations.reduce((s, e) => s + (e.total_calls || 1), 0), [evaluations]);
 
   return (
     <div className="min-h-screen p-6 space-y-6" style={{ background: "#0B0F0D" }}>
@@ -85,7 +88,7 @@ export default function AvaliacaoLigacoes() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: C.fg }}>Avaliação de Ligações IA</h1>
           <p className="text-sm mt-1" style={{ color: C.neutro }}>
-            Análise automática via IA após cada ligação atendida pela 3C Plus
+            Perfis por vendedor/cobrador com avaliação consolidada por contato
           </p>
         </div>
         <button
@@ -100,66 +103,24 @@ export default function AvaliacaoLigacoes() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Ligações" value={evaluations.length} icon={Phone} />
-        <KpiCard label="Avaliadas" value={doneEvals.length} icon={Star} color={C.oficial} sub={`${evaluations.length > 0 ? Math.round((doneEvals.length / evaluations.length) * 100) : 0}% do total`} />
-        <KpiCard label="Nota Média Geral" value={avgScore != null ? avgScore.toFixed(1) : "—"} icon={TrendingUp} color={avgScore >= 7 ? C.oficial : C.warn} sub="de 0 a 10" />
-        <KpiCard label="Aguardando" value={evaluations.filter(e => e.evaluation_status === "pending").length} icon={Filter} color={C.warn} />
+        <KpiCard label="Vendedores" value={agentGroups.length} icon={Users} />
+        <KpiCard label="Contatos avaliados" value={evaluations.length} icon={Phone} />
+        <KpiCard label="Total Ligações" value={totalCalls} icon={Phone} color={C.neutro} />
+        <KpiCard label="Nota Média Geral" value={avgScore != null ? avgScore.toFixed(1) : "—"} icon={TrendingUp} color={avgScore != null && avgScore >= 7 ? C.oficial : C.warn} sub="de 0 a 10" />
       </div>
 
-      {/* Ranking de agentes */}
-      {agentRanking.length > 0 && (
-        <div className="rounded-2xl border p-6" style={{ background: C.bg, borderColor: C.border }}>
-          <p className="text-sm font-semibold mb-5" style={{ color: C.fg }}>Ranking por Nota Média</p>
-          <div className="flex items-end justify-around gap-4 flex-wrap">
-            {agentRanking.map((agent, i) => (
-              <div key={agent.name} className="flex flex-col items-center gap-2">
-                <ScoreRing score={agent.avg} size={i === 0 ? 80 : 64} />
-                <div className="text-center">
-                  <p className="text-xs font-semibold" style={{ color: C.fg }}>{agent.name}</p>
-                  <p className="text-[10px]" style={{ color: C.neutro }}>{agent.count} avaliação{agent.count !== 1 ? "ões" : ""}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Search */}
+      <Input
+        placeholder="Buscar por vendedor, contato ou telefone..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="max-w-sm h-9 text-sm"
+        style={{ background: C.muted, borderColor: C.border, color: C.fg }}
+      />
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Input
-          placeholder="Buscar por vendedor ou contato..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs h-9 text-sm"
-          style={{ background: C.muted, borderColor: C.border, color: C.fg }}
-        />
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40 h-9 text-sm" style={{ background: C.muted, borderColor: C.border }}>
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="done">Avaliados</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-            <SelectItem value="processing">Processando</SelectItem>
-            <SelectItem value="error">Erro</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterAgent} onValueChange={setFilterAgent}>
-          <SelectTrigger className="w-44 h-9 text-sm" style={{ background: C.muted, borderColor: C.border }}>
-            <SelectValue placeholder="Vendedor" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os vendedores</SelectItem>
-            {agents.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <p className="text-xs ml-auto" style={{ color: C.neutro }}>{filtered.length} ligação{filtered.length !== 1 ? "ões" : ""}</p>
-      </div>
-
-      {/* List */}
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
+      {/* Agent profiles */}
+      <div className="space-y-4">
+        {filteredGroups.length === 0 ? (
           <div className="rounded-2xl border p-12 text-center" style={{ background: C.bg, borderColor: C.border }}>
             <Phone className="w-10 h-10 mx-auto mb-3" style={{ color: C.neutro }} />
             <p className="text-sm" style={{ color: C.neutro }}>Nenhuma avaliação encontrada</p>
@@ -168,7 +129,9 @@ export default function AvaliacaoLigacoes() {
             </p>
           </div>
         ) : (
-          filtered.map(ev => <CallEvaluationCard key={ev.id} evaluation={ev} />)
+          filteredGroups.map(g => (
+            <AgentProfileCard key={g.name} agentName={g.name} evaluations={g.evaluations} />
+          ))
         )}
       </div>
     </div>
