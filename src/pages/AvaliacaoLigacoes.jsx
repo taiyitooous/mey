@@ -43,7 +43,7 @@ export default function AvaliacaoLigacoes() {
   const agentGroups = useMemo(() => {
     const map = {};
     // Ignorar registros sem tempo real de fala
-    evaluations.filter(ev => (ev.total_speaking_time || 0) > 0).forEach(ev => {
+    evaluations.filter(ev => (ev.total_speaking_time || ev.speaking_time || 0) > 0).forEach(ev => {
       const name = ev.agent_name || "Desconhecido";
       if (!map[name]) map[name] = [];
       map[name].push(ev);

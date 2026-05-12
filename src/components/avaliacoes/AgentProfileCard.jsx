@@ -17,9 +17,12 @@ const C = {
 };
 
 const fmtDuration = (s) => {
-  const m = Math.floor((s || 0) / 60), sec = (s || 0) % 60;
+  const v = Math.round(s || 0);
+  const m = Math.floor(v / 60), sec = v % 60;
   return m > 0 ? `${m}min ${sec}s` : `${sec}s`;
 };
+
+const getSpeakingTime = (ev) => ev.total_speaking_time || ev.speaking_time || 0;
 
 const fmtDate = (d) => d
   ? new Date(d).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
@@ -85,7 +88,7 @@ function CallRow({ ev }) {
               <Phone className="w-2.5 h-2.5" /> {ev.total_calls || 1} lig.
             </span>
             <span className="flex items-center gap-1 text-[10px]" style={{ color: C.dimmed }}>
-              <Clock className="w-2.5 h-2.5" /> {fmtDuration(ev.total_speaking_time)}
+              <Clock className="w-2.5 h-2.5" /> {fmtDuration(getSpeakingTime(ev))}
             </span>
             <span className="text-[10px]" style={{ color: C.neutro }}>última: {fmtDate(ev.last_called_at)}</span>
             {ev.last_qualification && (
@@ -197,7 +200,7 @@ export default function AgentProfileCard({ agentName, evaluations }) {
   const avgPitch = doneEvals.length > 0 ? doneEvals.reduce((s, e) => s + (e.score_pitch || 0), 0) / doneEvals.length : null;
 
   const totalCalls = evaluations.reduce((s, e) => s + (e.total_calls || 1), 0);
-  const totalTime = evaluations.reduce((s, e) => s + (e.total_speaking_time || 0), 0);
+  const totalTime = evaluations.reduce((s, e) => s + getSpeakingTime(e), 0);
 
   return (
     <div className="rounded-2xl border overflow-hidden" style={{ background: C.bg, borderColor: C.border }}>
