@@ -76,6 +76,12 @@ Deno.serve(async (req) => {
     return Response.json({ error: "evaluation not found" }, { status: 404 });
   }
 
+  // Ignorar se não há tempo real de fala
+  if (!evaluation.total_speaking_time || evaluation.total_speaking_time < 5) {
+    await db.CallEvaluation.update(evaluation.id, { evaluation_status: "error" });
+    return Response.json({ error: "No speaking time — cannot evaluate" }, { status: 422 });
+  }
+
   // Marcar como processing
   await db.CallEvaluation.update(evaluation.id, { evaluation_status: "processing" });
 
