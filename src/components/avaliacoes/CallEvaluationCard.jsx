@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronUp, Phone, Clock, Star, Zap, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Phone, Clock, Star, Zap, CheckCircle2, AlertCircle, Loader2, PhoneCall } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import ScoreRing from "./ScoreRing";
@@ -60,8 +60,8 @@ export default function CallEvaluationCard({ evaluation }) {
     return m > 0 ? `${m}min ${sec}s` : `${sec}s`;
   };
 
-  const callDate = evaluation.called_at
-    ? new Date(evaluation.called_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+  const lastCallDate = evaluation.last_called_at
+    ? new Date(evaluation.last_called_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : new Date(evaluation.created_date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
   return (
@@ -82,21 +82,21 @@ export default function CallEvaluationCard({ evaluation }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-bold" style={{ color: C.fg }}>{evaluation.agent_name}</p>
-            {evaluation.contact_name && (
-              <p className="text-xs" style={{ color: C.neutro }}>→ {evaluation.contact_name}</p>
+            {(evaluation.contact_name || evaluation.phone) && (
+              <p className="text-xs" style={{ color: C.neutro }}>→ {evaluation.contact_name || evaluation.phone}</p>
             )}
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
-            {evaluation.campaign && (
-              <span className="text-xs" style={{ color: C.neutro }}>{evaluation.campaign}</span>
-            )}
-            <span className="flex items-center gap-1 text-xs" style={{ color: C.dimmed }}>
-              <Clock className="w-3 h-3" /> {fmtDuration(evaluation.speaking_time || 0)}
+            <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "#2A342D", color: C.dimmed }}>
+              <Phone className="w-3 h-3" /> {evaluation.total_calls || 1} ligação{(evaluation.total_calls || 1) !== 1 ? "ões" : ""}
             </span>
-            <span className="text-xs" style={{ color: C.neutro }}>{callDate}</span>
-            {evaluation.qualification && (
+            <span className="flex items-center gap-1 text-xs" style={{ color: C.dimmed }}>
+              <Clock className="w-3 h-3" /> {fmtDuration(evaluation.total_speaking_time || evaluation.speaking_time || 0)} total
+            </span>
+            <span className="text-xs" style={{ color: C.neutro }}>última: {lastCallDate}</span>
+            {evaluation.last_qualification && (
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#2A342D", color: C.dimmed }}>
-                {evaluation.qualification}
+                {evaluation.last_qualification}
               </span>
             )}
           </div>

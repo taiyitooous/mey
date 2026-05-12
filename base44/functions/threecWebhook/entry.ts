@@ -119,36 +119,76 @@ Deno.serve(async (req) => {
 
       saved.push({ event_type: eventType, agent: userName });
 
-      // Se a ligação foi atendida, criar registro de avaliação e disparar IA
-      if (eventType === "call.answered" && speakingTime > 30) {
+      // Se a ligação foi atendida, fazer upsert no registro de avaliação por telefone
+      if (eventType === "call.answered" && speakingTime > 30 && phone) {
         const callId = ch._id || ch.id || entityId;
         const audioUrl = ch.recording_url || ch.audio_url || ch.record_url || "";
         const transcript = ch.transcript || ch.transcription || "";
+        const contactName = contactData.Nome || contactData.nome || "";
+        const now = new Date().toISOString();
 
-        const evalRecord = await db.CallEvaluation.create({
-          agent_name: userName,
-          agent_id: agentId,
+        const newCallEntry = {
           call_id: callId,
-          contact_name: contactData.Nome || contactData.nome || "",
-          phone,
-          campaign: campaign.name || "",
           speaking_time: speakingTime,
           qualification: qualificationName,
-          audio_url: audioUrl,
+          campaign: campaign.name || "",
+          called_at: now,
           transcript,
-          evaluation_status: "pending",
-          called_at: new Date().toISOString(),
-        });
+          audio_url: audioUrl,
+        };
 
-        // Disparar avaliação assíncrona
+        // Buscar registro existente para este telefone + agente
+        const existing = await db.CallEvaluation.filter({ phone, agent_name: userName });
+        let evalRecord;
+
+        if (existing.length > 0) {
+          // Acumular ligação no registro existente
+          const prev = existing[0];
+          const prevCalls = (() => { try { return JSON.parse(prev.calls_data || "[]"); } catch { return []; } })();
+          prevCalls.push(newCallEntry);
+
+          evalRecord = await db.CallEvaluation.update(prev.id, {
+            calls_data: JSON.stringify(prevCalls),
+            total_calls: prevCalls.length,
+            total_speaking_time: prevCalls.reduce((s, c) => s + (c.speaking_time || 0), 0),
+            last_called_at: now,
+            last_qualification: qualificationName,
+            contact_name: contactName || prev.contact_name,
+            evaluation_status: "pending",
+            // Limpa scores antigos para reavaliação
+            score: null,
+            score_tone: null,
+            score_objections: null,
+            score_pitch: null,
+            feedback_summary: null,
+          });
+          evalRecord = { ...prev, ...evalRecord, id: prev.id };
+          console.log(`[3C] evaluation updated (${prevCalls.length} calls) for ${userName} / ${phone}`);
+        } else {
+          // Criar novo registro para este contato
+          evalRecord = await db.CallEvaluation.create({
+            agent_name: userName,
+            agent_id: agentId,
+            phone,
+            contact_name: contactName,
+            calls_data: JSON.stringify([newCallEntry]),
+            total_calls: 1,
+            total_speaking_time: speakingTime,
+            last_called_at: now,
+            last_qualification: qualificationName,
+            evaluation_status: "pending",
+          });
+          console.log(`[3C] evaluation created for ${userName} / ${phone}`);
+        }
+
+        // Disparar avaliação consolidada assíncrona
         try {
           base44.asServiceRole.functions.invoke("evaluateCall", { evaluation_id: evalRecord.id });
         } catch (e) {
           console.log("[3C] could not trigger evaluation:", e.message);
         }
 
-        console.log(`[3C] evaluation created: ${evalRecord.id} for agent ${userName}`);
-        saved.push({ event_type: "call.evaluation_created", agent: userName, eval_id: evalRecord.id });
+        saved.push({ event_type: "call.evaluation_upserted", agent: userName, eval_id: evalRecord.id });
       }
 
       if (isWinQualification(qualificationName)) {
