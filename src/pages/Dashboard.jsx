@@ -13,6 +13,7 @@ import {
 import {
   format, subDays, eachDayOfInterval, eachWeekOfInterval, isToday, differenceInDays,
 } from "date-fns";
+import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
 import { ptBR } from "date-fns/locale";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -501,6 +502,9 @@ export default function Dashboard() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* ── Calculadora de Projeção ──────────────────────────────── */}
+      <ProjectionCalculator />
 
       {/* ── Comparativo mês a mês ─────────────────────────────────── */}
       <div className={`${CARD_BASE} p-7`}>
