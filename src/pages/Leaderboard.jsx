@@ -18,6 +18,7 @@ import ManageLeadsModal from "@/components/leaderboard/ManageLeadsModal";
 import ManageTeamsModal from "@/components/leaderboard/ManageTeamsModal";
 import TeamView from "@/components/leaderboard/TeamView";
 import TrendChart from "@/components/leaderboard/TrendChart";
+import SalesOpsNotes from "@/components/leaderboard/SalesOpsNotes";
 import { getDateRange, SALES_CRITERIA } from "@/lib/leaderboardUtils";
 
 export default function Leaderboard() {
@@ -280,6 +281,8 @@ export default function Leaderboard() {
           filteredLeadCounts={filteredLeadCounts}
         />
       )}
+
+      <SalesOpsNotes />
     </div>
   );
 }
