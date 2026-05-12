@@ -18,6 +18,7 @@ import ImportarCSV from '@/pages/ImportarCSV';
 import DataCrazy from '@/pages/DataCrazy';
 import Leaderboard from '@/pages/Leaderboard';
 import SellerProfile from '@/pages/SellerProfile';
+import SellerComparison from '@/pages/SellerComparison';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
         <Route path="/importar-csv" element={<ImportarCSV />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/seller-profile" element={<SellerProfile />} />
+        <Route path="/seller-comparison" element={<SellerComparison />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
