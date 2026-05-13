@@ -14,7 +14,9 @@ Deno.serve(async (req) => {
     const allOrders = await db.Order.list('-created_date', 1000);
     const deliveredToday = allOrders.filter(o => {
       if (o.logistics_status !== 'delivered' || !o.delivered_at) return false;
-      const deliveryDate = format(new Date(o.delivered_at), 'yyyy-MM-dd');
+      const deliveryBR = new Date(o.delivered_at);
+      const deliveryBRDate = new Date(deliveryBR.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const deliveryDate = format(deliveryBRDate, 'yyyy-MM-dd');
       return deliveryDate === todayStr;
     });
 
