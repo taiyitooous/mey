@@ -104,6 +104,12 @@ Deno.serve(async (req) => {
     // Quantidade de itens (usar transaction.quantity ou product.quantity)
     const quantity = body.transaction?.quantity || body.product?.quantity || 0;
 
+    // Se o status é "delivered" mas não tem delivered_at, usa created_date como fallback
+    let finalDeliveredAt = deliveredAt;
+    if (logisticsStatus === 'delivered' && !finalDeliveredAt) {
+      finalDeliveredAt = receivedAt;
+    }
+
     const orderData = {
       order_id: transactionId,
       customer_name: body.customer?.name || '',
@@ -116,7 +122,7 @@ Deno.serve(async (req) => {
       payment_status: paymentStatus,
       payment_method: paymentMethod,
       paid_at: paidAt,
-      delivered_at: deliveredAt,
+      delivered_at: finalDeliveredAt,
       logistics_status: logisticsStatus,
     };
 
@@ -133,7 +139,7 @@ Deno.serve(async (req) => {
       }
       if (logisticsStatus !== 'created') {
         updateData.logistics_status = logisticsStatus;
-        if (deliveredAt) updateData.delivered_at = deliveredAt;
+        if (finalDeliveredAt) updateData.delivered_at = finalDeliveredAt;
       }
       if (paymentMethod !== 'other') updateData.payment_method = paymentMethod;
       if (body.tracking_code) updateData.tracking_code = body.tracking_code;
