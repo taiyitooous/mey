@@ -58,49 +58,89 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, received: true, note: 'no_transaction_id' }, { headers: CORS_HEADERS });
     }
 
-    // Mapear status da Skale para o sistema
-    // O status real do pagamento vem em transaction.payment_status ou skaletracking.status_pagamento
-    const skalePaymentStatus = body.transaction?.payment_status || body.skaletracking?.status_pagamento || '';
+    // Mapear status por tipo de evento específico da Skale
+    const evento = body.event || body.tipo_evento || '';
     let paymentStatus = 'pending';
-    const ps = skalePaymentStatus.toLowerCase();
-    if (ps === 'pago' || ps === 'paid') paymentStatus = 'paid';
-    else if (ps === 'estornado' || ps === 'refunded') paymentStatus = 'refunded';
-    else if (ps === 'cancelado' || ps === 'canceled') paymentStatus = 'canceled';
-
-    console.log('[Skale] payment_status mapeado:', skalePaymentStatus, '->', paymentStatus);
-
     let logisticsStatus = 'created';
-    const deliveryStatus = body.skaletracking?.status_entrega || '';
-    if (deliveryStatus.toLowerCase().includes('entregue')) logisticsStatus = 'delivered';
-    else if (deliveryStatus.toLowerCase().includes('trânsito') || deliveryStatus.toLowerCase().includes('transito')) logisticsStatus = 'in_transit';
-    else if (deliveryStatus.toLowerCase().includes('postag') || deliveryStatus.toLowerCase().includes('enviado')) logisticsStatus = 'shipped';
+    let paidAt = null;
+    let deliveredAt = null;
 
-    const amount = (body.transaction?.total_price || body.product?.price || 0) / 100;
-    const paidAt = body.transaction?.paid_at ? new Date(body.transaction.paid_at).toISOString() : (paymentStatus === 'paid' ? receivedAt : null);
+    console.log('[Skale] Evento:', evento);
+
+    // Eventos de pagamento
+    if (['payment_confirmed', 'payment_registered', 'order_paid_manual'].includes(evento)) {
+      paymentStatus = 'paid';
+      paidAt = body.paid_at || body.transaction?.paid_at || receivedAt;
+      if (typeof paidAt === 'string') paidAt = new Date(paidAt).toISOString();
+    } else if (evento === 'order_partial_paid_manual') {
+      paymentStatus = 'pending'; // ainda pendente (parcial)
+    } else if (['order_rejected', 'order_canceled'].includes(evento)) {
+      paymentStatus = 'canceled';
+    }
+
+    // Eventos de entrega/rastreio
+    if (['tracking_updated', 'tracking_code_recive'].includes(evento)) {
+      // Pedido saiu do depósito, já foi enviado
+      logisticsStatus = 'shipped';
+    } else if (evento === 'status_updated') {
+      // Verificar o status detalhado se enviado
+      const status = (body.status || body.delivery_status || '').toLowerCase();
+      if (status.includes('entregue')) {
+        logisticsStatus = 'delivered';
+        deliveredAt = body.delivered_at || receivedAt;
+      } else if (status.includes('trânsito') || status.includes('transito')) {
+        logisticsStatus = 'in_transit';
+      } else if (status.includes('postag') || status.includes('enviado')) {
+        logisticsStatus = 'shipped';
+      }
+    }
+
+    const amount = (body.amount || body.total_price || body.product?.price || 0) / 100;
+
+    // Mapear método de pagamento
+    let paymentMethod = 'other';
+    const method = (body.payment_method || body.transaction?.payment_method || '').toLowerCase();
+    if (method.includes('crédito') || method.includes('credit')) paymentMethod = 'card';
+    else if (method.includes('pix')) paymentMethod = 'pix';
+    else if (method.includes('boleto')) paymentMethod = 'boleto';
 
     const orderData = {
       order_id: transactionId,
-      customer_name: body.customer?.name || '',
-      customer_phone: body.customer?.phone || '',
-      city: body.customer?.address?.city || '',
-      state: body.customer?.address?.state || '',
-      carrier: body.shipping?.service || '',
-      tracking_code: body.shipping?.tracking_code || '',
+      customer_name: body.customer_name || body.customer?.name || '',
+      customer_phone: body.customer_phone || body.customer?.phone || '',
+      city: body.city || body.customer?.address?.city || '',
+      state: body.state || body.customer?.address?.state || '',
+      carrier: body.carrier || body.shipping?.service || '',
+      tracking_code: body.tracking_code || body.shipping?.tracking_code || '',
       amount,
       payment_status: paymentStatus,
-      payment_method: body.transaction?.payment_method?.toLowerCase().includes('crédito') ? 'card'
-        : body.transaction?.payment_method?.toLowerCase().includes('pix') ? 'pix'
-        : body.transaction?.payment_method?.toLowerCase().includes('boleto') ? 'boleto'
-        : 'other',
+      payment_method: paymentMethod,
       paid_at: paidAt,
+      delivered_at: deliveredAt,
       logistics_status: logisticsStatus,
     };
 
     // Upsert — atualiza se já existe, cria se não existe
+    // Apenas atualiza campos que realmente mudam por evento
     const existing = await db.Order.filter({ order_id: transactionId });
     if (existing.length > 0) {
-      await db.Order.update(existing[0].id, orderData);
-      console.log('[Skale] Order atualizado:', transactionId);
+      const updateData = {};
+      
+      // Atualizar apenas campos relevantes para este evento
+      if (paymentStatus !== 'pending' || paidAt) {
+        updateData.payment_status = paymentStatus;
+        if (paidAt) updateData.paid_at = paidAt;
+      }
+      if (logisticsStatus !== 'created') {
+        updateData.logistics_status = logisticsStatus;
+        if (deliveredAt) updateData.delivered_at = deliveredAt;
+      }
+      if (paymentMethod !== 'other') updateData.payment_method = paymentMethod;
+      if (body.tracking_code) updateData.tracking_code = body.tracking_code;
+      if (Object.keys(updateData).length > 0) {
+        await db.Order.update(existing[0].id, updateData);
+        console.log('[Skale] Order atualizado:', transactionId, 'Campos:', Object.keys(updateData));
+      }
     } else {
       await db.Order.create(orderData);
       console.log('[Skale] Order criado:', transactionId);
