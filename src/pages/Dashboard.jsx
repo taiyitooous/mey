@@ -77,10 +77,11 @@ export default function Dashboard() {
   const revPaid       = useMemo(() => paidOrders.reduce((s, o) => s + (o.amount || 0), 0), [paidOrders]);
   const revUnpaid     = useMemo(() => unpaidOrders.reduce((s, o) => s + (o.amount || 0), 0), [unpaidOrders]);
 
-  // Hoje (apenas pela data real de entrega/pagamento, nunca updated_date)
+  // Hoje (apenas pela data real de entrega/pagamento, usa created_date como fallback)
   const todayDelivered = useMemo(() => orders.filter(o => {
-    if (o.logistics_status !== "delivered" || !o.delivered_at) return false;
-    return format(new Date(o.delivered_at), "yyyy-MM-dd") === todayStr;
+    if (o.logistics_status !== "delivered") return false;
+    const d = o.delivered_at || o.created_date;
+    return d ? format(new Date(d), "yyyy-MM-dd") === todayStr : false;
   }), [orders, todayStr]);
 
   const todayPaid = useMemo(() => orders.filter(o => {
