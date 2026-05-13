@@ -64,8 +64,10 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Order.list("-created_date", 1000),
   });
 
-  const paidOrders    = useMemo(() => orders.filter(o => o.payment_status === "paid"), [orders]);
-  const unpaidOrders  = useMemo(() => orders.filter(o => o.payment_status !== "paid"), [orders]);
+  // Apenas pedidos entregues
+  const deliveredOrders = useMemo(() => orders.filter(o => o.logistics_status === "delivered"), [orders]);
+  const paidOrders    = useMemo(() => deliveredOrders.filter(o => o.payment_status === "paid"), [deliveredOrders]);
+  const unpaidOrders  = useMemo(() => deliveredOrders.filter(o => o.payment_status !== "paid"), [deliveredOrders]);
 
   const totalPaid     = paidOrders.length;
   const totalUnpaid   = unpaidOrders.length;
@@ -96,7 +98,7 @@ export default function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-5">
         <KpiCard
-          label="Aguardando Pagamento"
+          label="Entregues · Aguardando Pgto"
           value={totalUnpaid}
           sub={fmt(revUnpaid)}
           subColor={C.pendente}
@@ -114,7 +116,7 @@ export default function Dashboard() {
           accent={C.pendente}
         />
         <KpiCard
-          label="Já Pagaram"
+          label="Entregues · Já Pagaram"
           value={totalPaid}
           sub={fmt(revPaid)}
           subColor={C.oficial}

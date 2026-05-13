@@ -31,11 +31,14 @@ function ConvBar({ pct, color }) {
 }
 
 export default function ConversaoPanel() {
-  const { data: orders = [] } = useQuery({
+  const { data: allOrders = [] } = useQuery({
     queryKey: ["orders_conv"],
     queryFn: () => base44.entities.Order.list("-created_date", 2000),
     refetchInterval: 60000,
   });
+
+  // Apenas pedidos entregues
+  const orders = useMemo(() => allOrders.filter(o => o.logistics_status === "delivered"), [allOrders]);
 
   // Agrupa pedidos por dia de criação (últimos 7 dias + hoje)
   const dias = useMemo(() => {
