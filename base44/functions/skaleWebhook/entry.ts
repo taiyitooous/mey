@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     }
 
     // Mapear status por tipo de evento específico da Skale
-    const evento = body.event || body.tipo_evento || '';
+    const evento = body.skaletracking?.event || body.event || '';
     let paymentStatus = 'pending';
     let logisticsStatus = 'created';
     let paidAt = null;
@@ -67,51 +67,51 @@ Deno.serve(async (req) => {
 
     console.log('[Skale] Evento:', evento);
 
-    // Eventos de pagamento
-    if (['payment_confirmed', 'payment_registered', 'order_paid_manual'].includes(evento)) {
+    // Status de pagamento vem de skaletracking.status_pagamento
+    const skalePaymentStatus = body.skaletracking?.status_pagamento || body.transaction?.payment_status || '';
+    if (skalePaymentStatus.toLowerCase().includes('pago') || skalePaymentStatus.toLowerCase().includes('paid')) {
       paymentStatus = 'paid';
-      paidAt = body.paid_at || body.transaction?.paid_at || receivedAt;
-      if (typeof paidAt === 'string') paidAt = new Date(paidAt).toISOString();
-    } else if (evento === 'order_partial_paid_manual') {
-      paymentStatus = 'pending'; // ainda pendente (parcial)
-    } else if (['order_rejected', 'order_canceled'].includes(evento)) {
+      paidAt = body.transaction?.paid_at || receivedAt;
+      if (paidAt && typeof paidAt === 'string') paidAt = new Date(paidAt).toISOString();
+    } else if (skalePaymentStatus.toLowerCase().includes('estornado') || skalePaymentStatus.toLowerCase().includes('refunded')) {
+      paymentStatus = 'refunded';
+    } else if (skalePaymentStatus.toLowerCase().includes('cancelado') || skalePaymentStatus.toLowerCase().includes('canceled')) {
       paymentStatus = 'canceled';
     }
 
-    // Eventos de entrega/rastreio
-    if (['tracking_updated', 'tracking_code_recive'].includes(evento)) {
-      // Pedido saiu do depósito, já foi enviado
+    // Status de entrega vem de skaletracking.status_entrega
+    const skaleDeliveryStatus = body.skaletracking?.status_entrega || body.status || '';
+    if (skaleDeliveryStatus.toLowerCase().includes('entregue')) {
+      logisticsStatus = 'delivered';
+      deliveredAt = body.updated_at || receivedAt;
+      if (deliveredAt && typeof deliveredAt === 'string') deliveredAt = new Date(deliveredAt).toISOString();
+    } else if (skaleDeliveryStatus.toLowerCase().includes('trânsito') || skaleDeliveryStatus.toLowerCase().includes('transito')) {
+      logisticsStatus = 'in_transit';
+    } else if (skaleDeliveryStatus.toLowerCase().includes('postag') || skaleDeliveryStatus.toLowerCase().includes('enviado') || skaleDeliveryStatus.toLowerCase().includes('shipped')) {
       logisticsStatus = 'shipped';
-    } else if (evento === 'status_updated') {
-      // Verificar o status detalhado se enviado
-      const status = (body.status || body.delivery_status || '').toLowerCase();
-      if (status.includes('entregue')) {
-        logisticsStatus = 'delivered';
-        deliveredAt = body.delivered_at || receivedAt;
-      } else if (status.includes('trânsito') || status.includes('transito')) {
-        logisticsStatus = 'in_transit';
-      } else if (status.includes('postag') || status.includes('enviado')) {
-        logisticsStatus = 'shipped';
-      }
     }
 
-    const amount = (body.amount || body.total_price || body.product?.price || 0) / 100;
+    // Valor em centavos, converter para reais (dividir por 100)
+    const amount = (body.transaction?.total_price || body.product?.price || 0) / 100;
 
     // Mapear método de pagamento
     let paymentMethod = 'other';
-    const method = (body.payment_method || body.transaction?.payment_method || '').toLowerCase();
+    const method = (body.transaction?.payment_method || '').toLowerCase();
     if (method.includes('crédito') || method.includes('credit')) paymentMethod = 'card';
     else if (method.includes('pix')) paymentMethod = 'pix';
     else if (method.includes('boleto')) paymentMethod = 'boleto';
 
+    // Quantidade de itens (usar transaction.quantity ou product.quantity)
+    const quantity = body.transaction?.quantity || body.product?.quantity || 0;
+
     const orderData = {
       order_id: transactionId,
-      customer_name: body.customer_name || body.customer?.name || '',
-      customer_phone: body.customer_phone || body.customer?.phone || '',
-      city: body.city || body.customer?.address?.city || '',
-      state: body.state || body.customer?.address?.state || '',
-      carrier: body.carrier || body.shipping?.service || '',
-      tracking_code: body.tracking_code || body.shipping?.tracking_code || '',
+      customer_name: body.customer?.name || '',
+      customer_phone: body.customer?.phone || '',
+      city: body.customer?.address?.city || '',
+      state: body.customer?.address?.state || '',
+      carrier: body.shipping?.service || '',
+      tracking_code: body.shipping?.tracking_code || '',
       amount,
       payment_status: paymentStatus,
       payment_method: paymentMethod,
