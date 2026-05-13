@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2, Download } from "lucide-react";
+import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
@@ -130,45 +130,6 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
 
-  const handleExportCSV = (e) => {
-    e.stopPropagation();
-    // Agrupa por telefone (entity_id), pega o melhor nome encontrado
-    const byPhone = {};
-    events.forEach((ev) => {
-      const phone = ev.entity_id || "";
-      let contactName = "";
-      if (ev.payload) {
-        try {
-          const p = typeof ev.payload === "string" ? JSON.parse(ev.payload) : ev.payload;
-          contactName = p?.contact_name || p?.name || p?.customer_name || "";
-        } catch (_) {}
-      }
-      if (!byPhone[phone]) {
-        byPhone[phone] = { nome: contactName, telefone: phone };
-      } else if (contactName && !byPhone[phone].nome) {
-        byPhone[phone].nome = contactName;
-      }
-    });
-
-    const contacts = Object.values(byPhone).filter(c => c.telefone || c.nome);
-
-    if (contacts.length === 0) {
-      alert("Nenhum contato encontrado nos eventos deste vendedor.");
-      return;
-    }
-
-    const header = "Nome,Telefone";
-    const rows = contacts.map(c => `"${c.nome}","${c.telefone}"`);
-    const csv = [header, ...rows].join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `contatos_${displayName.replace(/\s+/g, "_")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handleDelete = async () => {
     if (!config?.id) {
       console.log("Sem ID do seller config:", config);
@@ -276,9 +237,6 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-6 px-2" title="Exportar clientes CSV" onClick={handleExportCSV}>
-                <Download className="w-3 h-3" />
-              </Button>
               <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
                 <Trash2 className="w-3 h-3" />
               </Button>

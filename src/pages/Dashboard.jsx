@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Clock, DollarSign, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, DollarSign, RefreshCw, Download } from "lucide-react";
 import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
 import SkaleSalesPanel from "@/components/dashboard/SkaleSalesPanel";
 import ConversaoPanel from "@/components/dashboard/ConversaoPanel";
@@ -74,6 +74,21 @@ export default function Dashboard() {
   const revPaid       = useMemo(() => paidOrders.reduce((s, o) => s + (o.amount || 0), 0), [paidOrders]);
   const revUnpaid     = useMemo(() => unpaidOrders.reduce((s, o) => s + (o.amount || 0), 0), [unpaidOrders]);
 
+  const exportCSV = (ordersList, filename) => {
+    const header = "Nome,Telefone,Cidade,Estado,Valor,Status Pagamento";
+    const rows = ordersList.map(o =>
+      `"${o.customer_name || ""}","${o.customer_phone || ""}","${o.city || ""}","${o.state || ""}","${(o.amount || 0).toFixed(2)}","${o.payment_status || ""}"`
+    );
+    const csv = "\uFEFF" + [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) return <DashSkeleton />;
 
   return (
@@ -85,14 +100,34 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-[#F3F6F2] tracking-tight">Painel de Pagamentos</h1>
           <p className="text-sm mt-1" style={{ color: C.neutro }}>Visão consolidada de cobranças</p>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border"
-          style={{ background: "#17211B", borderColor: "#2A342D", color: C.neutro }}
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} style={{ color: C.oficial }} />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportCSV(unpaidOrders, "clientes_em_aberto.csv")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border"
+            style={{ background: "#17211B", borderColor: "#2A342D", color: C.neutro }}
+            title="Exportar clientes em aberto"
+          >
+            <Download className="w-3.5 h-3.5" style={{ color: C.pendente }} />
+            Em Aberto
+          </button>
+          <button
+            onClick={() => exportCSV(paidOrders, "clientes_pagos.csv")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border"
+            style={{ background: "#17211B", borderColor: "#2A342D", color: C.neutro }}
+            title="Exportar clientes pagos"
+          >
+            <Download className="w-3.5 h-3.5" style={{ color: C.oficial }} />
+            Pagos
+          </button>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border"
+            style={{ background: "#17211B", borderColor: "#2A342D", color: C.neutro }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} style={{ color: C.oficial }} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
