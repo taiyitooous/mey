@@ -6,10 +6,11 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const db = base44.asServiceRole.entities;
 
-    // Data de hoje em São Paulo
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = format(today, 'yyyy-MM-dd');
+    // Data de hoje em São Paulo (UTC-3)
+    const todayUTC = new Date();
+    const todayBR = new Date(todayUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    todayBR.setHours(0, 0, 0, 0);
+    const todayStr = format(todayBR, 'yyyy-MM-dd');
 
     // Busca todos os pedidos com logistics_status = 'delivered'
     const allDelivered = await db.Order.filter({ logistics_status: 'delivered' }, '-created_date', 500);
