@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
+import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2, Download } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
@@ -130,6 +130,47 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   const borderColor = isActive ? "border-success/40" : isIdle ? "border-destructive/40" : "";
   const bgColor = isActive ? "" : isIdle ? "bg-destructive/5" : "";
 
+  const handleExportCSV = (e) => {
+    e.stopPropagation();
+    // Extrai nomes únicos dos contatos dos eventos
+    const contacts = [];
+    const seen = new Set();
+    events.forEach((ev) => {
+      let contactName = ev.contact_name || "";
+      if (!contactName && ev.payload) {
+        try {
+          const p = typeof ev.payload === "string" ? JSON.parse(ev.payload) : ev.payload;
+          contactName = p?.contact_name || p?.name || p?.customer_name || "";
+        } catch (_) {}
+      }
+      if (contactName && !seen.has(contactName)) {
+        seen.add(contactName);
+        contacts.push({
+          nome: contactName,
+          telefone: ev.entity_id || "",
+          evento: ev.event_type || "",
+          data: ev.created_date ? new Date(ev.created_date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
+        });
+      }
+    });
+
+    if (contacts.length === 0) {
+      alert("Nenhum nome de cliente encontrado nos eventos deste vendedor.");
+      return;
+    }
+
+    const header = "Nome,Telefone,Evento,Data";
+    const rows = contacts.map(c => `"${c.nome}","${c.telefone}","${c.evento}","${c.data}"`);
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `contatos_${displayName.replace(/\s+/g, "_")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDelete = async () => {
     if (!config?.id) {
       console.log("Sem ID do seller config:", config);
@@ -237,6 +278,9 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
             </>
           ) : (
             <>
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-6 px-2" title="Exportar clientes CSV" onClick={handleExportCSV}>
+                <Download className="w-3 h-3" />
+              </Button>
               <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
                 <Trash2 className="w-3 h-3" />
               </Button>
