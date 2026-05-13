@@ -132,37 +132,35 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
   const handleExportCSV = (e) => {
     e.stopPropagation();
-    // Extrai nomes únicos dos contatos dos eventos
-    const contacts = [];
-    const seen = new Set();
+    // Agrupa por telefone (entity_id), pega o melhor nome encontrado
+    const byPhone = {};
     events.forEach((ev) => {
-      let contactName = ev.contact_name || "";
-      if (!contactName && ev.payload) {
+      const phone = ev.entity_id || "";
+      let contactName = "";
+      if (ev.payload) {
         try {
           const p = typeof ev.payload === "string" ? JSON.parse(ev.payload) : ev.payload;
           contactName = p?.contact_name || p?.name || p?.customer_name || "";
         } catch (_) {}
       }
-      if (contactName && !seen.has(contactName)) {
-        seen.add(contactName);
-        contacts.push({
-          nome: contactName,
-          telefone: ev.entity_id || "",
-          evento: ev.event_type || "",
-          data: ev.created_date ? new Date(ev.created_date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
-        });
+      if (!byPhone[phone]) {
+        byPhone[phone] = { nome: contactName, telefone: phone };
+      } else if (contactName && !byPhone[phone].nome) {
+        byPhone[phone].nome = contactName;
       }
     });
 
+    const contacts = Object.values(byPhone).filter(c => c.telefone || c.nome);
+
     if (contacts.length === 0) {
-      alert("Nenhum nome de cliente encontrado nos eventos deste vendedor.");
+      alert("Nenhum contato encontrado nos eventos deste vendedor.");
       return;
     }
 
-    const header = "Nome,Telefone,Evento,Data";
-    const rows = contacts.map(c => `"${c.nome}","${c.telefone}","${c.evento}","${c.data}"`);
+    const header = "Nome,Telefone";
+    const rows = contacts.map(c => `"${c.nome}","${c.telefone}"`);
     const csv = [header, ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
