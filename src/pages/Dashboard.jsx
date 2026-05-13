@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, Clock, DollarSign, RefreshCw } from "lucide-react";
 import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
 import SkaleSalesPanel from "@/components/dashboard/SkaleSalesPanel";
+import ConversaoPanel from "@/components/dashboard/ConversaoPanel";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -131,6 +132,9 @@ export default function Dashboard() {
           accent={C.oficial}
         />
       </div>
+
+      {/* Conversão de Pedidos */}
+      <ConversaoPanel />
 
       {/* Vendas Skale */}
       <SkaleSalesPanel />
