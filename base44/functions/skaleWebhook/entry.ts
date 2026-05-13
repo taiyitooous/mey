@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       logisticsStatus = 'shipped';
     }
 
-    // Valor em centavos, converter para reais (dividir por 100)
+    // Valor já está em centavos na Skale
     const amount = (body.transaction?.total_price || body.product?.price || 0) / 100;
 
     // Mapear método de pagamento
