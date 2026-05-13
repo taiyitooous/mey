@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Phone, TrendingUp, Star, RefreshCw, Users } from "lucide-react";
+import { Phone, TrendingUp, Star, RefreshCw, Users, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
 import AgentProfileCard from "@/components/avaliacoes/AgentProfileCard";
 
 const C = {
@@ -32,10 +33,12 @@ function KpiCard({ label, value, icon: Icon, color, sub }) {
 
 export default function AvaliacaoLigacoes() {
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { data: evaluations = [], isFetching, refetch } = useQuery({
     queryKey: ["call_evaluations"],
-    queryFn: () => base44.entities.CallEvaluation.list("-created_date", 200),
+    queryFn: () => base44.entities.CallEvaluation.list("-created_date", 500),
     refetchInterval: 15000,
   });
 
@@ -58,10 +61,37 @@ export default function AvaliacaoLigacoes() {
       .sort((a, b) => b.avg - a.avg);
   }, [evaluations]);
 
+  // Filter by date range
+  const evaluationsByDate = useMemo(() => {
+    if (!startDate && !endDate) return evaluations;
+    return evaluations.filter(e => {
+      const created = e.created_date ? format(new Date(e.created_date), "yyyy-MM-dd") : null;
+      if (startDate && created < startDate) return false;
+      if (endDate && created > endDate) return false;
+      return true;
+    });
+  }, [evaluations, startDate, endDate]);
+
+  const agentGroupsByDate = useMemo(() => {
+    const map = {};
+    evaluationsByDate.filter(ev => (ev.total_speaking_time || ev.speaking_time || 0) > 0).forEach(ev => {
+      const name = ev.agent_name || "Desconhecido";
+      if (!map[name]) map[name] = [];
+      map[name].push(ev);
+    });
+    return Object.entries(map)
+      .map(([name, evs]) => {
+        const done = evs.filter(e => e.evaluation_status === "done");
+        const avg = done.length > 0 ? done.reduce((s, e) => s + (e.score || 0), 0) / done.length : -1;
+        return { name, evaluations: evs, avg };
+      })
+      .sort((a, b) => b.avg - a.avg);
+  }, [evaluationsByDate]);
+
   const filteredGroups = useMemo(() => {
-    if (!search) return agentGroups;
+    if (!search) return agentGroupsByDate;
     const q = search.toLowerCase();
-    return agentGroups
+    return agentGroupsByDate
       .filter(g => g.name.toLowerCase().includes(q) ||
         g.evaluations.some(e => e.contact_name?.toLowerCase().includes(q) || e.phone?.includes(q)))
       .map(g => ({
@@ -72,15 +102,15 @@ export default function AvaliacaoLigacoes() {
           e.phone?.includes(q)
         )
       }));
-  }, [agentGroups, search]);
+  }, [agentGroupsByDate, search]);
 
-  const doneEvals = useMemo(() => evaluations.filter(e => e.evaluation_status === "done"), [evaluations]);
+  const doneEvals = useMemo(() => evaluationsByDate.filter(e => e.evaluation_status === "done"), [evaluationsByDate]);
   const avgScore = useMemo(() => {
     if (!doneEvals.length) return null;
     return doneEvals.reduce((s, e) => s + (e.score || 0), 0) / doneEvals.length;
   }, [doneEvals]);
 
-  const totalCalls = useMemo(() => evaluations.reduce((s, e) => s + (e.total_calls || 1), 0), [evaluations]);
+  const totalCalls = useMemo(() => evaluationsByDate.reduce((s, e) => s + (e.total_calls || 1), 0), [evaluationsByDate]);
 
   return (
     <div className="min-h-screen p-6 space-y-6" style={{ background: "#0B0F0D" }}>
@@ -104,10 +134,51 @@ export default function AvaliacaoLigacoes() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Vendedores" value={agentGroups.length} icon={Users} />
-        <KpiCard label="Contatos avaliados" value={evaluations.length} icon={Phone} />
+        <KpiCard label="Vendedores" value={agentGroupsByDate.length} icon={Users} />
+        <KpiCard label="Contatos avaliados" value={evaluationsByDate.length} icon={Phone} />
         <KpiCard label="Total Ligações" value={totalCalls} icon={Phone} color={C.neutro} />
         <KpiCard label="Nota Média Geral" value={avgScore != null ? avgScore.toFixed(1) : "—"} icon={TrendingUp} color={avgScore != null && avgScore >= 7 ? C.oficial : C.warn} sub="de 0 a 10" />
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col gap-4 max-w-2xl">
+        <div className="flex items-center gap-2 text-sm" style={{ color: C.neutro }}>
+          <Calendar className="w-4 h-4" />
+          <span className="font-semibold">Filtrar por período</span>
+        </div>
+        <div className="flex gap-3 flex-wrap">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold" style={{ color: C.neutro }}>Data inicial</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-2 rounded-lg text-sm h-9"
+              style={{ background: C.muted, borderColor: C.border, color: C.fg, border: `1px solid ${C.border}` }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold" style={{ color: C.neutro }}>Data final</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-2 rounded-lg text-sm h-9"
+              style={{ background: C.muted, borderColor: C.border, color: C.fg, border: `1px solid ${C.border}` }}
+            />
+          </div>
+          {(startDate || endDate) && (
+            <div className="flex items-end">
+              <button
+                onClick={() => { setStartDate(""); setEndDate(""); }}
+                className="px-3 py-2 rounded-lg text-xs font-semibold h-9"
+                style={{ background: `${C.oficial}18`, color: C.oficial, border: `1px solid ${C.oficial}` }}
+              >
+                Limpar filtro
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search */}
