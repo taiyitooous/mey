@@ -91,6 +91,9 @@ export default function Dashboard() {
 
   const todayRevPaid = useMemo(() => todayPaid.reduce((s, o) => s + (o.amount || 0), 0), [todayPaid]);
 
+  const todayUnpaid = useMemo(() => todayDelivered.filter(o => o.payment_status !== "paid"), [todayDelivered]);
+  const todayRevUnpaid = useMemo(() => todayUnpaid.reduce((s, o) => s + (o.amount || 0), 0), [todayUnpaid]);
+
   const exportCSV = (ordersList, filename) => {
     const header = "Nome,Telefone,Cidade,Estado,Valor,Status Pagamento";
     const rows = ordersList.map(o =>
@@ -152,13 +155,13 @@ export default function Dashboard() {
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: C.neutro }}>Hoje</p>
         <div className="grid grid-cols-2 gap-4">
           <KpiCard
-            label="Entregues Hoje"
-            value={todayDelivered.length}
-            sub={todayDelivered.length === 0 ? "nenhum ainda" : `${todayDelivered.length} pedido${todayDelivered.length > 1 ? "s" : ""}`}
-            subColor={C.neutro}
-            icon={Truck}
-            iconColor={C.oficial}
-            accent={C.oficial}
+            label="Entregues · Aguardando Pgto"
+            value={todayUnpaid.length}
+            sub={fmt(todayRevUnpaid)}
+            subColor={C.pendente}
+            icon={Clock}
+            iconColor={C.pendente}
+            accent={C.pendente}
           />
           <KpiCard
             label="Pagamentos Hoje"
