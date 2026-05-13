@@ -4,6 +4,13 @@ import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, Clock, DollarSign, RefreshCw, Download, Truck, CalendarCheck } from "lucide-react";
 import { format } from "date-fns";
+
+const getTodayBRDateString = () => {
+  const todayUTC = new Date();
+  const todayBR = new Date(todayUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  todayBR.setHours(0, 0, 0, 0);
+  return format(todayBR, 'yyyy-MM-dd');
+};
 import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
 import SkaleSalesPanel from "@/components/dashboard/SkaleSalesPanel";
 import ConversaoPanel from "@/components/dashboard/ConversaoPanel";
@@ -65,7 +72,7 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Order.list("-created_date", 1000),
   });
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayStr = getTodayBRDateString();
 
   // Apenas pedidos entregues
   const deliveredOrders = useMemo(() => orders.filter(o => o.logistics_status === "delivered"), [orders]);
@@ -77,16 +84,19 @@ export default function Dashboard() {
   const revPaid       = useMemo(() => paidOrders.reduce((s, o) => s + (o.amount || 0), 0), [paidOrders]);
   const revUnpaid     = useMemo(() => unpaidOrders.reduce((s, o) => s + (o.amount || 0), 0), [unpaidOrders]);
 
-  // Hoje (apenas pela data real de entrega/pagamento, usa created_date como fallback)
+  // Hoje (apenas pela data real de entrega/pagamento usando timezone BR)
   const todayDelivered = useMemo(() => orders.filter(o => {
-    if (o.logistics_status !== "delivered") return false;
-    const d = o.delivered_at || o.created_date;
-    return d ? format(new Date(d), "yyyy-MM-dd") === todayStr : false;
+    if (o.logistics_status !== "delivered" || !o.delivered_at) return false;
+    const dUTC = new Date(o.delivered_at);
+    const dBR = new Date(dUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    return format(dBR, "yyyy-MM-dd") === todayStr;
   }), [orders, todayStr]);
 
   const todayPaid = useMemo(() => orders.filter(o => {
     if (o.payment_status !== "paid" || !o.paid_at) return false;
-    return format(new Date(o.paid_at), "yyyy-MM-dd") === todayStr;
+    const pUTC = new Date(o.paid_at);
+    const pBR = new Date(pUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    return format(pBR, "yyyy-MM-dd") === todayStr;
   }), [orders, todayStr]);
 
   const todayRevPaid = useMemo(() => todayPaid.reduce((s, o) => s + (o.amount || 0), 0), [todayPaid]);
