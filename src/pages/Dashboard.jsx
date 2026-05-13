@@ -2,7 +2,8 @@ import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Clock, DollarSign, RefreshCw, Download } from "lucide-react";
+import { CheckCircle2, Clock, DollarSign, RefreshCw, Download, Truck, CalendarCheck } from "lucide-react";
+import { format } from "date-fns";
 import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
 import SkaleSalesPanel from "@/components/dashboard/SkaleSalesPanel";
 import ConversaoPanel from "@/components/dashboard/ConversaoPanel";
@@ -64,6 +65,8 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Order.list("-created_date", 1000),
   });
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
   // Apenas pedidos entregues
   const deliveredOrders = useMemo(() => orders.filter(o => o.logistics_status === "delivered"), [orders]);
   const paidOrders    = useMemo(() => deliveredOrders.filter(o => o.payment_status === "paid"), [deliveredOrders]);
@@ -73,6 +76,21 @@ export default function Dashboard() {
   const totalUnpaid   = unpaidOrders.length;
   const revPaid       = useMemo(() => paidOrders.reduce((s, o) => s + (o.amount || 0), 0), [paidOrders]);
   const revUnpaid     = useMemo(() => unpaidOrders.reduce((s, o) => s + (o.amount || 0), 0), [unpaidOrders]);
+
+  // Hoje
+  const todayDelivered = useMemo(() => orders.filter(o => {
+    if (o.logistics_status !== "delivered") return false;
+    const d = o.delivered_at || o.updated_date || o.created_date;
+    return d ? format(new Date(d), "yyyy-MM-dd") === todayStr : false;
+  }), [orders, todayStr]);
+
+  const todayPaid = useMemo(() => orders.filter(o => {
+    if (o.payment_status !== "paid") return false;
+    const d = o.paid_at || o.updated_date;
+    return d ? format(new Date(d), "yyyy-MM-dd") === todayStr : false;
+  }), [orders, todayStr]);
+
+  const todayRevPaid = useMemo(() => todayPaid.reduce((s, o) => s + (o.amount || 0), 0), [todayPaid]);
 
   const exportCSV = (ordersList, filename) => {
     const header = "Nome,Telefone,Cidade,Estado,Valor,Status Pagamento";
@@ -130,8 +148,35 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-5">
+      {/* KPIs de Hoje */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: C.neutro }}>Hoje</p>
+        <div className="grid grid-cols-2 gap-4">
+          <KpiCard
+            label="Entregues Hoje"
+            value={todayDelivered.length}
+            sub={todayDelivered.length === 0 ? "nenhum ainda" : `${todayDelivered.length} pedido${todayDelivered.length > 1 ? "s" : ""}`}
+            subColor={C.neutro}
+            icon={Truck}
+            iconColor={C.oficial}
+            accent={C.oficial}
+          />
+          <KpiCard
+            label="Pagamentos Hoje"
+            value={todayPaid.length}
+            sub={fmt(todayRevPaid)}
+            subColor={C.oficial}
+            icon={CalendarCheck}
+            iconColor={C.oficial}
+            accent={C.oficial}
+          />
+        </div>
+      </div>
+
+      {/* KPIs Geral */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: C.neutro }}>Acumulado</p>
+        <div className="grid grid-cols-2 gap-5">
         <KpiCard
           label="Entregues · Aguardando Pgto"
           value={totalUnpaid}
@@ -168,6 +213,7 @@ export default function Dashboard() {
           iconColor={C.oficial}
           accent={C.oficial}
         />
+        </div>
       </div>
 
       {/* Conversão de Pedidos */}
