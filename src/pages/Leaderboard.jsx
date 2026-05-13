@@ -8,7 +8,7 @@ import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
 import LeaderboardPodium from "@/components/leaderboard/LeaderboardPodium";
 import LeaderboardTable from "@/components/leaderboard/LeaderboardTable";
-import LeaderboardCharts from "@/components/leaderboard/LeaderboardCharts";
+
 import RegisterSaleModal from "@/components/leaderboard/RegisterSaleModal";
 import RegisterLeadsModal from "@/components/leaderboard/RegisterLeadsModal";
 import ManageProductsModal from "@/components/leaderboard/ManageProductsModal";
@@ -269,9 +269,8 @@ export default function Leaderboard() {
           </div>
 
           <LeaderboardKPIs data={sortedSales} type="sales" />
-          {sortedSales.length > 0 && <LeaderboardPodium data={sortedSales} criteria={salesCriteria} type="sales" />}
-          <LeaderboardCharts data={sortedSales} type="sales" />
-          <LeaderboardTable data={sortedSales} criteria={salesCriteria} type="sales" loading={loadingSales} />
+           {sortedSales.length > 0 && <LeaderboardPodium data={sortedSales} criteria={salesCriteria} type="sales" />}
+           <LeaderboardTable data={sortedSales} criteria={salesCriteria} type="sales" loading={loadingSales} />
         </div>
       )}
 
