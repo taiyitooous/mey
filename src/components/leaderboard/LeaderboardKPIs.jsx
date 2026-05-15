@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, TrendingUp, Target } from "lucide-react";
+import { Users, TrendingUp, Target, ShoppingBag } from "lucide-react";
 
 function KPICard({ icon: Icon, label, value, gradient, iconColor, accentColor }) {
   return (
@@ -37,11 +37,18 @@ export default function LeaderboardKPIs({ data, type }) {
     const teamConversion = totalLeads > 0 ? ((totalWins / totalLeads) * 100).toFixed(1) : "0.0";
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <KPICard
           icon={Users}
           label="Vendedores ativos"
           value={data.length}
+          gradient="linear-gradient(135deg, hsl(142 29% 43% / 0.12), hsl(142 29% 43% / 0.04))"
+          accentColor="#4F8F63"
+        />
+        <KPICard
+          icon={ShoppingBag}
+          label="Total de vendas"
+          value={totalWins.toLocaleString("pt-BR")}
           gradient="linear-gradient(135deg, hsl(142 29% 43% / 0.12), hsl(142 29% 43% / 0.04))"
           accentColor="#4F8F63"
         />
