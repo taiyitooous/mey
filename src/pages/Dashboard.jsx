@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Clock, DollarSign, RefreshCw, Download, Truck, CalendarCheck } from "lucide-react";
+import { CheckCircle2, Clock, DollarSign, RefreshCw, Download, Truck, CalendarCheck, Package } from "lucide-react";
 import { format } from "date-fns";
 
 const getTodayBRDateString = () => {
@@ -163,7 +163,16 @@ export default function Dashboard() {
       {/* KPIs de Hoje */}
       <div>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: C.neutro }}>Hoje</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <KpiCard
+            label="Entregues Hoje"
+            value={todayDelivered.length}
+            sub={`${todayPaid.length} pagos · ${todayUnpaid.length} em aberto`}
+            subColor={C.neutro}
+            icon={Truck}
+            iconColor="#6E9FA3"
+            accent="#6E9FA3"
+          />
           <KpiCard
             label="Entregues · Aguardando Pgto"
             value={todayUnpaid.length}
@@ -189,6 +198,24 @@ export default function Dashboard() {
       <div>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: C.neutro }}>Acumulado</p>
         <div className="grid grid-cols-2 gap-5">
+        <KpiCard
+          label="Total Entregues"
+          value={deliveredOrders.length}
+          sub={`${totalPaid} pagos · ${totalUnpaid} em aberto`}
+          subColor={C.neutro}
+          icon={Package}
+          iconColor="#6E9FA3"
+          accent="#6E9FA3"
+        />
+        <KpiCard
+          label="Valor Total Entregue"
+          value={fmt(revPaid + revUnpaid)}
+          sub={`${fmt(revPaid)} recebido`}
+          subColor={C.oficial}
+          icon={DollarSign}
+          iconColor="#6E9FA3"
+          accent="#6E9FA3"
+        />
         <KpiCard
           label="Entregues · Aguardando Pgto"
           value={totalUnpaid}
