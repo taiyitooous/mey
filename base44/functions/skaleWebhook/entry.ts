@@ -142,7 +142,6 @@ Deno.serve(async (req) => {
     if (isAfterPay) {
       // After Pay é modalidade separada na Skale — fica pending até confirmação real
       paymentStatus = 'pending';
-      paymentMethod = 'other'; // será sobrescrito abaixo se necessário
     } else if (skalePaymentStatus.toLowerCase().includes('pago') || skalePaymentStatus.toLowerCase().includes('paid')) {
       paymentStatus = 'paid';
       paidAt = body.transaction?.paid_at || receivedAt;
