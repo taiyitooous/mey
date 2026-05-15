@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ScrollText } from "lucide-react";
+import { Search, ScrollText, CheckCircle2, Truck } from "lucide-react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -40,8 +41,29 @@ export default function Eventos() {
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
-    queryFn: () => base44.entities.Event.list("-created_date", 200),
+    queryFn: () => base44.entities.Event.list("-created_date", 500),
   });
+
+  // KPIs: pagamentos confirmados recebidos da Skale e do 123Log
+  const paymentKpis = useMemo(() => {
+    let skale = 0, log123 = 0;
+    for (const ev of events) {
+      try {
+        const p = JSON.parse(ev.payload || "{}");
+        // Skale: evento com status=delivered e payment_status=Pago (ou Paid)
+        if (ev.event_type === "skale.raw_payload") {
+          const ps = (p.skaletracking?.status_pagamento || p.transaction?.payment_status || "").toLowerCase();
+          if (ps.includes("pago") || ps.includes("paid")) skale++;
+        }
+        // 123Log: evento com status=delivered
+        if (ev.event_type === "123log.tracking") {
+          const status = (p.delivery?.last_event?.description || p.delivery?.status || "").toLowerCase();
+          if (status.includes("entregue") || status.includes("delivered")) log123++;
+        }
+      } catch {}
+    }
+    return { skale, log123 };
+  }, [events]);
 
   const filtered = events.filter((e) => {
     const matchSearch =
@@ -83,6 +105,28 @@ export default function Eventos() {
               <SelectItem value="payout">Payout</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {/* KPIs de pagamentos recebidos */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl border bg-card border-border p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+            <CheckCircle2 className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground">Pagos confirmados · Skale</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{isLoading ? "—" : paymentKpis.skale}</p>
+          </div>
+        </div>
+        <div className="rounded-xl border bg-card border-border p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent-foreground/10">
+            <Truck className="w-5 h-5 text-accent-foreground" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground">Entregues confirmados · 123Log</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{isLoading ? "—" : paymentKpis.log123}</p>
+          </div>
         </div>
       </div>
 
