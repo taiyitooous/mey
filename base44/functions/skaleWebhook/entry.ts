@@ -35,6 +35,74 @@ Deno.serve(async (req) => {
       body = {};
     }
 
+    // ── 123Log postback ──────────────────────────────────────────────────────
+    if (body.type === 'TRACKING_STATUS_CHANGED') {
+      const expectedKey = Deno.env.get('FIVEDELIVERY_WEBHOOK_SECRET');
+      if (body.integration_key !== expectedKey) {
+        console.log('[123Log] integration_key inválida');
+        return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS_HEADERS });
+      }
+
+      const orderNumber = body.sale_order?.order_number || body.sale_order?.id;
+      if (!orderNumber) {
+        console.log('[123Log] Sem order_number, ignorando');
+        return Response.json({ success: true, note: 'no_order_number' }, { headers: CORS_HEADERS });
+      }
+
+      // Salva evento bruto 123Log
+      await db.Event.create({
+        entity_type: 'order',
+        entity_id: orderNumber,
+        event_type: '123log.tracking',
+        user_name: '123Log',
+        user_email: '',
+        source: 'five_delivery',
+        payload: rawBody.substring(0, 10000),
+      });
+
+      // Mapear delivery.status → logistics_status
+      const deliveryStatus = body.delivery?.status || '';
+      let logisticsStatus = null;
+      let deliveredAt = null;
+
+      if (deliveryStatus === 'delivered') {
+        logisticsStatus = 'delivered';
+        deliveredAt = body.delivery?.last_event?.date
+          ? new Date(body.delivery.last_event.date).toISOString()
+          : receivedAt;
+      } else if (deliveryStatus === 'out_for_delivery') {
+        logisticsStatus = 'in_transit';
+      } else if (['posted', 'object_in_transit', 'delivery_programmed'].includes(deliveryStatus)) {
+        logisticsStatus = 'in_transit';
+      } else if (['returned_to_sender', 'returned'].includes(deliveryStatus)) {
+        logisticsStatus = 'failed';
+      } else if (deliveryStatus === 'preparation' || body.sale_order?.status?.code === 'done') {
+        logisticsStatus = 'shipped';
+      }
+
+      // Atualiza pedido se encontrar pelo order_id
+      const existing = await db.Order.filter({ order_id: orderNumber });
+      if (existing.length > 0) {
+        const updateData = {};
+        if (logisticsStatus) updateData.logistics_status = logisticsStatus;
+        if (deliveredAt) updateData.delivered_at = deliveredAt;
+        if (body.delivery?.tracking_code) updateData.tracking_code = body.delivery.tracking_code;
+        if (body.delivery?.carrier) updateData.carrier = body.delivery.carrier;
+        if (body.sale_order?.customer?.name) updateData.customer_name = body.sale_order.customer.name;
+        if (body.sale_order?.customer?.phone) updateData.customer_phone = body.sale_order.customer.phone;
+
+        if (Object.keys(updateData).length > 0) {
+          await db.Order.update(existing[0].id, updateData);
+          console.log('[123Log] Order atualizado:', orderNumber, '→', logisticsStatus, 'Campos:', Object.keys(updateData));
+        }
+      } else {
+        console.log('[123Log] Pedido não encontrado no banco:', orderNumber);
+      }
+
+      return Response.json({ success: true, received: true, order_number: orderNumber, logistics_status: logisticsStatus }, { headers: CORS_HEADERS });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Salva evento bruto para auditoria
     await db.Event.create({
       entity_type: 'order',
