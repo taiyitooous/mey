@@ -220,7 +220,8 @@ Deno.serve(async (req) => {
       }
       if (logisticsStatus !== 'created') {
         updateData.logistics_status = logisticsStatus;
-        if (finalDeliveredAt) updateData.delivered_at = finalDeliveredAt;
+        // Só grava delivered_at se ainda não existe — evita sobrescrever data real com evento posterior
+        if (finalDeliveredAt && !existing[0].delivered_at) updateData.delivered_at = finalDeliveredAt;
       }
       if (paymentMethod !== 'other') updateData.payment_method = paymentMethod;
       if (body.tracking_code) updateData.tracking_code = body.tracking_code;
