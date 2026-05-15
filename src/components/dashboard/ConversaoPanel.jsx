@@ -51,9 +51,8 @@ export default function ConversaoPanel() {
         : format(d, "dd/MM", { locale: ptBR });
 
       const dayOrders = orders.filter(o => {
-        // Usa delivered_at (data real de entrega) para bater com a Skale
-        const dateRef = o.delivered_at || o.created_date;
-        const cd = dateRef ? format(new Date(dateRef), "yyyy-MM-dd") : null;
+        // Skale agrupa pedidos pela data de CRIAÇÃO do pedido (não pela data de entrega)
+        const cd = o.created_date ? format(new Date(o.created_date), "yyyy-MM-dd") : null;
         return cd === dayStr;
       });
 

@@ -69,7 +69,13 @@ Deno.serve(async (req) => {
 
     // Status de pagamento vem de skaletracking.status_pagamento
     const skalePaymentStatus = body.skaletracking?.status_pagamento || body.transaction?.payment_status || '';
-    if (skalePaymentStatus.toLowerCase().includes('pago') || skalePaymentStatus.toLowerCase().includes('paid')) {
+    const isAfterPay = skalePaymentStatus.toLowerCase().includes('after pay') || skalePaymentStatus.toLowerCase().includes('afterpay');
+
+    if (isAfterPay) {
+      // After Pay é modalidade separada na Skale — fica pending até confirmação real
+      paymentStatus = 'pending';
+      paymentMethod = 'other'; // será sobrescrito abaixo se necessário
+    } else if (skalePaymentStatus.toLowerCase().includes('pago') || skalePaymentStatus.toLowerCase().includes('paid')) {
       paymentStatus = 'paid';
       paidAt = body.transaction?.paid_at || receivedAt;
       if (paidAt && typeof paidAt === 'string') paidAt = new Date(paidAt).toISOString();
