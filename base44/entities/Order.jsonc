@@ -1,0 +1,126 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "ID externo do pedido (Five Delivery)"
+    },
+    "lead_id": {
+      "type": "string",
+      "description": "ID do lead vinculado"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Telefone do cliente"
+    },
+    "logistics_status": {
+      "type": "string",
+      "enum": [
+        "created",
+        "shipped",
+        "in_transit",
+        "delivered",
+        "failed",
+        "pickup_waiting"
+      ],
+      "default": "created",
+      "description": "Status log\u00edstico"
+    },
+    "city": {
+      "type": "string",
+      "description": "Cidade"
+    },
+    "state": {
+      "type": "string",
+      "description": "UF"
+    },
+    "carrier": {
+      "type": "string",
+      "description": "Transportadora"
+    },
+    "tracking_code": {
+      "type": "string",
+      "description": "C\u00f3digo de rastreio"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor do pedido (R$)"
+    },
+    "skale_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data de cria\u00e7\u00e3o do pedido na Skale (transaction.created_at)"
+    },
+    "shipped_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data de envio"
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data de entrega"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "refunded",
+        "canceled"
+      ],
+      "default": "pending",
+      "description": "Status de pagamento"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "pix",
+        "card",
+        "boleto",
+        "transfer",
+        "other"
+      ],
+      "description": "M\u00e9todo de pagamento"
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data do pagamento"
+    },
+    "collection_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "attempting",
+        "promise",
+        "agreement",
+        "paid"
+      ],
+      "default": "none",
+      "description": "Status de cobran\u00e7a"
+    },
+    "last_collection_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima tentativa de cobran\u00e7a"
+    },
+    "next_action_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Pr\u00f3xima a\u00e7\u00e3o agendada"
+    },
+    "collection_notes": {
+      "type": "string",
+      "description": "Notas de cobran\u00e7a"
+    }
+  },
+  "required": [
+    "order_id"
+  ]
+}

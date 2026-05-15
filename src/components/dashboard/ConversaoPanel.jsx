@@ -51,8 +51,9 @@ export default function ConversaoPanel() {
         : format(d, "dd/MM", { locale: ptBR });
 
       const dayOrders = orders.filter(o => {
-        // Skale agrupa pedidos pela data de CRIAÇÃO do pedido (não pela data de entrega)
-        const cd = o.created_date ? format(new Date(o.created_date), "yyyy-MM-dd") : null;
+        // Skale agrupa pelo transaction.created_at (skale_created_at); fallback para created_date
+        const ref = o.skale_created_at || o.created_date;
+        const cd = ref ? format(new Date(ref), "yyyy-MM-dd") : null;
         return cd === dayStr;
       });
 

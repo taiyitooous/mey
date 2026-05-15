@@ -116,6 +116,13 @@ Deno.serve(async (req) => {
       finalDeliveredAt = receivedAt;
     }
 
+    // Data de criação do pedido na Skale (fonte da verdade para agrupamento por dia)
+    let skaleCreatedAt = null;
+    const rawSkaleCreated = body.transaction?.created_at || body.started_at;
+    if (rawSkaleCreated) {
+      skaleCreatedAt = new Date(rawSkaleCreated).toISOString();
+    }
+
     const orderData = {
       order_id: transactionId,
       customer_name: body.customer?.name || '',
@@ -130,6 +137,7 @@ Deno.serve(async (req) => {
       paid_at: paidAt,
       delivered_at: finalDeliveredAt,
       logistics_status: logisticsStatus,
+      skale_created_at: skaleCreatedAt,
     };
 
     // Upsert — atualiza se já existe, cria se não existe
@@ -149,6 +157,8 @@ Deno.serve(async (req) => {
       }
       if (paymentMethod !== 'other') updateData.payment_method = paymentMethod;
       if (body.tracking_code) updateData.tracking_code = body.tracking_code;
+      // Salva skale_created_at se ainda não está preenchido (só na primeira vez)
+      if (skaleCreatedAt && !existing[0].skale_created_at) updateData.skale_created_at = skaleCreatedAt;
       if (Object.keys(updateData).length > 0) {
         await db.Order.update(existing[0].id, updateData);
         console.log('[Skale] Order atualizado:', transactionId, 'Campos:', Object.keys(updateData));
