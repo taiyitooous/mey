@@ -156,7 +156,12 @@ Deno.serve(async (req) => {
     const skaleDeliveryStatus = body.skaletracking?.status_entrega || body.status || '';
     if (skaleDeliveryStatus.toLowerCase().includes('entregue')) {
       logisticsStatus = 'delivered';
-      deliveredAt = body.updated_at || receivedAt;
+      // body.updated_at está no fuso de Brasília (sem timezone) — ex: "2026-05-15 15:42:26"
+      if (body.updated_at) {
+        deliveredAt = new Date(body.updated_at + '-03:00').toISOString();
+      } else {
+        deliveredAt = receivedAt;
+      }
       if (deliveredAt && typeof deliveredAt === 'string') deliveredAt = new Date(deliveredAt).toISOString();
     } else if (skaleDeliveryStatus.toLowerCase().includes('trânsito') || skaleDeliveryStatus.toLowerCase().includes('transito')) {
       logisticsStatus = 'in_transit';
