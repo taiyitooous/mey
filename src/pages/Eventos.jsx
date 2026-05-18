@@ -35,13 +35,31 @@ const TYPE_COLORS = {
   payout: "bg-muted text-muted-foreground",
 };
 
+const EVENT_TYPE_OPTIONS = [
+  { value: "all", label: "Todos os tipos" },
+  { value: "skale.raw_payload", label: "Skale · Raw" },
+  { value: "123log.tracking", label: "123Log · Tracking" },
+  { value: "lead.created", label: "Lead criado" },
+  { value: "lead.updated", label: "Lead atualizado" },
+  { value: "order.created", label: "Order criado" },
+  { value: "order.updated", label: "Order atualizado" },
+  { value: "collection.attempt", label: "Cobrança" },
+  { value: "payment.confirmed", label: "Pagamento confirmado" },
+];
+
 export default function Eventos() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["events"],
-    queryFn: () => base44.entities.Event.list("-created_date", 500),
+    queryKey: ["events", eventTypeFilter],
+    queryFn: () => {
+      if (eventTypeFilter !== "all") {
+        return base44.entities.Event.filter({ event_type: eventTypeFilter }, "-created_date", 500);
+      }
+      return base44.entities.Event.list("-created_date", 500);
+    },
   });
 
   // KPIs: pagamentos confirmados recebidos da Skale e do 123Log
@@ -75,6 +93,15 @@ export default function Eventos() {
     return matchSearch && matchType;
   });
 
+  // Contagem por event_type para exibir nos KPIs dos cards clicáveis
+  const countByEventType = useMemo(() => {
+    const map = {};
+    for (const ev of events) {
+      map[ev.event_type] = (map[ev.event_type] || 0) + 1;
+    }
+    return map;
+  }, [events]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -82,7 +109,7 @@ export default function Eventos() {
           <h1 className="text-2xl font-bold text-foreground">Eventos</h1>
           <p className="text-sm text-muted-foreground mt-1">Log de auditoria</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -92,12 +119,22 @@ export default function Eventos() {
               className="pl-9 w-48"
             />
           </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-32">
+          <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+            <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              {EVENT_TYPE_OPTIONS.map(o => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Entidade: Todos</SelectItem>
               <SelectItem value="lead">Lead</SelectItem>
               <SelectItem value="order">Order</SelectItem>
               <SelectItem value="collection">Cobrança</SelectItem>
@@ -108,26 +145,34 @@ export default function Eventos() {
         </div>
       </div>
 
-      {/* KPIs de pagamentos recebidos */}
+      {/* KPIs clicáveis por fonte */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border bg-card border-border p-4 flex items-center gap-4">
+        <button
+          onClick={() => setEventTypeFilter(eventTypeFilter === "skale.raw_payload" ? "all" : "skale.raw_payload")}
+          className={`rounded-xl border p-4 flex items-center gap-4 text-left transition-all ${eventTypeFilter === "skale.raw_payload" ? "border-primary bg-primary/10" : "bg-card border-border hover:border-primary/50"}`}
+        >
           <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
             <CheckCircle2 className="w-5 h-5 text-primary" />
           </div>
           <div>
             <p className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground">Pagos confirmados · Skale</p>
             <p className="text-2xl font-bold text-foreground mt-0.5">{isLoading ? "—" : paymentKpis.skale}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{isLoading ? "" : `${countByEventType["skale.raw_payload"] || 0} eventos totais`}</p>
           </div>
-        </div>
-        <div className="rounded-xl border bg-card border-border p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent-foreground/10">
-            <Truck className="w-5 h-5 text-accent-foreground" />
+        </button>
+        <button
+          onClick={() => setEventTypeFilter(eventTypeFilter === "123log.tracking" ? "all" : "123log.tracking")}
+          className={`rounded-xl border p-4 flex items-center gap-4 text-left transition-all ${eventTypeFilter === "123log.tracking" ? "border-warning bg-warning/10" : "bg-card border-border hover:border-warning/50"}`}
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10">
+            <Truck className="w-5 h-5 text-warning" />
           </div>
           <div>
             <p className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground">Entregues confirmados · 123Log</p>
             <p className="text-2xl font-bold text-foreground mt-0.5">{isLoading ? "—" : paymentKpis.log123}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{isLoading ? "" : `${countByEventType["123log.tracking"] || 0} eventos totais`}</p>
           </div>
-        </div>
+        </button>
       </div>
 
       {isLoading ? (
