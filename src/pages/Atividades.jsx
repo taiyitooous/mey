@@ -8,8 +8,10 @@ import SellerCard from "@/components/atividades/SellerCard";
 import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import QualificacoesList from "@/components/atividades/QualificacoesList";
 import QualificacoesPorHorario from "@/components/atividades/QualificacoesPorHorario";
+import RelatorioLigacoes from "@/components/atividades/RelatorioLigacoes";
 import { subDays } from "date-fns";
 import { getCategory, isCallAttempt } from "@/lib/eventUtils";
+import { FileBarChart } from "lucide-react";
 
 // Retorna início/fim do dia em SP (em timestamps UTC)
 function startOfDaySP(date = new Date()) {
@@ -51,6 +53,7 @@ export default function Atividades() {
   const [timeRange, setTimeRange] = useState("hoje");
   const [selectedChannel, setSelectedChannel] = useState("all");
   const [resultOnly, setResultOnly] = useState(false);
+  const [showRelatorio, setShowRelatorio] = useState(false);
   const [customStart, setCustomStart] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
   const queryClient = useQueryClient();
@@ -253,6 +256,11 @@ export default function Atividades() {
       .sort((a, b) => b.events.length - a.events.length);
   }, [filteredEvents, events, wavoipUserNames, userAvatarMap, sellerConfigMap]);
 
+  const periodoLabel = useMemo(() => {
+    if (timeRange === "custom") return `${customStart} → ${customEnd}`;
+    return TIME_RANGES.find(r => r.key === timeRange)?.label || timeRange;
+  }, [timeRange, customStart, customEnd]);
+
   // If a seller profile is open, show full-page view
   if (selectedSeller) {
     // Chave normalizada para buscar config (primeiro nome em minúsculas)
@@ -268,6 +276,14 @@ export default function Atividades() {
   }
 
   return (
+    <>
+    {showRelatorio && (
+      <RelatorioLigacoes
+        events={events}
+        onClose={() => setShowRelatorio(false)}
+        periodoLabel={periodoLabel}
+      />
+    )}
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -277,8 +293,15 @@ export default function Atividades() {
             <p className="text-sm text-muted-foreground mt-1">Performance do time em tempo real</p>
           </div>
           
-          {/* Filtros de período */}
+          {/* Filtros de período + botão relatório */}
           <div className="flex gap-2 flex-wrap justify-end items-center">
+            <button
+              onClick={() => setShowRelatorio(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            >
+              <FileBarChart className="w-3.5 h-3.5" />
+              Relatório ligações
+            </button>
             {TIME_RANGES.map((range) => (
               <button
                 key={range.key}
@@ -387,5 +410,6 @@ export default function Atividades() {
         )}
       </div>
     </div>
+    </>
   );
 }
