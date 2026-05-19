@@ -4,39 +4,111 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, CheckCircle, AlertCircle, Loader } from "lucide-react";
 
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
+  const rows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    for (let c = 0; c < line.length; c++) {
+      if (line[c] === '"') {
+        inQuotes = !inQuotes;
+      } else if (line[c] === ';' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += line[c];
+      }
+    }
+    values.push(current.trim());
+
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = values[idx] || '';
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+const CHUNK_SIZE = 300;
+
 export default function ImportarCSV() {
   const [files, setFiles] = useState([]);
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState([]);
+  const [progress, setProgress] = useState(null); // { current, total, file }
   const [error, setError] = useState(null);
 
   const handleFileChange = (e) => {
     setFiles(Array.from(e.target.files));
     setResults([]);
     setError(null);
+    setProgress(null);
   };
 
   const handleImport = async () => {
     if (files.length === 0) return;
-    
+
     setImporting(true);
     setResults([]);
     setError(null);
-    
+
     const allResults = [];
-    
+
     for (const file of files) {
       try {
         const csvText = await file.text();
-        const response = await base44.functions.invoke('importThreecCalls', { csvText });
-        allResults.push({ file: file.name, ...response.data });
+        const allRows = parseCSV(csvText);
+        const totalChunks = Math.ceil(allRows.length / CHUNK_SIZE);
+
+        let totalCreated = 0;
+        const mergedAgentStats = {};
+
+        for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+          setProgress({
+            file: file.name,
+            current: chunkIdx + 1,
+            total: totalChunks,
+            rows: allRows.length,
+          });
+
+          const chunk = allRows.slice(chunkIdx * CHUNK_SIZE, (chunkIdx + 1) * CHUNK_SIZE);
+          const response = await base44.functions.invoke('importThreecCalls', { rows: chunk });
+          const data = response.data;
+
+          totalCreated += data.created || 0;
+          if (data.agentStats) {
+            Object.entries(data.agentStats).forEach(([agent, stats]) => {
+              if (!mergedAgentStats[agent]) mergedAgentStats[agent] = { total: 0, answered: 0 };
+              mergedAgentStats[agent].total += stats.total;
+              mergedAgentStats[agent].answered += stats.answered;
+            });
+          }
+        }
+
+        allResults.push({
+          file: file.name,
+          success: true,
+          created: totalCreated,
+          agentStats: mergedAgentStats,
+        });
       } catch (err) {
         allResults.push({ file: file.name, success: false, error: err.message });
       }
     }
-    
+
     setResults(allResults);
     setImporting(false);
+    setProgress(null);
   };
 
   const totalCreated = results.reduce((sum, r) => sum + (r.created || 0), 0);
@@ -81,6 +153,25 @@ export default function ImportarCSV() {
           </div>
         )}
 
+        {/* Progress bar */}
+        {importing && progress && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{progress.file}</span>
+              <span>Lote {progress.current}/{progress.total} — {progress.rows} linhas</span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              {Math.round((progress.current / progress.total) * 100)}% concluído...
+            </p>
+          </div>
+        )}
+
         <Button
           onClick={handleImport}
           disabled={files.length === 0 || importing}
@@ -117,7 +208,6 @@ export default function ImportarCSV() {
             </div>
           </Card>
 
-          {/* Per-file results */}
           {results.map((r, i) => (
             <div key={i} className="text-xs text-muted-foreground">
               <span className="font-medium">{r.file}:</span> {r.created || 0} chamadas importadas
@@ -125,7 +215,6 @@ export default function ImportarCSV() {
             </div>
           ))}
 
-          {/* Agent stats */}
           {Object.keys(allAgentStats).length > 0 && (
             <Card className="p-4">
               <h3 className="text-sm font-semibold mb-3">Resumo por Agente</h3>

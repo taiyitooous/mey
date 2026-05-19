@@ -62,62 +62,75 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { csvText } = await req.json();
-    if (!csvText) {
-      return Response.json({ error: 'Missing csvText' }, { status: 400 });
+    const { csvText, rows } = await req.json();
+
+    // Support both full csvText (legacy) and pre-parsed rows array (batch mode)
+    let calls;
+    if (rows && Array.isArray(rows)) {
+      calls = rows;
+    } else if (csvText) {
+      calls = parseCSV(csvText);
+    } else {
+      return Response.json({ error: 'Missing csvText or rows' }, { status: 400 });
     }
 
-    const calls = parseCSV(csvText);
     let createdCount = 0;
     const agentStats = {};
 
-    for (const call of calls) {
-      const agentName = call['agent_name'] || '';
-      const phone = call['number'] || call['receptive_phone'] || '';
-      const callDate = call['call_date'] || '';
-      const sid = call['sid'] || call['telephony_id'] || '';
-      
-      if (!agentName || !phone) continue;
+    // Process in batches of 50 to avoid overwhelming the DB
+    const BATCH = 50;
+    for (let i = 0; i < calls.length; i += BATCH) {
+      const batch = calls.slice(i, i + BATCH);
+      const promises = batch.map(async (call) => {
+        const agentName = call['agent_name'] || '';
+        const phone = call['number'] || call['receptive_phone'] || '';
+        const callDate = call['call_date'] || '';
+        const sid = call['sid'] || call['telephony_id'] || '';
 
-      if (!agentStats[agentName]) agentStats[agentName] = { total: 0, answered: 0 };
-      agentStats[agentName].total++;
+        if (!agentName || !phone) return;
 
-      const answered = wasAnswered(call);
-      if (answered) agentStats[agentName].answered++;
+        if (!agentStats[agentName]) agentStats[agentName] = { total: 0, answered: 0 };
+        agentStats[agentName].total++;
 
-      // Parse date from "23/03/2026 09:22:41" format to ISO
-      let isoDate = new Date().toISOString();
-      if (callDate) {
-        try {
-          const [datePart, timePart] = callDate.split(' ');
-          const [day, month, year] = datePart.split('/');
-          isoDate = new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}-03:00`).toISOString();
-        } catch (_) {}
-      }
+        const answered = wasAnswered(call);
+        if (answered) agentStats[agentName].answered++;
 
-      const eventType = answered ? 'call.answered' : 'call.ended';
+        // Parse date from "23/03/2026 09:22:41" format to ISO
+        let isoDate = new Date().toISOString();
+        if (callDate) {
+          try {
+            const [datePart, timePart] = callDate.split(' ');
+            const [day, month, year] = datePart.split('/');
+            isoDate = new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}-03:00`).toISOString();
+          } catch (_) {}
+        }
 
-      await base44.asServiceRole.entities.Event.create({
-        entity_type: 'lead',
-        entity_id: phone,
-        event_type: eventType,
-        payload: JSON.stringify({
-          call_id: sid,
-          agent_id: call['agent_id'],
-          phone,
-          result: answered ? 'answered' : 'no_answer',
-          speaking_time: call['speaking_with_agent_time'],
-          qualification: call['qualification_name'],
-          campaign: call['campaign_name'],
+        const eventType = answered ? 'call.answered' : 'call.ended';
+
+        await base44.asServiceRole.entities.Event.create({
+          entity_type: 'lead',
+          entity_id: phone,
+          event_type: eventType,
+          payload: JSON.stringify({
+            call_id: sid,
+            agent_id: call['agent_id'],
+            phone,
+            result: answered ? 'answered' : 'no_answer',
+            speaking_time: call['speaking_with_agent_time'],
+            qualification: call['qualification_name'],
+            campaign: call['campaign_name'],
+            source: '3c',
+          }),
+          user_name: agentName,
+          user_email: '',
           source: '3c',
-        }),
-        user_name: agentName,
-        user_email: '',
-        source: '3c',
-        created_date: isoDate,
+          created_date: isoDate,
+        });
+
+        createdCount++;
       });
 
-      createdCount++;
+      await Promise.all(promises);
     }
 
     return Response.json({
