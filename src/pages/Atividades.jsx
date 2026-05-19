@@ -77,15 +77,27 @@ export default function Atividades() {
     queryKey: ["events_atividades", timeRange, customStart, customEnd],
     queryFn: async () => {
       const { startDate, endDate } = getDateRange();
-      const all = await base44.entities.Event.list("-created_date", 2000);
-      return all.filter((e) => {
-        const eventDateSP = new Date(e.created_date).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        const startDateSP = new Date(startDate).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        const endDateSP = new Date(endDate).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        return eventDateSP >= startDateSP && eventDateSP <= endDateSP;
-      });
+      const startISO = new Date(startDate).toISOString();
+      const endISO = new Date(endDate).toISOString();
+
+      // Busca paginada para cobrir todos os eventos do período
+      let all = [];
+      let skip = 0;
+      const batchSize = 1000;
+      while (true) {
+        const batch = await base44.entities.Event.filter(
+          { created_date: { $gte: startISO, $lte: endISO } },
+          "-created_date",
+          batchSize,
+          skip
+        );
+        all = all.concat(batch);
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
+      return all;
     },
-    refetchInterval: 5000,
+    refetchInterval: 15000,
     staleTime: 0,
     gcTime: 0,
   });
