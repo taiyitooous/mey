@@ -343,6 +343,7 @@ function CopyableUrl({ url }) {
 
 const DATACRAZY_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/dataCrazyWebhook`;
 const SKALE_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/skaleEvents`;
+const WAVOIP_WEBHOOK_URL = `${appParams.appBaseUrl || 'https://api.base44.com'}/api/apps/${appParams.appId}/functions/wavoipCallsWebhook`;
 
 export default function Integracoes() {
   const queryClient = useQueryClient();
@@ -547,11 +548,18 @@ export default function Integracoes() {
         </div>
 
         {/* Info box */}
-        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-          <p className="font-semibold text-foreground">🔑 Como obter o token:</p>
-          <p>1. Acesse a plataforma Wavoip</p>
-          <p>2. Vá em Dispositivos e copie o token do dispositivo</p>
-          <p>3. Cole o token aqui e associe ao usuário MEY responsável</p>
+        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-2">
+          <p className="font-semibold text-foreground">🔗 Como configurar o Webhook no Wavoip:</p>
+          <p>1. Cadastre o dispositivo abaixo (token + usuário MEY)</p>
+          <p>2. Acesse o painel Wavoip → <strong>Dispositivo</strong> → <strong>Configurações de Webhook</strong></p>
+          <p>3. Cole a URL abaixo no campo de webhook do dispositivo</p>
+          <p>4. O MEY receberá as chamadas em tempo real automaticamente</p>
+        </div>
+
+        {/* Webhook URL */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URL do Webhook (configure em cada dispositivo no Wavoip)</p>
+          <CopyableUrl url={WAVOIP_WEBHOOK_URL} />
         </div>
 
         {/* Device list */}
