@@ -102,9 +102,9 @@ export default function Atividades() {
       }
       return all;
     },
-    refetchInterval: 15000,
-    staleTime: 0,
-    gcTime: 0,
+    refetchInterval: 30000,
+    staleTime: 10000,
+    retry: 1,
   });
 
   // Real-time subscription
@@ -116,10 +116,7 @@ export default function Atividades() {
     return unsubscribe;
   }, [queryClient]);
 
-  // Force refetch quando timeRange ou datas customizadas mudam
-  useEffect(() => {
-    queryClient.refetchQueries({ queryKey: ["events_atividades"] });
-  }, [timeRange, customStart, customEnd, queryClient]);
+
 
   const { data: users = [] } = useQuery({
     queryKey: ["users_all"],
