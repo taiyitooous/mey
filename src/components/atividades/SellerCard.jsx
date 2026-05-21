@@ -68,12 +68,8 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
   // WhatsApp Wavoip: apenas eventos com source === "whatsapp" (exclui eventos 3C)
   const isWavoipEvent = (e) => e.source === "whatsapp" && getCategory(e.event_type) === "whatsapp";
-  const whatsappCalls = selectedChannel === "whatsapp" 
-    ? events.filter(isWavoipEvent).length
-    : calls > 0 ? events.filter(isWavoipEvent).length : 0;
-  const whatsappAnswered = selectedChannel === "whatsapp"
-    ? events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length
-    : calls > 0 ? events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length : 0;
+  const whatsappCalls = events.filter(isWavoipEvent).length;
+  const whatsappAnswered = events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {
@@ -99,17 +95,16 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
     // Calculate total time (duration of all calls in HH:MM:SS)
     let totalSeconds = 0;
-    events.forEach((e) => {
+    events.filter((e) => e.source === "3c").forEach((e) => {
       if (e.payload) {
         try {
           const payload = typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload;
           const speakingTime = payload?.speaking_time;
-          if (typeof speakingTime === "string") {
+          if (typeof speakingTime === "number") {
+            totalSeconds += speakingTime;
+          } else if (typeof speakingTime === "string") {
             const parts = speakingTime.split(":").map(Number);
-            const h = parts[0] || 0;
-            const m = parts[1] || 0;
-            const s = parts[2] || 0;
-            totalSeconds += h * 3600 + m * 60 + s;
+            totalSeconds += (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
           }
         } catch (_) {}
       }
@@ -167,7 +162,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{displayName}</p>
-            <p className="text-xs text-muted-foreground truncate">{calls + whatsappCalls} ligações totais</p>
+            <p className="text-xs text-muted-foreground truncate">{calls} lig. 3C{whatsappCalls > 0 ? ` · ${whatsappCalls} WA` : ""}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
