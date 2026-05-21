@@ -61,7 +61,7 @@ export default function TeamScoreboard({ events }) {
       const cid = p.call_id || e.entity_id;
       const prev = wavoipByCallId[cid];
       // Prioridade: received=3, missed=2, started=1
-      const priority = (ev) => ev.event_type === "whatsapp_call_received" ? 3 : ev.event_type === "whatsapp_call_missed" ? 2 : 1;
+      const priority = (ev) => (ev.event_type === "whatsapp_call_received" || ev.event_type === "whatsapp_call_answered") ? 3 : (ev.event_type === "whatsapp_call_missed" || ev.event_type === "whatsapp_call_ended") ? 2 : 1;
       if (!prev || priority(e) > priority(prev)) {
         wavoipByCallId[cid] = e;
       }

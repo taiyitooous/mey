@@ -26,12 +26,12 @@ export function isEffectiveContact(event) {
   }
   // Para WhatsApp: conta interações de resposta e chamadas Wavoip atendidas
   if (event.event_type === "whatsapp_replied" || event.event_type === "lead.whatsapp_replied") return true;
-  if (event.event_type === "whatsapp_call_received") return true; // atendida (duração > 5s)
+  if (event.event_type === "whatsapp_call_received" || event.event_type === "whatsapp_call_answered") return true; // atendida
   return false;
 }
 
 export function isWavoipCallAttempt(event) {
-  return ["whatsapp_call_started", "whatsapp_call_received", "whatsapp_call_missed"].includes(event.event_type);
+  return ["whatsapp_call_started", "whatsapp_call_received", "whatsapp_call_missed", "whatsapp_call_initiated", "whatsapp_call_answered", "whatsapp_call_ended"].includes(event.event_type);
 }
 
 export function isWavoipCallAnswered(event) {

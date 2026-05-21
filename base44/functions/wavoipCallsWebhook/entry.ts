@@ -50,8 +50,8 @@ Deno.serve(async (req) => {
     }
 
     const config = configs[0];
-    const user_name = config.user_name;
-    const user_email = config.user_email;
+    const user_name = (config.user_name || '').trim();
+    const user_email = (config.user_email || '').trim();
     const device_token = config.device_token;
 
     // Processar apenas eventos de CALL

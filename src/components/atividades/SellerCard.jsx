@@ -73,7 +73,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
     try {
       const p = e.payload ? JSON.parse(e.payload) : {};
       const cid = p.call_id || e.entity_id;
-      const priority = (ev) => ev.event_type === "whatsapp_call_received" ? 3 : ev.event_type === "whatsapp_call_missed" ? 2 : 1;
+      const priority = (ev) => (ev.event_type === "whatsapp_call_received" || ev.event_type === "whatsapp_call_answered") ? 3 : (ev.event_type === "whatsapp_call_missed" || ev.event_type === "whatsapp_call_ended") ? 2 : 1;
       const prev = wavoipByCallId[cid];
       if (!prev || priority(e) > priority(prev)) wavoipByCallId[cid] = e;
     } catch {
