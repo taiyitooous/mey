@@ -7,7 +7,8 @@ import { base44 } from "@/api/base44Client";
 export function useWavoipListener(devices = []) {
   const wavoipRef = useRef(null);
   const unsubsRef = useRef([]);
-  const activeCallsRef = useRef({}); // call.id -> { phone, call_type, startedAt, device_token }
+  const activeCallsRef = useRef({});   // call.id -> { phone, call_type, startedAt, device_token, ended }
+  const registeredEventsRef = useRef(new Set()); // "callId_type" → impede disparo duplo no frontend
 
   useEffect(() => {
     const activeTokens = devices.filter((d) => d.active !== false).map((d) => d.device_token);
@@ -23,40 +24,48 @@ export function useWavoipListener(devices = []) {
       const wavoip = new Wavoip({ tokens: activeTokens });
       wavoipRef.current = wavoip;
 
+      const registerOnce = (callId, type, payload) => {
+        const key = `${callId}_${type}`;
+        if (registeredEventsRef.current.has(key)) {
+          console.log(`[Wavoip] Ignorando duplicata frontend: ${key}`);
+          return;
+        }
+        registeredEventsRef.current.add(key);
+        base44.functions.invoke("registerWavoipCall", payload)
+          .catch((err) => console.error(`[Wavoip] Erro ao registrar ${type}:`, err.message));
+      };
+
       // Listener de ofertas (chamadas recebidas)
       const unsubOffer = wavoip.on("offer", (offer) => {
         const { id, peer, device_token, type: call_type } = offer;
         const phone = peer?.phone || "";
         const startedAt = Date.now();
 
-        console.log(`[Wavoip] 📞 Chamada recebida | phone: ${phone} | device: ${device_token?.slice(-8)} | type: ${call_type}`);
+        console.log(`[Wavoip] 📞 Chamada | phone: ${phone} | device: ${device_token?.slice(-8)} | type: ${call_type}`);
 
-        // Guardar referência da chamada
-        activeCallsRef.current[id] = { phone, call_type, startedAt, device_token };
+        activeCallsRef.current[id] = { phone, call_type, startedAt, device_token, ended: false };
 
-        // Registrar evento de início
-        base44.functions.invoke("registerWavoipCall", {
+        registerOnce(id, "start", {
           device_token,
           phone,
           type: "start",
           call_type: call_type || "unknown",
           call_id: id,
           duration_seconds: 0,
-        }).catch((err) => console.error("[Wavoip] Erro ao registrar início:", err.message));
+        });
 
-        // Registrar encerramento da chamada (apenas uma vez)
         const registerEnd = (type, duration) => {
           const active = activeCallsRef.current[id];
-          if (!active || active.ended) return; // já registrou
+          if (!active || active.ended) return;
           active.ended = true;
-          base44.functions.invoke("registerWavoipCall", {
+          registerOnce(id, type, {
             device_token: active.device_token,
             phone: active.phone,
             type,
             call_type: active.call_type,
             call_id: id,
             duration_seconds: duration,
-          }).catch((err) => console.error(`[Wavoip] Erro ao registrar ${type}:`, err.message));
+          });
           delete activeCallsRef.current[id];
         };
 
@@ -80,8 +89,7 @@ export function useWavoipListener(devices = []) {
       unsubsRef.current.push(unsubOffer);
 
       // Log de status dos dispositivos
-      const devices_list = wavoip.getDevices();
-      devices_list.forEach((device) => {
+      wavoip.getDevices().forEach((device) => {
         const unsub = device.on("statusChanged", (status) => {
           console.log(`[Wavoip] Device ${device.token.slice(-8)} → ${status}`);
         });
@@ -96,6 +104,7 @@ export function useWavoipListener(devices = []) {
       unsubsRef.current.forEach((unsub) => { try { unsub(); } catch {} });
       unsubsRef.current = [];
       activeCallsRef.current = {};
+      // Não limpa registeredEventsRef para manter dedup mesmo após re-mount
       wavoipRef.current = null;
     };
   }, [JSON.stringify(devices.filter(d => d.active !== false).map(d => d.device_token).sort())]);
