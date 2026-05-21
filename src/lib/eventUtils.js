@@ -184,8 +184,8 @@ export function buildHourlyData(events) {
     const h = new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (!hourly[h]) return;
 
-    // WhatsApp: contar todos (inclui whatsapp_call_started, whatsapp_call_received, whatsapp_call_missed)
-    if (getCategory(e.event_type) === "whatsapp") {
+    // WhatsApp Wavoip: apenas eventos com source === "whatsapp" (exclui eventos 3C)
+    if (e.source === "whatsapp" && getCategory(e.event_type) === "whatsapp") {
       hourly[h].whatsapp++;
     }
     if (getCategory(e.event_type) === "stage") hourly[h].stage++;

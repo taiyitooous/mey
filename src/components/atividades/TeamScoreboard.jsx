@@ -51,11 +51,11 @@ export default function TeamScoreboard({ events }) {
   // Vendedores com pelo menos 1 ligação 3C
   const sellersWith3C = new Set(dedupedCalls.map((e) => e.user_name?.toLowerCase().trim()));
   
-  // WhatsApp: apenas de vendedores que fizeram ligações 3C
+  // WhatsApp Wavoip: apenas eventos com source === "whatsapp" (exclui eventos 3C)
   const whatsappEvents = events.filter((e) => {
+    if (e.source !== "whatsapp") return false;
     if (getCategory(e.event_type) !== "whatsapp") return false;
-    const userName = e.user_name?.toLowerCase().trim();
-    return sellersWith3C.has(userName);
+    return true;
   });
   const whatsappAnswered = whatsappEvents.filter((e) => isEffectiveContact(e)).length;
   const whatsappTotal = whatsappEvents.length;

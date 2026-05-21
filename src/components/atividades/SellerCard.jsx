@@ -66,13 +66,14 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
     }
   });
 
-  // WhatsApp Wavoip: mostrar sempre se filtro é WhatsApp, caso contrário apenas se tem 3C
+  // WhatsApp Wavoip: apenas eventos com source === "whatsapp" (exclui eventos 3C)
+  const isWavoipEvent = (e) => e.source === "whatsapp" && getCategory(e.event_type) === "whatsapp";
   const whatsappCalls = selectedChannel === "whatsapp" 
-    ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length
-    : calls > 0 ? events.filter((e) => getCategory(e.event_type) === "whatsapp").length : 0;
+    ? events.filter(isWavoipEvent).length
+    : calls > 0 ? events.filter(isWavoipEvent).length : 0;
   const whatsappAnswered = selectedChannel === "whatsapp"
-    ? events.filter((e) => e.event_type === "whatsapp_call_received").length
-    : calls > 0 ? events.filter((e) => e.event_type === "whatsapp_call_received").length : 0;
+    ? events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length
+    : calls > 0 ? events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length : 0;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {
