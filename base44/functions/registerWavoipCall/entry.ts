@@ -31,13 +31,14 @@ Deno.serve(async (req) => {
   const user_name = config.user_name;
   const user_email = config.user_email || '';
 
-  // Gerar um ID único para deduplicação — inclui o type para start/end não colidirem
-  const uniqueId = call_id || `${device_token}_${phone}_${Date.now()}`;
+  // ID único por chamada + tipo — impede duplicatas do mesmo evento para a mesma chamada
+  const uniqueId = call_id || `${device_token}_${phone}`;
   const entity_id = `wavoip_ws_${type}_${uniqueId}`;
 
-  // Verificar duplicata pelo entity_id
+  // Verificar duplicata pelo entity_id (mesmo type + mesmo call_id = duplicata)
   const existing = await db.Event.filter({ source: 'whatsapp', entity_id });
   if (existing.length > 0) {
+    console.log(`[Wavoip WS] Duplicata ignorada: ${entity_id}`);
     return Response.json({ success: true, duplicate: true });
   }
 

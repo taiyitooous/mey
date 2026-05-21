@@ -51,14 +51,27 @@ export default function TeamScoreboard({ events }) {
   // Vendedores com pelo menos 1 ligação 3C
   const sellersWith3C = new Set(dedupedCalls.map((e) => e.user_name?.toLowerCase().trim()));
   
-  // WhatsApp Wavoip: apenas eventos com source === "whatsapp" (exclui eventos 3C)
-  const whatsappEvents = events.filter((e) => {
-    if (e.source !== "whatsapp") return false;
-    if (getCategory(e.event_type) !== "whatsapp") return false;
-    return true;
+  // WhatsApp Wavoip: deduplicar por call_id (start + missed/answered = 1 chamada)
+  const wavoipRaw = events.filter((e) => e.source === "whatsapp" && isWavoipCallAttempt(e));
+  // Dedup: para cada call_id, priorizar: received > missed > started
+  const wavoipByCallId = {};
+  wavoipRaw.forEach((e) => {
+    try {
+      const p = e.payload ? JSON.parse(e.payload) : {};
+      const cid = p.call_id || e.entity_id;
+      const prev = wavoipByCallId[cid];
+      // Prioridade: received=3, missed=2, started=1
+      const priority = (ev) => ev.event_type === "whatsapp_call_received" ? 3 : ev.event_type === "whatsapp_call_missed" ? 2 : 1;
+      if (!prev || priority(e) > priority(prev)) {
+        wavoipByCallId[cid] = e;
+      }
+    } catch {
+      wavoipByCallId[e.entity_id] = e;
+    }
   });
-  const whatsappAnswered = whatsappEvents.filter((e) => isEffectiveContact(e)).length;
-  const whatsappTotal = whatsappEvents.length;
+  const dedupedWavoip = Object.values(wavoipByCallId);
+  const whatsappAnswered = dedupedWavoip.filter((e) => e.event_type === "whatsapp_call_received").length;
+  const whatsappTotal = dedupedWavoip.length;
   const whatsappRate = whatsappTotal > 0 ? Math.round((whatsappAnswered / whatsappTotal) * 100) : 0;
 
   const wins = events.filter((e) => e.event_type === "lead.won").length;

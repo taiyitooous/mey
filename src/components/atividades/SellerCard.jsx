@@ -8,7 +8,7 @@ import { base44 } from "@/api/base44Client";
 import { differenceInMinutes, formatDistanceToNow, getHours, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAnswered, getCallQualification } from "@/lib/eventUtils";
+import { getCategory, isEffectiveContact, isCallAttempt, isWavoipCallAttempt, isWavoipCallAnswered, getCallQualification } from "@/lib/eventUtils";
 import SellerAvatarEditor from "./SellerAvatarEditor";
 
 function buildSparkline(events) {
@@ -66,10 +66,23 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
     }
   });
 
-  // WhatsApp Wavoip: apenas eventos com source === "whatsapp" (exclui eventos 3C)
-  const isWavoipEvent = (e) => e.source === "whatsapp" && getCategory(e.event_type) === "whatsapp";
-  const whatsappCalls = events.filter(isWavoipEvent).length;
-  const whatsappAnswered = events.filter((e) => e.source === "whatsapp" && e.event_type === "whatsapp_call_received").length;
+  // WhatsApp Wavoip: deduplicar por call_id igual ao Scoreboard
+  const wavoipRaw = events.filter((e) => e.source === "whatsapp" && isWavoipCallAttempt(e));
+  const wavoipByCallId = {};
+  wavoipRaw.forEach((e) => {
+    try {
+      const p = e.payload ? JSON.parse(e.payload) : {};
+      const cid = p.call_id || e.entity_id;
+      const priority = (ev) => ev.event_type === "whatsapp_call_received" ? 3 : ev.event_type === "whatsapp_call_missed" ? 2 : 1;
+      const prev = wavoipByCallId[cid];
+      if (!prev || priority(e) > priority(prev)) wavoipByCallId[cid] = e;
+    } catch {
+      wavoipByCallId[e.entity_id] = e;
+    }
+  });
+  const dedupedWavoip = Object.values(wavoipByCallId);
+  const whatsappCalls = dedupedWavoip.length;
+  const whatsappAnswered = dedupedWavoip.filter((e) => e.event_type === "whatsapp_call_received").length;
 
   // Calculate status and time
   const statusInfo = useMemo(() => {

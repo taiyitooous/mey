@@ -44,51 +44,34 @@ export function useWavoipListener(devices = []) {
           duration_seconds: 0,
         }).catch((err) => console.error("[Wavoip] Erro ao registrar início:", err.message));
 
-        // Escutar encerramento da oferta
-        const unsubEnded = offer.on("ended", () => {
+        // Registrar encerramento da chamada (apenas uma vez)
+        const registerEnd = (type, duration) => {
           const active = activeCallsRef.current[id];
-          if (!active) return;
-          const duration = Math.round((Date.now() - active.startedAt) / 1000);
-          // Se foi encerrada sem aceitar → missed
+          if (!active || active.ended) return; // já registrou
+          active.ended = true;
           base44.functions.invoke("registerWavoipCall", {
             device_token: active.device_token,
             phone: active.phone,
-            type: "missed",
+            type,
             call_type: active.call_type,
             call_id: id,
             duration_seconds: duration,
-          }).catch((err) => console.error("[Wavoip] Erro ao registrar missed:", err.message));
+          }).catch((err) => console.error(`[Wavoip] Erro ao registrar ${type}:`, err.message));
           delete activeCallsRef.current[id];
+        };
+
+        const unsubEnded = offer.on("ended", () => {
+          const duration = Math.round((Date.now() - (activeCallsRef.current[id]?.startedAt || Date.now())) / 1000);
+          registerEnd("missed", duration);
         });
 
         const unsubUnanswered = offer.on("unanswered", () => {
-          const active = activeCallsRef.current[id];
-          if (!active) return;
-          const duration = Math.round((Date.now() - active.startedAt) / 1000);
-          base44.functions.invoke("registerWavoipCall", {
-            device_token: active.device_token,
-            phone: active.phone,
-            type: "missed",
-            call_type: active.call_type,
-            call_id: id,
-            duration_seconds: duration,
-          }).catch((err) => console.error("[Wavoip] Erro ao registrar unanswered:", err.message));
-          delete activeCallsRef.current[id];
+          const duration = Math.round((Date.now() - (activeCallsRef.current[id]?.startedAt || Date.now())) / 1000);
+          registerEnd("missed", duration);
         });
 
         const unsubAcceptedElsewhere = offer.on("acceptedElsewhere", () => {
-          // Atendida em outro dispositivo — registrar como answered
-          const active = activeCallsRef.current[id];
-          if (!active) return;
-          base44.functions.invoke("registerWavoipCall", {
-            device_token: active.device_token,
-            phone: active.phone,
-            type: "answered",
-            call_type: active.call_type,
-            call_id: id,
-            duration_seconds: 0,
-          }).catch(() => {});
-          delete activeCallsRef.current[id];
+          registerEnd("answered", 0);
         });
 
         unsubsRef.current.push(unsubEnded, unsubUnanswered, unsubAcceptedElsewhere);
