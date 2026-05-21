@@ -1,106 +1,119 @@
 import { useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 
-// Hook que conecta via Socket.IO ao Wavoip e registra chamadas em tempo real
-// O evento "device:contact" é disparado quando uma chamada começa ou termina
-// contact = { phone } quando chamada ativa, contact = null quando termina
+// Hook que conecta ao Wavoip via @wavoip/wavoip-api (WebSocket oficial)
+// Escuta chamadas recebidas (offer) e registra eventos no banco via registerWavoipCall
 
 export function useWavoipListener(devices = []) {
-  const socketsRef = useRef({});
-  const activeCallsRef = useRef({}); // token -> { phone, call_type, startedAt }
+  const wavoipRef = useRef(null);
+  const unsubsRef = useRef([]);
+  const activeCallsRef = useRef({}); // call.id -> { phone, call_type, startedAt, device_token }
 
   useEffect(() => {
-    if (!devices.length) return;
+    const activeTokens = devices.filter((d) => d.active !== false).map((d) => d.device_token);
+    if (!activeTokens.length) return;
 
-    // Carregar socket.io-client dinamicamente
-    import("https://cdn.socket.io/4.7.5/socket.io.esm.min.js").then(({ io }) => {
-      devices.forEach((device) => {
-        const token = device.device_token;
-        if (!token || socketsRef.current[token]) return;
+    let destroyed = false;
 
-        console.log(`[Wavoip] Conectando WebSocket para ${device.device_name || token.slice(-8)}...`);
+    import("@wavoip/wavoip-api").then(({ Wavoip }) => {
+      if (destroyed) return;
 
-        const socket = io("https://devices.wavoip.com", {
-          transports: ["websocket"],
-          path: `/${token}/websocket`,
-          autoConnect: true,
-          auth: { version: "official" },
+      console.log(`[Wavoip] Iniciando com ${activeTokens.length} dispositivo(s)...`);
+
+      const wavoip = new Wavoip({ tokens: activeTokens });
+      wavoipRef.current = wavoip;
+
+      // Listener de ofertas (chamadas recebidas)
+      const unsubOffer = wavoip.on("offer", (offer) => {
+        const { id, peer, device_token, type: call_type } = offer;
+        const phone = peer?.phone || "";
+        const startedAt = Date.now();
+
+        console.log(`[Wavoip] 📞 Chamada recebida | phone: ${phone} | device: ${device_token?.slice(-8)} | type: ${call_type}`);
+
+        // Guardar referência da chamada
+        activeCallsRef.current[id] = { phone, call_type, startedAt, device_token };
+
+        // Registrar evento de início
+        base44.functions.invoke("registerWavoipCall", {
+          device_token,
+          phone,
+          type: "start",
+          call_type: call_type || "unknown",
+          call_id: id,
+          duration_seconds: 0,
+        }).catch((err) => console.error("[Wavoip] Erro ao registrar início:", err.message));
+
+        // Escutar encerramento da oferta
+        const unsubEnded = offer.on("ended", () => {
+          const active = activeCallsRef.current[id];
+          if (!active) return;
+          const duration = Math.round((Date.now() - active.startedAt) / 1000);
+          // Se foi encerrada sem aceitar → missed
+          base44.functions.invoke("registerWavoipCall", {
+            device_token: active.device_token,
+            phone: active.phone,
+            type: "missed",
+            call_type: active.call_type,
+            call_id: id,
+            duration_seconds: duration,
+          }).catch((err) => console.error("[Wavoip] Erro ao registrar missed:", err.message));
+          delete activeCallsRef.current[id];
         });
 
-        socket.on("connect", () => {
-          console.log(`[Wavoip] ✓ Conectado: ${device.device_name || token.slice(-8)}`);
+        const unsubUnanswered = offer.on("unanswered", () => {
+          const active = activeCallsRef.current[id];
+          if (!active) return;
+          const duration = Math.round((Date.now() - active.startedAt) / 1000);
+          base44.functions.invoke("registerWavoipCall", {
+            device_token: active.device_token,
+            phone: active.phone,
+            type: "missed",
+            call_type: active.call_type,
+            call_id: id,
+            duration_seconds: duration,
+          }).catch((err) => console.error("[Wavoip] Erro ao registrar unanswered:", err.message));
+          delete activeCallsRef.current[id];
         });
 
-        socket.on("disconnect", () => {
-          console.log(`[Wavoip] ✗ Desconectado: ${device.device_name || token.slice(-8)}`);
+        const unsubAcceptedElsewhere = offer.on("acceptedElsewhere", () => {
+          // Atendida em outro dispositivo — registrar como answered
+          const active = activeCallsRef.current[id];
+          if (!active) return;
+          base44.functions.invoke("registerWavoipCall", {
+            device_token: active.device_token,
+            phone: active.phone,
+            type: "answered",
+            call_type: active.call_type,
+            call_id: id,
+            duration_seconds: 0,
+          }).catch(() => {});
+          delete activeCallsRef.current[id];
         });
 
-        // device:contact é disparado quando uma chamada começa (contact = { phone })
-        // e quando termina (contact = null)
-        socket.on("device:contact", async (call_type, contact) => {
-          const deviceLabel = device.device_name || token.slice(-8);
-          console.log(`[Wavoip] device:contact | ${deviceLabel} | call_type: ${call_type} | contact:`, contact);
-
-          if (contact && contact.phone) {
-            // Chamada iniciada — salvar referência e registrar início
-            const startedAt = Date.now();
-            activeCallsRef.current[token] = {
-              phone: contact.phone,
-              call_type,
-              startedAt,
-            };
-            console.log(`[Wavoip] Chamada iniciada: ${contact.phone} (${call_type})`);
-
-            const call_id = `${token}_${contact.phone}_${startedAt}`;
-            base44.functions.invoke("registerWavoipCall", {
-              device_token: token,
-              phone: contact.phone,
-              type: "start",
-              call_type,
-              call_id,
-              duration_seconds: 0,
-            }).then((res) => {
-              console.log(`[Wavoip] Início registrado:`, res.data);
-            }).catch((err) => {
-              console.error(`[Wavoip] Erro ao registrar início:`, err.message);
-            });
-
-          } else {
-            // Chamada encerrada (contact = null)
-            const activeCall = activeCallsRef.current[token];
-            if (!activeCall) return;
-
-            const duration = Math.round((Date.now() - activeCall.startedAt) / 1000);
-            const call_id = `${token}_${activeCall.phone}_${activeCall.startedAt}`;
-
-            console.log(`[Wavoip] Chamada encerrada: ${activeCall.phone} | duração: ${duration}s`);
-
-            // Registrar fim da chamada — "answered" se durou mais de 5s, senão "missed"
-            const endType = duration > 5 ? "answered" : "missed";
-            base44.functions.invoke("registerWavoipCall", {
-              device_token: token,
-              phone: activeCall.phone,
-              type: endType,
-              call_type: activeCall.call_type,
-              call_id,
-              duration_seconds: duration,
-            }).then((res) => {
-              console.log(`[Wavoip] Fim registrado:`, res.data);
-            }).catch((err) => {
-              console.error(`[Wavoip] Erro ao registrar fim:`, err.message);
-            });
-
-            delete activeCallsRef.current[token];
-          }
-        });
-
-        socketsRef.current[token] = socket;
+        unsubsRef.current.push(unsubEnded, unsubUnanswered, unsubAcceptedElsewhere);
       });
+
+      unsubsRef.current.push(unsubOffer);
+
+      // Log de status dos dispositivos
+      const devices_list = wavoip.getDevices();
+      devices_list.forEach((device) => {
+        const unsub = device.on("statusChanged", (status) => {
+          console.log(`[Wavoip] Device ${device.token.slice(-8)} → ${status}`);
+        });
+        unsubsRef.current.push(unsub);
+      });
+    }).catch((err) => {
+      console.error("[Wavoip] Erro ao importar @wavoip/wavoip-api:", err);
     });
 
     return () => {
-      Object.values(socketsRef.current).forEach((socket) => socket.disconnect());
-      socketsRef.current = {};
+      destroyed = true;
+      unsubsRef.current.forEach((unsub) => { try { unsub(); } catch {} });
+      unsubsRef.current = [];
+      activeCallsRef.current = {};
+      wavoipRef.current = null;
     };
-  }, [JSON.stringify(devices.map(d => d.device_token))]);
+  }, [JSON.stringify(devices.filter(d => d.active !== false).map(d => d.device_token).sort())]);
 }
