@@ -77,22 +77,25 @@ export default function Atividades() {
     queryKey: ["events_atividades", timeRange, customStart, customEnd],
     queryFn: async () => {
       const { startDate, endDate } = getDateRange();
-      const startISO = new Date(startDate).toISOString();
-      const endISO = new Date(endDate).toISOString();
+      const startMs = typeof startDate === "number" ? startDate : new Date(startDate).getTime();
+      const endMs = typeof endDate === "number" ? endDate : new Date(endDate).getTime();
 
-      // Busca paginada para cobrir todos os eventos do período
+      // Busca paginada sem filtro de data no servidor (filtra no cliente)
       let all = [];
       let skip = 0;
-      const batchSize = 1000;
+      const batchSize = 500;
       while (true) {
-        const batch = await base44.entities.Event.filter(
-          { created_date: { $gte: startISO, $lte: endISO } },
-          "-created_date",
-          batchSize,
-          skip
-        );
-        all = all.concat(batch);
+        const batch = await base44.entities.Event.list("-created_date", batchSize, skip);
+        // Filtra pelo período no cliente
+        const inRange = batch.filter((e) => {
+          const t = new Date(e.created_date).getTime();
+          return t >= startMs && t <= endMs;
+        });
+        all = all.concat(inRange);
+        // Se o último evento do batch já é anterior ao startDate, para
         if (batch.length < batchSize) break;
+        const lastEventTime = new Date(batch[batch.length - 1].created_date).getTime();
+        if (lastEventTime < startMs) break;
         skip += batchSize;
       }
       return all;
@@ -262,7 +265,8 @@ export default function Atividades() {
     return Object.values(consolidated)
       .filter((seller) => {
         const sellerKey = seller.name.split(" ")[0].toLowerCase().trim();
-        return sellersWithActivity.has(sellerKey);
+        // Considera ativo se tiver qualquer evento (email vazio não deve bloquear)
+        return sellersWithActivity.has(sellerKey) || seller.events.length > 0;
       })
       .map((seller) => ({
         ...seller,
