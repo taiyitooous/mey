@@ -9,9 +9,10 @@ import SellerProfilePage from "@/components/atividades/SellerProfilePage";
 import QualificacoesList from "@/components/atividades/QualificacoesList";
 import QualificacoesPorHorario from "@/components/atividades/QualificacoesPorHorario";
 import RelatorioLigacoes from "@/components/atividades/RelatorioLigacoes";
+import WavoipHistorico from "@/components/atividades/WavoipHistorico";
 import { subDays } from "date-fns";
 import { getCategory, isCallAttempt } from "@/lib/eventUtils";
-import { FileBarChart } from "lucide-react";
+import { FileBarChart, Smartphone } from "lucide-react";
 
 // Retorna início/fim do dia em SP (em timestamps UTC)
 function startOfDaySP(date = new Date()) {
@@ -54,6 +55,7 @@ export default function Atividades() {
   const [selectedChannel, setSelectedChannel] = useState("all");
   const [resultOnly, setResultOnly] = useState(false);
   const [showRelatorio, setShowRelatorio] = useState(false);
+  const [activeView, setActiveView] = useState("geral"); // "geral" | "wavoip"
   const [customStart, setCustomStart] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
   const queryClient = useQueryClient();
@@ -359,8 +361,33 @@ export default function Atividades() {
         </div>
       </div>
 
-      {/* Filtros de canal e resultado */}
-      <div className="flex gap-2 flex-wrap items-center pb-2 border-b border-border">
+      {/* Abas de visão */}
+      <div className="flex gap-1 border-b border-border pb-0 mb-0">
+        <button
+          onClick={() => setActiveView("geral")}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeView === "geral"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Visão Geral (3C)
+        </button>
+        <button
+          onClick={() => setActiveView("wavoip")}
+          className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeView === "wavoip"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          Wavoip / WhatsApp
+        </button>
+      </div>
+
+      {/* Filtros de canal e resultado — só na visão geral */}
+      {activeView === "geral" && <div className="flex gap-2 flex-wrap items-center pb-2 border-b border-border">
         <div className="flex gap-1.5 flex-wrap">
           {CHANNELS.map((channel) => (
             <button
@@ -387,8 +414,15 @@ export default function Atividades() {
         >
           ✓ Somente com resultado
         </button>
-      </div>
+      </div>}
 
+      {/* Vista Wavoip */}
+      {activeView === "wavoip" && (
+        <WavoipHistorico events={events} />
+      )}
+
+      {/* Vista Geral */}
+      {activeView === "geral" && <>
       {/* Row 1: Scoreboard */}
       <TeamScoreboard events={filteredEvents} />
 
@@ -430,6 +464,7 @@ export default function Atividades() {
           </div>
         )}
       </div>
+      </>}
     </div>
     </>
   );
