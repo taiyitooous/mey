@@ -181,6 +181,8 @@ export default function Atividades() {
     return filtered;
   }, [events, selectedChannel, resultOnly]);
 
+  const filteredEventIds = useMemo(() => new Set(filteredEvents.map((e) => e.id)), [filteredEvents]);
+
   const sellers = useMemo(() => {
     // Vendedores com qualquer atividade em TODO o período (3C, WhatsApp, etc)
     const sellersWithActivity = new Set(
@@ -269,8 +271,7 @@ export default function Atividades() {
       })
       .map((seller) => ({
         ...seller,
-        // Mostrar eventos filtrados para exibição no card, mas manter contagem total
-        displayEvents: seller.events.filter((e) => filteredEvents.some((fe) => fe.id === e.id))
+        displayEvents: seller.events.filter((e) => filteredEventIds.has(e.id))
       }))
       .filter((seller) => seller.displayEvents.length > 0)
       .sort((a, b) => b.events.length - a.events.length);
