@@ -14,6 +14,29 @@ import {
 const COLOR_A = "#4F8F63";
 const COLOR_B = "#3AAFCA";
 
+const GRID = "rgba(255,255,255,0.04)";
+const AXIS_STYLE = { fontSize: 11, fill: "hsl(138 5% 50%)", fontFamily: "var(--font-inter)" };
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-2xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "rgba(18,24,21,0.97)", minWidth: 150 }}>
+      <div className="px-4 py-2 border-b border-white/5">
+        <p className="text-xs font-semibold text-foreground/90">{label}</p>
+      </div>
+      <div className="px-4 py-2.5 space-y-1.5">
+        {payload.map((p) => (
+          <div key={p.dataKey} className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color || p.fill }} />
+            <span className="text-xs text-muted-foreground flex-1">{p.name || p.dataKey}</span>
+            <span className="text-xs font-bold text-foreground">{p.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 function buildSellerStats(sellerName, allSales, allLeads) {
   const key = sellerName.trim().toLowerCase();
   const sales = allSales.filter((r) => r.seller_name?.trim().toLowerCase() === key && r.type !== "exit");
@@ -233,44 +256,81 @@ export default function SellerComparison() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Radar */}
-        <Card className="p-5 space-y-3">
-          <h3 className="font-semibold text-sm">Radar de Desempenho</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <RadarChart data={radarData} margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
-              <PolarGrid stroke="hsl(142 11% 18%)" />
-              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-              <Radar name={sellerA} dataKey="A" stroke={COLOR_A} fill={COLOR_A} fillOpacity={0.2} />
-              <Radar name={sellerB} dataKey="B" stroke={COLOR_B} fill={COLOR_B} fillOpacity={0.2} />
-              <Legend
-                formatter={(value) => <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>{value}</span>}
-              />
-              <Tooltip
-                contentStyle={{ background: "hsl(150 14% 9%)", border: "1px solid hsl(142 11% 18%)", borderRadius: 8, fontSize: 12 }}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-        </Card>
+        <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: "linear-gradient(160deg, hsl(150 14% 9%), hsl(150 17% 7%))" }}>
+          <div className="px-5 pt-5 pb-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1 h-4 rounded-full bg-primary" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Radar de Desempenho</p>
+            </div>
+          </div>
+          <div className="px-3 pb-4 pt-1">
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={radarData} margin={{ top: 10, right: 24, left: 24, bottom: 10 }}>
+                <defs>
+                  <radialGradient id="radarA" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor={COLOR_A} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={COLOR_A} stopOpacity={0.05} />
+                  </radialGradient>
+                  <radialGradient id="radarB" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor={COLOR_B} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={COLOR_B} stopOpacity={0.05} />
+                  </radialGradient>
+                </defs>
+                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(138 5% 55%)", fontFamily: "var(--font-inter)" }} />
+                <Radar name={sellerA} dataKey="A" stroke={COLOR_A} strokeWidth={2} fill="url(#radarA)" fillOpacity={1} />
+                <Radar name={sellerB} dataKey="B" stroke={COLOR_B} strokeWidth={2} fill="url(#radarB)" fillOpacity={1} />
+                <Tooltip content={<CustomTooltip />} />
+              </RadarChart>
+            </ResponsiveContainer>
+            <div className="flex items-center justify-center gap-5 mt-1">
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full" style={{ background: COLOR_A }} /><span className="text-[11px] text-muted-foreground">{sellerA}</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full" style={{ background: COLOR_B }} /><span className="text-[11px] text-muted-foreground">{sellerB}</span></div>
+            </div>
+          </div>
+        </div>
 
         {/* Monthly volume */}
-        <Card className="p-5 space-y-3">
-          <h3 className="font-semibold text-sm">Vendas por Mês</h3>
-          {monthlyChart.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">Sem dados</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={monthlyChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(142 11% 18%)" />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(150 14% 9%)", border: "1px solid hsl(142 11% 18%)", borderRadius: 8, fontSize: 12 }}
-                />
-                <Bar dataKey={sellerA} fill={COLOR_A} radius={[3, 3, 0, 0]} fillOpacity={0.85} />
-                <Bar dataKey={sellerB} fill={COLOR_B} radius={[3, 3, 0, 0]} fillOpacity={0.85} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
+        <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: "linear-gradient(160deg, hsl(150 14% 9%), hsl(150 17% 7%))" }}>
+          <div className="px-5 pt-5 pb-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1 h-4 rounded-full bg-primary" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Vendas por Mês</p>
+            </div>
+          </div>
+          <div className="px-3 pb-4 pt-2">
+            {monthlyChart.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sem dados</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={monthlyChart} margin={{ top: 8, right: 8, left: -20, bottom: 0 }} barCategoryGap="30%">
+                    <defs>
+                      <linearGradient id="barGA" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={COLOR_A} stopOpacity={0.9} />
+                        <stop offset="100%" stopColor={COLOR_A} stopOpacity={0.3} />
+                      </linearGradient>
+                      <linearGradient id="barGB" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={COLOR_B} stopOpacity={0.9} />
+                        <stop offset="100%" stopColor={COLOR_B} stopOpacity={0.3} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="2 6" stroke={GRID} vertical={false} />
+                    <XAxis dataKey="label" tick={AXIS_STYLE} axisLine={false} tickLine={false} />
+                    <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)", radius: 6 }} />
+                    <Bar dataKey={sellerA} fill="url(#barGA)" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                    <Bar dataKey={sellerB} fill="url(#barGB)" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex items-center justify-center gap-5 mt-1">
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm" style={{ background: COLOR_A }} /><span className="text-[11px] text-muted-foreground">{sellerA}</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm" style={{ background: COLOR_B }} /><span className="text-[11px] text-muted-foreground">{sellerB}</span></div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
