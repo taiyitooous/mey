@@ -1,5 +1,5 @@
 import React from "react";
-import { Card } from "@/components/ui/card";
+
 import { getCategory, isEffectiveContact, deduplicateCallEvents, isWavoipCallAttempt, isWavoipCallAnswered } from "@/lib/eventUtils";
 import { Phone, Trophy, Smartphone } from "lucide-react";
 
@@ -22,21 +22,46 @@ function semaphore(value, good, bad, higherIsBetter = true) {
 }
 
 function ScoreCard({ value, label, meta, status, icon: Icon }) {
-  const s = STATUS[status] || STATUS.bom;
+  const statusConfig = {
+    bom: { bg: "#4F8F63", bg_light: "rgba(79, 143, 99, 0.12)", border: "rgba(79, 143, 99, 0.3)" },
+    atencao: { bg: "#E8B84B", bg_light: "rgba(232, 184, 75, 0.12)", border: "rgba(232, 184, 75, 0.3)" },
+    ruim: { bg: "#B85C5C", bg_light: "rgba(184, 92, 92, 0.12)", border: "rgba(184, 92, 92, 0.3)" },
+  };
+  const config = statusConfig[status] || statusConfig.bom;
+
   return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${s}`}>
-          {status === "bom" ? "Bom" : status === "atencao" ? "Atenção" : "Ruim"}
+    <div
+      className="relative overflow-hidden rounded-2xl p-4 border group transition-all duration-200 hover:shadow-lg"
+      style={{ background: `linear-gradient(135deg, ${config.bg_light} 0%, transparent 100%)`, borderColor: config.border }}
+    >
+      {/* Accent line */}
+      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${config.bg}60, transparent)` }} />
+
+      {/* Icon + Status */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        {Icon && (
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: `${config.bg}22`, border: `1px solid ${config.bg}40` }}
+          >
+            <Icon className="w-4.5 h-4.5" style={{ color: config.bg }} />
+          </div>
+        )}
+        <span
+          className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-lg whitespace-nowrap"
+          style={{ background: `${config.bg}22`, color: config.bg }}
+        >
+          {status === "bom" ? "✓ Bom" : status === "atencao" ? "⚠ Atenção" : "✗ Ruim"}
         </span>
-        {Icon && <Icon className="w-5 h-5 text-muted-foreground" />}
       </div>
-      <div>
-        <div className="text-4xl font-bold leading-none">{value}</div>
-        <div className="text-sm font-semibold mt-1.5">{label}</div>
-        {meta && <div className="text-xs text-muted-foreground mt-0.5">{meta}</div>}
+
+      {/* Metric */}
+      <div className="min-w-0">
+        <div className="text-2xl font-extrabold text-foreground leading-none tabular-nums">{value}</div>
+        <div className="text-xs font-semibold text-muted-foreground mt-1.5 truncate">{label}</div>
+        {meta && <div className="text-[11px] text-muted-foreground/60 mt-1 truncate">{meta}</div>}
       </div>
-    </Card>
+    </div>
   );
 }
 
