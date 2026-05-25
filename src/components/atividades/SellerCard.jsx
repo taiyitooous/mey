@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle, Trophy, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
@@ -162,100 +162,97 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
   }
 
   return (
-    <Card className={`p-4 flex flex-col gap-3 cursor-pointer hover:shadow-md transition-all duration-200 ${borderColor} ${bgColor} border`} onClick={onClick}>
-      {/* Header with status */}
-      <div className="flex items-start justify-between gap-3" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <SellerAvatarEditor
-            sellerKey={normalizedSellerKey}
-            displayName={config?.display_name}
-            avatarUrl={config?.avatar_url || avatarUrl}
-            onUpdated={onConfigUpdated}
-            size="sm" />
+    <div
+      className={`relative overflow-hidden rounded-2xl p-4 flex flex-col gap-3 cursor-pointer border transition-all duration-200 group hover:shadow-lg ${borderColor} ${bgColor}`}
+      style={{ background: "linear-gradient(135deg, hsl(150 14% 9%), hsl(150 17% 6%))" }}
+      onClick={onClick}
+    >
+      {/* Accent line top */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+
+      {/* Header with avatar */}
+      <div className="flex items-start justify-between gap-3 relative z-10" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="shrink-0 relative">
+            <SellerAvatarEditor
+              sellerKey={normalizedSellerKey}
+              displayName={config?.display_name}
+              avatarUrl={config?.avatar_url || avatarUrl}
+              onUpdated={onConfigUpdated}
+              size="sm" />
+            {isActive && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border border-card" />}
+          </div>
           
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{displayName}</p>
-            <p className="text-xs text-muted-foreground truncate">{calls} lig. 3C{whatsappCalls > 0 ? ` · ${whatsappCalls} WA` : ""}</p>
+            <p className="text-sm font-semibold truncate text-foreground">{displayName}</p>
+            <p className="text-xs text-muted-foreground/70 truncate">{calls} 3C{whatsappCalls > 0 ? ` · ${whatsappCalls} WA` : ""}</p>
           </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-
-
         </div>
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-4 gap-1.5">
+      {/* KPI grid */}
+      <div className="grid grid-cols-4 gap-2">
         {[
-        { icon: Phone, value: calls, label: "3C" },
-        { icon: MessageCircle, value: whatsappCalls, label: "WhatsApp" },
-        { label: "WA Atendidas", value: `${whatsappAnswered}/${whatsappCalls}`, plain: true },
-        { label: "Contato", value: `${contactRate}%`, plain: true }].
-        map(({ icon: Icon, value, label, plain }) =>
-        <div key={label} className="text-center bg-muted/50 rounded-lg py-2">
-            {Icon && !plain ? <Icon className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-0.5" /> : null}
-            <p className="text-sm font-bold leading-tight">{value}</p>
-            <p className="text-[10px] text-muted-foreground">{label}</p>
+          { icon: Phone, value: calls, label: "3C" },
+          { icon: MessageCircle, value: whatsappCalls, label: "WA" },
+          { label: "Atend.", value: `${whatsappAnswered}/${whatsappCalls}`, plain: true },
+          { label: "Taxa", value: `${contactRate}%`, plain: true }
+        ].map(({ icon: Icon, value, label, plain }) => (
+          <div
+            key={label}
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-center"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            {Icon && !plain && <Icon className="w-3.5 h-3.5 text-primary/60" />}
+            <p className="text-xs font-extrabold text-foreground leading-tight tabular-nums">{value}</p>
+            <p className="text-[10px] text-muted-foreground/60">{label}</p>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Sparkline */}
-      {events.length > 0 &&
-      <div className="h-10">
+      {events.length > 0 && (
+        <div className="h-8 -mx-2">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={sparkData}>
-              <Line type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={1.5} dot={false} />
+            <LineChart data={sparkData} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
+              <Line type="monotone" dataKey="v" stroke="#4F8F63" strokeWidth={1.5} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
-      }
+      )}
 
       {/* Qualificações */}
       {Object.keys(qualifications).length > 0 && (
-        <div className="text-xs space-y-1 pt-1 border-t border-border">
-          {Object.entries(qualifications).map(([q, count]) => (
-            <div key={q} className="flex justify-between">
-              <span className="text-muted-foreground capitalize">{q}:</span>
-              <span className="font-semibold">{count}</span>
+        <div className="text-xs space-y-0.5 pt-2 border-t border-white/5">
+          {Object.entries(qualifications).slice(0, 2).map(([q, count]) => (
+            <div key={q} className="flex justify-between px-1">
+              <span className="text-muted-foreground/70 capitalize">{q}:</span>
+              <span className="font-semibold text-foreground/80">{count}</span>
             </div>
           ))}
         </div>
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-1">
+      <div className="flex items-center justify-between pt-1 relative z-10" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-1 flex-wrap">
-          {wins > 0 && <Badge className="bg-success/10 text-success border-0 text-xs">{wins} ganhos</Badge>}
-          {losses > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-xs">{losses} perdidos</Badge>}
+          {wins > 0 && <Badge className="bg-success/15 text-success border-0 text-[10px] px-1.5 py-0.5">{wins} ganhos</Badge>}
           {minsAgo !== null && (
-            <Badge className={`border-0 text-xs ${isActive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-              {isActive ? "ativo agora" : minsAgo >= 60 ? `${Math.floor(minsAgo / 60)}h${minsAgo % 60 > 0 ? `${minsAgo % 60}min` : ""} sem ação` : `${minsAgo}min sem ação`}
+            <Badge className={`border-0 text-[10px] px-1.5 py-0.5 ${isActive ? "bg-success/15 text-success" : "bg-muted/40 text-muted-foreground/60"}`}>
+              {isActive ? "ativo" : minsAgo >= 60 ? "ocioso" : "online"}
             </Badge>
           )}
         </div>
-        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-          {showDeleteConfirm ? (
-            <>
-              <Button variant="destructive" size="sm" className="text-xs h-6 px-2" onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
-                Confirma?
-              </Button>
-              <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }}>
-                Cancelar
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
-                <Trash2 className="w-3 h-3" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-xs text-primary h-6 px-2 shrink-0" onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...config}); }}>
-                Ver perfil <ArrowRight className="w-3 h-3 ml-1" />
-              </Button>
-            </>
-          )}
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs text-primary h-5 px-1.5"
+          onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...config}); }}
+        >
+          Ver <ArrowRight className="w-3 h-3 ml-0.5" />
+        </Button>
       </div>
-    </Card>);
+    </div>
+  );
 
 }
