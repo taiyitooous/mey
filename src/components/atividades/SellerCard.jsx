@@ -165,7 +165,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
     <div
       className={`relative overflow-hidden rounded-xl p-3 flex flex-col gap-2 cursor-pointer border transition-all duration-200 group hover:shadow-lg ${borderColor} ${bgColor}`}
       style={{ background: "linear-gradient(135deg, hsl(150 14% 9%), hsl(150 17% 6%))" }}
-      onClick={onClick}
+      onClick={() => onClick?.(seller)}
     >
       {/* Accent line top */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
@@ -247,7 +247,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
           variant="ghost"
           size="sm"
           className="text-[9px] text-primary h-4 px-1"
-          onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...config}); }}
+          onClick={(e) => { e.stopPropagation(); onClick?.(seller); }}
         >
           <ArrowRight className="w-2.5 h-2.5" />
         </Button>

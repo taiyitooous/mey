@@ -454,7 +454,7 @@ export default function Atividades() {
                   avatarUrl={userAvatarMap[seller.email] || userAvatarMap[seller.name]}
                   sellerConfig={config}
                   onConfigUpdated={refetchConfigs}
-                  onClick={() => setSelectedSeller(seller)}
+                  onClick={() => setSelectedSeller({ ...seller, events: seller.events })}
                   selectedChannel={selectedChannel}
                 />
               );
