@@ -163,7 +163,7 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl p-4 flex flex-col gap-3 cursor-pointer border transition-all duration-200 group hover:shadow-lg ${borderColor} ${bgColor}`}
+      className={`relative overflow-hidden rounded-xl p-3 flex flex-col gap-2 cursor-pointer border transition-all duration-200 group hover:shadow-lg ${borderColor} ${bgColor}`}
       style={{ background: "linear-gradient(135deg, hsl(150 14% 9%), hsl(150 17% 6%))" }}
       onClick={onClick}
     >
@@ -171,27 +171,27 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
       {/* Header with avatar */}
-      <div className="flex items-start justify-between gap-3 relative z-10" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="shrink-0 relative">
+      <div className="flex items-center justify-between gap-2 relative z-10" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="shrink-0 relative w-7 h-7">
             <SellerAvatarEditor
               sellerKey={normalizedSellerKey}
               displayName={config?.display_name}
               avatarUrl={config?.avatar_url || avatarUrl}
               onUpdated={onConfigUpdated}
-              size="sm" />
-            {isActive && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border border-card" />}
+              size="xs" />
+            {isActive && <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-success border border-card" />}
           </div>
           
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate text-foreground">{displayName}</p>
-            <p className="text-xs text-muted-foreground/70 truncate">{calls} 3C{whatsappCalls > 0 ? ` · ${whatsappCalls} WA` : ""}</p>
+            <p className="text-xs font-semibold truncate text-foreground leading-tight">{displayName}</p>
+            <p className="text-[10px] text-muted-foreground/70 truncate">{calls} 3C{whatsappCalls > 0 ? ` · ${whatsappCalls} WA` : ""}</p>
           </div>
         </div>
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1">
         {[
           { icon: Phone, value: calls, label: "3C" },
           { icon: MessageCircle, value: whatsappCalls, label: "WA" },
@@ -200,22 +200,22 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
         ].map(({ icon: Icon, value, label, plain }) => (
           <div
             key={label}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-center"
+            className="flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg text-center"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
           >
-            {Icon && !plain && <Icon className="w-3.5 h-3.5 text-primary/60" />}
-            <p className="text-xs font-extrabold text-foreground leading-tight tabular-nums">{value}</p>
-            <p className="text-[10px] text-muted-foreground/60">{label}</p>
+            {Icon && !plain && <Icon className="w-3 h-3 text-primary/60" />}
+            <p className="text-[10px] font-extrabold text-foreground leading-tight tabular-nums">{value}</p>
+            <p className="text-[8px] text-muted-foreground/60 leading-none">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Sparkline */}
       {events.length > 0 && (
-        <div className="h-8 -mx-2">
+        <div className="h-6 -mx-2">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={sparkData} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
-              <Line type="monotone" dataKey="v" stroke="#4F8F63" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            <LineChart data={sparkData} margin={{ top: 1, right: 2, left: 2, bottom: 0 }}>
+              <Line type="monotone" dataKey="v" stroke="#4F8F63" strokeWidth={1.2} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -223,10 +223,10 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
 
       {/* Qualificações */}
       {Object.keys(qualifications).length > 0 && (
-        <div className="text-xs space-y-0.5 pt-2 border-t border-white/5">
+        <div className="text-[10px] space-y-0.5 pt-1.5 border-t border-white/5">
           {Object.entries(qualifications).slice(0, 2).map(([q, count]) => (
-            <div key={q} className="flex justify-between px-1">
-              <span className="text-muted-foreground/70 capitalize">{q}:</span>
+            <div key={q} className="flex justify-between px-0.5">
+              <span className="text-muted-foreground/70 capitalize truncate mr-1">{q}:</span>
               <span className="font-semibold text-foreground/80">{count}</span>
             </div>
           ))}
@@ -234,11 +234,11 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-1 relative z-10" onClick={(e) => e.stopPropagation()}>
-        <div className="flex gap-1 flex-wrap">
-          {wins > 0 && <Badge className="bg-success/15 text-success border-0 text-[10px] px-1.5 py-0.5">{wins} ganhos</Badge>}
+      <div className="flex items-center justify-between pt-1 gap-1 relative z-10" onClick={(e) => e.stopPropagation()}>
+        <div className="flex gap-0.5 flex-wrap min-w-0">
+          {wins > 0 && <Badge className="bg-success/15 text-success border-0 text-[9px] px-1 py-0 h-4">{wins}w</Badge>}
           {minsAgo !== null && (
-            <Badge className={`border-0 text-[10px] px-1.5 py-0.5 ${isActive ? "bg-success/15 text-success" : "bg-muted/40 text-muted-foreground/60"}`}>
+            <Badge className={`border-0 text-[9px] px-1 py-0 h-4 ${isActive ? "bg-success/15 text-success" : "bg-muted/40 text-muted-foreground/60"}`}>
               {isActive ? "ativo" : minsAgo >= 60 ? "ocioso" : "online"}
             </Badge>
           )}
@@ -246,10 +246,10 @@ export default function SellerCard({ seller, onClick, avatarUrl, sellerConfig, o
         <Button
           variant="ghost"
           size="sm"
-          className="text-xs text-primary h-5 px-1.5"
+          className="text-[9px] text-primary h-4 px-1"
           onClick={(e) => { e.stopPropagation(); onClick?.({...seller, ...config}); }}
         >
-          Ver <ArrowRight className="w-3 h-3 ml-0.5" />
+          <ArrowRight className="w-2.5 h-2.5" />
         </Button>
       </div>
     </div>
