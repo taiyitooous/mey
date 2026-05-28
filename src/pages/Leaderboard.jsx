@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, PlusCircle, Users, Package, UserCog, ClipboardList, UsersRound } from "lucide-react";
+import { TrendingUp, PlusCircle, Users, Package, UserCog, ClipboardList, UsersRound, Download } from "lucide-react";
+import ExportLeaderboard from "@/components/leaderboard/ExportLeaderboard";
 import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
 import LeaderboardPodium from "@/components/leaderboard/LeaderboardPodium";
@@ -34,6 +35,7 @@ export default function Leaderboard() {
   const [showManageLeadsModal, setShowManageLeadsModal] = useState(false);
   const [showTeamsModal, setShowTeamsModal] = useState(false);
   const [viewMode, setViewMode] = useState("individual"); // "individual" | "teams"
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -198,6 +200,15 @@ export default function Leaderboard() {
             Registrar Leads
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowExportModal(true)}
+            className="border-border gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <Download className="w-4 h-4" />
+            Exportar
+          </Button>
+          <Button
             size="sm"
             onClick={() => setShowSaleModal(true)}
             className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
@@ -208,6 +219,14 @@ export default function Leaderboard() {
         </div>
       </div>
 
+      {showExportModal && (
+        <ExportLeaderboard
+          data={sortedSales}
+          saleRecords={filteredSaleRecords}
+          periodoLabel={period}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
       {showSaleModal && (
         <RegisterSaleModal sellers={allSellers} onClose={() => setShowSaleModal(false)} />
       )}
