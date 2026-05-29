@@ -2,13 +2,15 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Trash2, Search } from "lucide-react";
+import { X, Trash2, Search, Edit2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 export default function ManageSkaleModal({ onClose }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editData, setEditData] = useState({});
 
   const { data: records = [] } = useQuery({
     queryKey: ["skale_records_manage"],
@@ -27,6 +29,26 @@ export default function ManageSkaleModal({ onClose }) {
     queryClient.invalidateQueries({ queryKey: ["skale_records"] });
     queryClient.invalidateQueries({ queryKey: ["skale_records_manage"] });
     setDeleting(null);
+  };
+
+  const startEditing = (record) => {
+    setEditing(record.id);
+    setEditData({
+      scheduled_count: record.scheduled_count || 0,
+      revenue: record.revenue || 0,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    await base44.entities.SkaleRecord.update(editing, {
+      scheduled_count: Number(editData.scheduled_count) || 0,
+      revenue: Number(editData.revenue) || 0,
+    });
+    queryClient.invalidateQueries({ queryKey: ["skale_records"] });
+    queryClient.invalidateQueries({ queryKey: ["skale_records_manage"] });
+    setEditing(null);
+    setEditData({});
   };
 
   return (
@@ -57,6 +79,44 @@ export default function ManageSkaleModal({ onClose }) {
         <div className="p-6 max-h-[55vh] overflow-y-auto space-y-1">
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Nenhum registro encontrado</p>
+          ) : editing ? (
+            <div className="space-y-3">
+              <div className="px-3 py-3 rounded-lg border border-border bg-card/50">
+                <p className="text-xs text-muted-foreground mb-3">
+                  <span className="font-semibold text-foreground">{records.find(r => r.id === editing)?.seller_name}</span> — {records.find(r => r.id === editing)?.date}
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Qtd. Agendamentos</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editData.scheduled_count}
+                      onChange={(e) => setEditData({ ...editData, scheduled_count: e.target.value })}
+                      className="h-8 text-xs bg-card border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Faturamento (R$)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editData.revenue}
+                      onChange={(e) => setEditData({ ...editData, revenue: e.target.value })}
+                      className="h-8 text-xs bg-card border-border"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="flex-1">
+                      Cancelar
+                    </Button>
+                    <Button size="sm" onClick={handleSaveEdit} className="flex-1 bg-primary hover:bg-primary/90">
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             filtered.map((r) => (
               <div
@@ -65,20 +125,27 @@ export default function ManageSkaleModal({ onClose }) {
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <span className="font-semibold text-xs w-28 truncate">{r.seller_name}</span>
-                  <span className="text-muted-foreground text-xs w-36 truncate">{r.customer_name || "—"}</span>
-                  <span className="text-muted-foreground text-xs">{r.date}</span>
+                  <span className="text-muted-foreground text-xs w-24">{r.date}</span>
                   <span className="text-xs font-medium">{r.scheduled_count ?? 1} agend.</span>
                   <span className="text-xs text-primary font-semibold">
                     {r.revenue > 0 ? `R$ ${Number(r.revenue).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
                   </span>
                 </div>
-                <button
-                  onClick={() => handleDelete(r.id)}
-                  disabled={deleting === r.id}
-                  className="text-muted-foreground hover:text-destructive transition-colors ml-3"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2 ml-3">
+                  <button
+                    onClick={() => startEditing(r)}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    disabled={deleting === r.id}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))
           )}
