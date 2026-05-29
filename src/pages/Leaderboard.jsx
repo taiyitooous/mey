@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, PlusCircle, Users, Package, UserCog, ClipboardList, UsersRound, Download } from "lucide-react";
+import { TrendingUp, PlusCircle, Users, Package, UserCog, ClipboardList, UsersRound, Download, CalendarDays } from "lucide-react";
 import ExportLeaderboard from "@/components/leaderboard/ExportLeaderboard";
 import LeaderboardHeader from "@/components/leaderboard/LeaderboardHeader";
 import LeaderboardKPIs from "@/components/leaderboard/LeaderboardKPIs";
@@ -18,6 +18,7 @@ import ManageSalesModal from "@/components/leaderboard/ManageSalesModal";
 import ManageLeadsModal from "@/components/leaderboard/ManageLeadsModal";
 import ManageTeamsModal from "@/components/leaderboard/ManageTeamsModal";
 import TeamView from "@/components/leaderboard/TeamView";
+import SkaleLeaderboard from "@/components/leaderboard/skale/SkaleLeaderboard";
 import TrendChart from "@/components/leaderboard/TrendChart";
 import SalesOpsNotes from "@/components/leaderboard/SalesOpsNotes";
 import { getDateRange, SALES_CRITERIA } from "@/lib/leaderboardUtils";
@@ -34,7 +35,7 @@ export default function Leaderboard() {
   const [showManageSalesModal, setShowManageSalesModal] = useState(false);
   const [showManageLeadsModal, setShowManageLeadsModal] = useState(false);
   const [showTeamsModal, setShowTeamsModal] = useState(false);
-  const [viewMode, setViewMode] = useState("individual"); // "individual" | "teams"
+  const [viewMode, setViewMode] = useState("individual"); // "individual" | "teams" | "skale"
   const [showExportModal, setShowExportModal] = useState(false);
 
   const { start, end } = useMemo(
@@ -265,6 +266,13 @@ export default function Leaderboard() {
           <UsersRound className="w-4 h-4" />
           Por Equipe
         </button>
+        <button
+          onClick={() => setViewMode("skale")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${viewMode === "skale" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          Skale
+        </button>
       </div>
 
       {viewMode === "individual" && (
@@ -298,6 +306,10 @@ export default function Leaderboard() {
           filteredSaleRecords={filteredSaleRecords}
           filteredLeadCounts={filteredLeadCounts}
         />
+      )}
+
+      {viewMode === "skale" && (
+        <SkaleLeaderboard allSellers={allSellers} />
       )}
 
       <SalesOpsNotes />

@@ -1,0 +1,37 @@
+{
+  "name": "SkaleRecord",
+  "type": "object",
+  "properties": {
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do agendamento/venda"
+    },
+    "scheduled_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de agendamentos"
+    },
+    "revenue": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor de faturamento (R$)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "seller_name",
+    "date"
+  ]
+}
