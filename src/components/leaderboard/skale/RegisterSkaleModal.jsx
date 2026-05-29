@@ -7,17 +7,17 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export default function RegisterSkaleModal({ sellers, onClose }) {
   const queryClient = useQueryClient();
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(0, 7); // "yyyy-MM"
 
   const [rows, setRows] = useState([
-    { seller_name: sellers[0] || "", customer_name: "", date: today, scheduled_count: 1, revenue: "" },
+    { seller_name: sellers[0] || "", month: today, scheduled_count: "", revenue: "" },
   ]);
   const [saving, setSaving] = useState(false);
 
   const addRow = () =>
     setRows((prev) => [
       ...prev,
-      { seller_name: sellers[0] || "", customer_name: "", date: today, scheduled_count: 1, revenue: "" },
+      { seller_name: sellers[0] || "", month: today, scheduled_count: "", revenue: "" },
     ]);
 
   const updateRow = (i, field, value) =>
@@ -28,12 +28,12 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
   const handleSave = async () => {
     setSaving(true);
     for (const row of rows) {
-      if (!row.seller_name || !row.date) continue;
+      if (!row.seller_name || !row.month) continue;
+      // Usa o primeiro dia do mês como date
       await base44.entities.SkaleRecord.create({
         seller_name: row.seller_name,
-        customer_name: row.customer_name || "",
-        date: row.date,
-        scheduled_count: Number(row.scheduled_count) || 1,
+        date: row.month + "-01",
+        scheduled_count: Number(row.scheduled_count) || 0,
         revenue: Number(row.revenue) || 0,
       });
     }
@@ -45,7 +45,7 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
-        className="w-full max-w-2xl rounded-2xl border border-border overflow-hidden"
+        className="w-full max-w-xl rounded-2xl border border-border overflow-hidden"
         style={{ background: "linear-gradient(160deg, hsl(150 14% 9%), hsl(150 17% 7%))" }}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -56,9 +56,18 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
         </div>
 
         <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
+          {/* Labels */}
+          <div className="grid grid-cols-12 gap-2 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-0.5">
+            <div className="col-span-4">Vendedor</div>
+            <div className="col-span-3">Mês</div>
+            <div className="col-span-2">Qtd. Agend.</div>
+            <div className="col-span-2">Faturamento R$</div>
+            <div className="col-span-1" />
+          </div>
+
           {rows.map((row, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-3">
+              <div className="col-span-4">
                 <select
                   value={row.seller_name}
                   onChange={(e) => updateRow(i, "seller_name", e.target.value)}
@@ -69,25 +78,17 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
               </div>
               <div className="col-span-3">
                 <Input
-                  placeholder="Cliente"
-                  value={row.customer_name}
-                  onChange={(e) => updateRow(i, "customer_name", e.target.value)}
+                  type="month"
+                  value={row.month}
+                  onChange={(e) => updateRow(i, "month", e.target.value)}
                   className="h-9 text-xs bg-card border-border"
                 />
               </div>
               <div className="col-span-2">
                 <Input
-                  type="date"
-                  value={row.date}
-                  onChange={(e) => updateRow(i, "date", e.target.value)}
-                  className="h-9 text-xs bg-card border-border"
-                />
-              </div>
-              <div className="col-span-1">
-                <Input
                   type="number"
-                  min={1}
-                  placeholder="Qtd"
+                  min={0}
+                  placeholder="0"
                   value={row.scheduled_count}
                   onChange={(e) => updateRow(i, "scheduled_count", e.target.value)}
                   className="h-9 text-xs bg-card border-border"
@@ -97,7 +98,7 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
                 <Input
                   type="number"
                   min={0}
-                  placeholder="R$ valor"
+                  placeholder="0,00"
                   value={row.revenue}
                   onChange={(e) => updateRow(i, "revenue", e.target.value)}
                   className="h-9 text-xs bg-card border-border"
@@ -112,14 +113,6 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
               </div>
             </div>
           ))}
-
-          <div className="grid grid-cols-12 gap-2 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-0.5">
-            <div className="col-span-3">Vendedor</div>
-            <div className="col-span-3">Cliente</div>
-            <div className="col-span-2">Data</div>
-            <div className="col-span-1">Qtd</div>
-            <div className="col-span-2">Faturamento</div>
-          </div>
 
           <button
             onClick={addRow}
