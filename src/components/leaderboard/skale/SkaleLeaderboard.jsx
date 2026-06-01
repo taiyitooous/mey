@@ -87,11 +87,18 @@ export default function SkaleLeaderboard({ allSellers }) {
   }, [records, startStr, endStr]);
 
   // Leads recebidos no período (soma do LeadDailyCount)
+  // Os registros de leads têm date = primeiro dia do mês (ex: 2026-05-01)
+  // então verificamos se o mês do registro está dentro do período selecionado
   const leadsBySellerInPeriod = useMemo(() => {
     const map = {};
     leadCounts.forEach((lc) => {
       if (!lc.seller_name || !lc.date) return;
-      if (startStr && lc.date < startStr) return;
+      // Último dia do mês do registro
+      const lcYear = parseInt(lc.date.slice(0, 4));
+      const lcMonth = parseInt(lc.date.slice(5, 7)) - 1;
+      const lcMonthEnd = new Date(lcYear, lcMonth + 1, 0).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+      // O mês do lead se sobrepõe ao período selecionado?
+      if (startStr && lcMonthEnd < startStr) return;
       if (endStr && lc.date > endStr) return;
       const k = lc.seller_name.trim().toLowerCase();
       map[k] = (map[k] || 0) + (Number(lc.lead_count) || 0);
