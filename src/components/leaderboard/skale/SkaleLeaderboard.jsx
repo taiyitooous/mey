@@ -156,19 +156,34 @@ export default function SkaleLeaderboard({ allSellers }) {
 
   const saveLeadEdit = async (sellerName) => {
     const leadsNum = Number(editingLeadValue) || 0;
-    // Find existing LeadDailyCount for this seller in the ref month
-    const existing = leadCounts.find(
-      (lc) => lc.seller_name?.trim().toLowerCase() === sellerName.trim().toLowerCase() && lc.date === refMonthStr
-    );
-    if (leadsNum > 0) {
-      if (existing) {
-        await base44.entities.LeadDailyCount.update(existing.id, { lead_count: leadsNum });
-      } else {
-        await base44.entities.LeadDailyCount.create({ seller_name: sellerName, date: refMonthStr, lead_count: leadsNum });
-      }
-    } else if (existing) {
-      await base44.entities.LeadDailyCount.delete(existing.id);
+    const sellerKey = sellerName.trim().toLowerCase();
+
+    // Acha todos os registros do vendedor que se sobrepõem ao período
+    const existingInPeriod = leadCounts.filter((lc) => {
+      if (lc.seller_name?.trim().toLowerCase() !== sellerKey) return false;
+      if (!lc.date) return false;
+      const lcYear = parseInt(lc.date.slice(0, 4));
+      const lcMonth = parseInt(lc.date.slice(5, 7)) - 1;
+      const lcMonthEnd = new Date(lcYear, lcMonth + 1, 0).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+      if (startStr && lcMonthEnd < startStr) return false;
+      if (endStr && lc.date > endStr) return false;
+      return true;
+    });
+
+    // Remove todos os registros existentes no período
+    for (const lc of existingInPeriod) {
+      await base44.entities.LeadDailyCount.delete(lc.id);
     }
+
+    // Cria novo registro com o valor informado
+    if (leadsNum > 0) {
+      await base44.entities.LeadDailyCount.create({
+        seller_name: sellerName.trim(),
+        date: refMonthStr,
+        lead_count: leadsNum,
+      });
+    }
+
     queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
     setEditingLeadSeller(null);
     setEditingLeadValue("");
