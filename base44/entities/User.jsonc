@@ -1,0 +1,29 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "leader",
+        "seller",
+        "collector"
+      ],
+      "default": "seller"
+    },
+    "leader_id": {
+      "type": "string",
+      "description": "ID do l\u00edder (se for vendedor)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "URL da foto do vendedor"
+    }
+  },
+  "required": []
+}

@@ -1,0 +1,55 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "order",
+        "payment",
+        "payout",
+        "collection"
+      ],
+      "description": "Tipo da entidade"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID da entidade"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Tipo do evento (ex: lead.created, order.delivered)"
+    },
+    "payload": {
+      "type": "string",
+      "description": "Dados adicionais em JSON"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que gerou o evento"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "mey",
+        "3c",
+        "datacrazy",
+        "five_delivery",
+        "whatsapp",
+        "manual"
+      ],
+      "default": "mey",
+      "description": "Plataforma de origem do evento"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "event_type"
+  ]
+}

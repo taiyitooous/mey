@@ -66,7 +66,19 @@ export default function SkaleLeaderboard({ allSellers }) {
 
   const filtered = useMemo(() => {
     if (!startStr || !endStr) return records;
-    return records.filter((r) => r.date >= startStr && r.date <= endStr);
+    // r.date is "yyyy-MM-01" (first day of month), so we check if the month overlaps the selected range
+    // A record's month spans from its date to the last day of that month
+    return records.filter((r) => {
+      if (!r.date) return false;
+      const recYear = parseInt(r.date.slice(0, 4));
+      const recMonth = parseInt(r.date.slice(5, 7)) - 1;
+      const recMonthStart = `${recYear}-${String(recMonth + 1).padStart(2, "0")}-01`;
+      // Last day of record's month
+      const lastDay = new Date(recYear, recMonth + 1, 0);
+      const recMonthEnd = lastDay.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+      // Overlap: record month overlaps selected range
+      return recMonthStart <= endStr && recMonthEnd >= startStr;
+    });
   }, [records, startStr, endStr]);
 
   // Agrupa por vendedor

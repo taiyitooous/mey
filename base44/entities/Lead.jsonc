@@ -1,0 +1,94 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "string",
+      "description": "ID externo do lead (DataCrazy)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome do lead"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone do lead"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "datacrazy",
+        "manual"
+      ],
+      "default": "manual",
+      "description": "Origem do lead"
+    },
+    "source_campaign": {
+      "type": "string",
+      "description": "Campanha de origem"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor respons\u00e1vel"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor respons\u00e1vel"
+    },
+    "stage": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "default": 1,
+      "description": "Etapa do funil (1-4 + 5=final)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "won",
+        "lost"
+      ],
+      "default": "open",
+      "description": "Status do lead"
+    },
+    "loss_reason": {
+      "type": "string",
+      "enum": [
+        "no_interest",
+        "no_budget",
+        "competitor",
+        "no_contact",
+        "invalid",
+        "other"
+      ],
+      "description": "Motivo da perda"
+    },
+    "value_expected": {
+      "type": "number",
+      "description": "Valor esperado (R$)"
+    },
+    "last_contact_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltimo contato"
+    },
+    "last_stage_change_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima mudan\u00e7a de etapa"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

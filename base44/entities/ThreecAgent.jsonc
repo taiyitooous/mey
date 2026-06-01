@@ -1,0 +1,31 @@
+{
+  "name": "ThreecAgent",
+  "type": "object",
+  "properties": {
+    "agent_id": {
+      "type": "string",
+      "description": "ID do agente na 3C (campo que vem no webhook: agent_id, ramal, extension...)"
+    },
+    "agent_name_3c": {
+      "type": "string",
+      "description": "Nome do agente conforme aparece na 3C (refer\u00eancia)"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio MEY vinculado"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio MEY vinculado"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Mapeamento ativo"
+    }
+  },
+  "required": [
+    "agent_id",
+    "user_name"
+  ]
+}

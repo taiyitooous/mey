@@ -1,0 +1,23 @@
+{
+  "name": "Coordinator",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do coordenador"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do coordenador"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o coordenador est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "user_email",
+    "user_name"
+  ]
+}
