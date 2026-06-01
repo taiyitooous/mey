@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, ClipboardList, TrendingUp, DollarSign, Calendar, Trophy, Medal, Search, Users } from "lucide-react";
+import { PlusCircle, ClipboardList, TrendingUp, DollarSign, Calendar, Trophy, Medal, Search, Users, Pencil, Check, X } from "lucide-react";
 import { getDateRange, PERIOD_OPTIONS } from "@/lib/leaderboardUtils";
 import RegisterSkaleModal from "./RegisterSkaleModal";
 import ManageSkaleModal from "./ManageSkaleModal";
@@ -42,6 +42,7 @@ function KPICard({ icon: Icon, label, value, color }) {
 }
 
 export default function SkaleLeaderboard({ allSellers }) {
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -49,6 +50,11 @@ export default function SkaleLeaderboard({ allSellers }) {
   const [showRegister, setShowRegister] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [search, setSearch] = useState("");
+
+  // Inline lead editing state
+  const [editingLeadSeller, setEditingLeadSeller] = useState(null); // seller name
+  const [editingLeadValue, setEditingLeadValue] = useState("");
+  const inputRef = useRef(null);
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -58,6 +64,12 @@ export default function SkaleLeaderboard({ allSellers }) {
   const toSPDateStr = (date) => date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
   const startStr = start ? toSPDateStr(start) : null;
   const endStr = end ? toSPDateStr(end) : null;
+
+  // Reference month for saving leads (first day of the period's month)
+  const refMonthStr = useMemo(() => {
+    if (!startStr) return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(0, 7) + "-01";
+    return startStr.slice(0, 7) + "-01";
+  }, [startStr]);
 
   const { data: records = [] } = useQuery({
     queryKey: ["skale_records"],
@@ -71,33 +83,25 @@ export default function SkaleLeaderboard({ allSellers }) {
 
   const filtered = useMemo(() => {
     if (!startStr || !endStr) return records;
-    // r.date is "yyyy-MM-01" (first day of month), so we check if the month overlaps the selected range
-    // A record's month spans from its date to the last day of that month
     return records.filter((r) => {
       if (!r.date) return false;
       const recYear = parseInt(r.date.slice(0, 4));
       const recMonth = parseInt(r.date.slice(5, 7)) - 1;
       const recMonthStart = `${recYear}-${String(recMonth + 1).padStart(2, "0")}-01`;
-      // Last day of record's month
       const lastDay = new Date(recYear, recMonth + 1, 0);
       const recMonthEnd = lastDay.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-      // Overlap: record month overlaps selected range
       return recMonthStart <= endStr && recMonthEnd >= startStr;
     });
   }, [records, startStr, endStr]);
 
-  // Leads recebidos no período (soma do LeadDailyCount)
-  // Os registros de leads têm date = primeiro dia do mês (ex: 2026-05-01)
-  // então verificamos se o mês do registro está dentro do período selecionado
+  // leadCounts filtered to period, keyed by seller lowercase
   const leadsBySellerInPeriod = useMemo(() => {
     const map = {};
     leadCounts.forEach((lc) => {
       if (!lc.seller_name || !lc.date) return;
-      // Último dia do mês do registro
       const lcYear = parseInt(lc.date.slice(0, 4));
       const lcMonth = parseInt(lc.date.slice(5, 7)) - 1;
       const lcMonthEnd = new Date(lcYear, lcMonth + 1, 0).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-      // O mês do lead se sobrepõe ao período selecionado?
       if (startStr && lcMonthEnd < startStr) return;
       if (endStr && lc.date > endStr) return;
       const k = lc.seller_name.trim().toLowerCase();
@@ -106,7 +110,7 @@ export default function SkaleLeaderboard({ allSellers }) {
     return map;
   }, [leadCounts, startStr, endStr]);
 
-  // Agrupa por vendedor
+  // Rank data
   const rankData = useMemo(() => {
     const map = {};
     filtered.forEach((r) => {
@@ -118,7 +122,11 @@ export default function SkaleLeaderboard({ allSellers }) {
       if (r.customer_name) map[k].customers.push({ customer: r.customer_name, date: r.date, revenue: r.revenue });
     });
     return Object.values(map)
-      .map((row) => ({ ...row, leads: leadsBySellerInPeriod[row.name.trim().toLowerCase()] || 0 }))
+      .map((row) => {
+        const leads = leadsBySellerInPeriod[row.name.trim().toLowerCase()] || 0;
+        const conversion = leads > 0 ? ((row.scheduled / leads) * 100).toFixed(1) : null;
+        return { ...row, leads, conversion };
+      })
       .sort((a, b) => criteria === "revenue" ? b.revenue - a.revenue : b.scheduled - a.scheduled);
   }, [filtered, criteria, leadsBySellerInPeriod]);
 
@@ -130,9 +138,41 @@ export default function SkaleLeaderboard({ allSellers }) {
   const totalScheduled = rankData.reduce((s, r) => s + r.scheduled, 0);
   const totalRevenue = rankData.reduce((s, r) => s + r.revenue, 0);
   const totalLeads = Object.values(leadsBySellerInPeriod).reduce((s, v) => s + v, 0);
+  const totalConversion = totalLeads > 0 ? ((totalScheduled / totalLeads) * 100).toFixed(1) : null;
 
-  const fmtCurrency = (v) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmtCurrency = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Inline lead edit handlers
+  const startLeadEdit = (row) => {
+    setEditingLeadSeller(row.name);
+    setEditingLeadValue(row.leads > 0 ? String(row.leads) : "");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const cancelLeadEdit = () => {
+    setEditingLeadSeller(null);
+    setEditingLeadValue("");
+  };
+
+  const saveLeadEdit = async (sellerName) => {
+    const leadsNum = Number(editingLeadValue) || 0;
+    // Find existing LeadDailyCount for this seller in the ref month
+    const existing = leadCounts.find(
+      (lc) => lc.seller_name?.trim().toLowerCase() === sellerName.trim().toLowerCase() && lc.date === refMonthStr
+    );
+    if (leadsNum > 0) {
+      if (existing) {
+        await base44.entities.LeadDailyCount.update(existing.id, { lead_count: leadsNum });
+      } else {
+        await base44.entities.LeadDailyCount.create({ seller_name: sellerName, date: refMonthStr, lead_count: leadsNum });
+      }
+    } else if (existing) {
+      await base44.entities.LeadDailyCount.delete(existing.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
+    setEditingLeadSeller(null);
+    setEditingLeadValue("");
+  };
 
   return (
     <div className="space-y-6">
@@ -195,7 +235,7 @@ export default function SkaleLeaderboard({ allSellers }) {
         <KPICard icon={Calendar} label="Total Agendamentos" value={totalScheduled} color="#4F8F63" />
         <KPICard icon={DollarSign} label="Faturamento Total" value={fmtCurrency(totalRevenue)} color="#E8B84B" />
         <KPICard icon={Users} label="Leads Recebidos" value={totalLeads} color="#9B79D4" />
-        <KPICard icon={TrendingUp} label="Vendedores ativos" value={rankData.length} color="#3AAFCA" />
+        <KPICard icon={TrendingUp} label="Taxa de Conversão" value={totalConversion ? `${totalConversion}%` : "—"} color="#3AAFCA" />
       </div>
 
       {/* Criteria selector */}
@@ -257,6 +297,7 @@ export default function SkaleLeaderboard({ allSellers }) {
                     <th className="text-right px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Agendamentos</th>
                     <th className="text-right px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Faturamento</th>
                     <th className="text-right px-4 py-3.5 text-xs font-bold uppercase tracking-wider" style={{ color: "#9B79D4" }}>Leads</th>
+                    <th className="text-right px-4 py-3.5 text-xs font-bold uppercase tracking-wider" style={{ color: "#3AAFCA" }}>Conversão</th>
                     <th className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider" style={{ color: "#4F8F63" }}>
                       Critério
                     </th>
@@ -271,6 +312,7 @@ export default function SkaleLeaderboard({ allSellers }) {
                     const criteriaValue = criteria === "revenue"
                       ? fmtCurrency(row.revenue)
                       : `${row.scheduled} agend.`;
+                    const isEditingThis = editingLeadSeller === row.name;
 
                     return (
                       <tr
@@ -305,8 +347,44 @@ export default function SkaleLeaderboard({ allSellers }) {
                         <td className="px-4 py-3.5 text-right font-semibold" style={{ color: row.revenue > 0 ? "#E8B84B" : undefined }}>
                           {row.revenue > 0 ? fmtCurrency(row.revenue) : "—"}
                         </td>
-                        <td className="px-4 py-3.5 text-right font-semibold" style={{ color: row.leads > 0 ? "#9B79D4" : undefined }}>
-                          {row.leads > 0 ? row.leads : "—"}
+                        <td className="px-4 py-3.5 text-right">
+                          {isEditingThis ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                ref={inputRef}
+                                type="number"
+                                min={0}
+                                value={editingLeadValue}
+                                onChange={(e) => setEditingLeadValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveLeadEdit(row.name);
+                                  if (e.key === "Escape") cancelLeadEdit();
+                                }}
+                                className="h-7 w-20 text-xs bg-card border-border text-right"
+                              />
+                              <button onClick={() => saveLeadEdit(row.name)} className="text-primary hover:opacity-80">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={cancelLeadEdit} className="text-muted-foreground hover:text-destructive">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5 group/leads">
+                              <span className="font-semibold" style={{ color: row.leads > 0 ? "#9B79D4" : undefined }}>
+                                {row.leads > 0 ? row.leads : "—"}
+                              </span>
+                              <button
+                                onClick={() => startLeadEdit(row)}
+                                className="opacity-0 group-hover/leads:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-right text-xs font-semibold" style={{ color: row.conversion ? "#3AAFCA" : undefined }}>
+                          {row.conversion ? `${row.conversion}%` : "—"}
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <span
