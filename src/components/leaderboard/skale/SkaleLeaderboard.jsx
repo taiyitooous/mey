@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, ClipboardList, TrendingUp, DollarSign, Calendar, Trophy, Medal, Search } from "lucide-react";
+import { PlusCircle, ClipboardList, TrendingUp, DollarSign, Calendar, Trophy, Medal, Search, Users } from "lucide-react";
 import { getDateRange, PERIOD_OPTIONS } from "@/lib/leaderboardUtils";
 import RegisterSkaleModal from "./RegisterSkaleModal";
 import ManageSkaleModal from "./ManageSkaleModal";
@@ -64,6 +64,11 @@ export default function SkaleLeaderboard({ allSellers }) {
     queryFn: () => base44.entities.SkaleRecord.list("-date", 2000),
   });
 
+  const { data: leadCounts = [] } = useQuery({
+    queryKey: ["lead_daily_counts"],
+    queryFn: () => base44.entities.LeadDailyCount.list("-date", 5000),
+  });
+
   const filtered = useMemo(() => {
     if (!startStr || !endStr) return records;
     // r.date is "yyyy-MM-01" (first day of month), so we check if the month overlaps the selected range
@@ -81,6 +86,19 @@ export default function SkaleLeaderboard({ allSellers }) {
     });
   }, [records, startStr, endStr]);
 
+  // Leads recebidos no período (soma do LeadDailyCount)
+  const leadsBySellerInPeriod = useMemo(() => {
+    const map = {};
+    leadCounts.forEach((lc) => {
+      if (!lc.seller_name || !lc.date) return;
+      if (startStr && lc.date < startStr) return;
+      if (endStr && lc.date > endStr) return;
+      const k = lc.seller_name.trim().toLowerCase();
+      map[k] = (map[k] || 0) + (Number(lc.lead_count) || 0);
+    });
+    return map;
+  }, [leadCounts, startStr, endStr]);
+
   // Agrupa por vendedor
   const rankData = useMemo(() => {
     const map = {};
@@ -92,10 +110,10 @@ export default function SkaleLeaderboard({ allSellers }) {
       map[k].revenue += Number(r.revenue) || 0;
       if (r.customer_name) map[k].customers.push({ customer: r.customer_name, date: r.date, revenue: r.revenue });
     });
-    return Object.values(map).sort((a, b) =>
-      criteria === "revenue" ? b.revenue - a.revenue : b.scheduled - a.scheduled
-    );
-  }, [filtered, criteria]);
+    return Object.values(map)
+      .map((row) => ({ ...row, leads: leadsBySellerInPeriod[row.name.trim().toLowerCase()] || 0 }))
+      .sort((a, b) => criteria === "revenue" ? b.revenue - a.revenue : b.scheduled - a.scheduled);
+  }, [filtered, criteria, leadsBySellerInPeriod]);
 
   const searchFiltered = useMemo(() => {
     if (!search.trim()) return rankData;
@@ -104,6 +122,7 @@ export default function SkaleLeaderboard({ allSellers }) {
 
   const totalScheduled = rankData.reduce((s, r) => s + r.scheduled, 0);
   const totalRevenue = rankData.reduce((s, r) => s + r.revenue, 0);
+  const totalLeads = Object.values(leadsBySellerInPeriod).reduce((s, v) => s + v, 0);
 
   const fmtCurrency = (v) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -165,9 +184,10 @@ export default function SkaleLeaderboard({ allSellers }) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPICard icon={Calendar} label="Total Agendamentos" value={totalScheduled} color="#4F8F63" />
         <KPICard icon={DollarSign} label="Faturamento Total" value={fmtCurrency(totalRevenue)} color="#E8B84B" />
+        <KPICard icon={Users} label="Leads Recebidos" value={totalLeads} color="#9B79D4" />
         <KPICard icon={TrendingUp} label="Vendedores ativos" value={rankData.length} color="#3AAFCA" />
       </div>
 
@@ -229,7 +249,7 @@ export default function SkaleLeaderboard({ allSellers }) {
                     <th className="text-left px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Vendedor</th>
                     <th className="text-right px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Agendamentos</th>
                     <th className="text-right px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Faturamento</th>
-                    <th className="text-right px-4 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Clientes</th>
+                    <th className="text-right px-4 py-3.5 text-xs font-bold uppercase tracking-wider" style={{ color: "#9B79D4" }}>Leads</th>
                     <th className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider" style={{ color: "#4F8F63" }}>
                       Critério
                     </th>
@@ -278,7 +298,9 @@ export default function SkaleLeaderboard({ allSellers }) {
                         <td className="px-4 py-3.5 text-right font-semibold" style={{ color: row.revenue > 0 ? "#E8B84B" : undefined }}>
                           {row.revenue > 0 ? fmtCurrency(row.revenue) : "—"}
                         </td>
-                        <td className="px-4 py-3.5 text-right text-muted-foreground text-xs">{row.customers.length}</td>
+                        <td className="px-4 py-3.5 text-right font-semibold" style={{ color: row.leads > 0 ? "#9B79D4" : undefined }}>
+                          {row.leads > 0 ? row.leads : "—"}
+                        </td>
                         <td className="px-5 py-3.5 text-right">
                           <span
                             className="font-extrabold text-sm px-2.5 py-0.5 rounded-full"
