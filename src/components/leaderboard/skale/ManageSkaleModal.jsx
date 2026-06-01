@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,21 @@ export default function ManageSkaleModal({ onClose }) {
     queryFn: () => base44.entities.SkaleRecord.list("-date", 1000),
   });
 
+  const { data: leadCounts = [] } = useQuery({
+    queryKey: ["lead_daily_counts"],
+    queryFn: () => base44.entities.LeadDailyCount.list("-date", 5000),
+  });
+
+  // Monta mapa seller+date -> LeadDailyCount record
+  const leadCountMap = React.useMemo(() => {
+    const map = {};
+    leadCounts.forEach((lc) => {
+      const k = `${lc.seller_name?.trim().toLowerCase()}|${lc.date}`;
+      map[k] = lc;
+    });
+    return map;
+  }, [leadCounts]);
+
   const filtered = records.filter(
     (r) =>
       r.seller_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -33,20 +48,41 @@ export default function ManageSkaleModal({ onClose }) {
 
   const startEditing = (record) => {
     setEditing(record.id);
+    const k = `${record.seller_name?.trim().toLowerCase()}|${record.date}`;
+    const lc = leadCountMap[k];
     setEditData({
       scheduled_count: record.scheduled_count || 0,
       revenue: record.revenue || 0,
+      leads: lc ? lc.lead_count : "",
+      leads_record_id: lc ? lc.id : null,
     });
   };
 
   const handleSaveEdit = async () => {
     if (!editing) return;
+    const rec = records.find(r => r.id === editing);
     await base44.entities.SkaleRecord.update(editing, {
       scheduled_count: Number(editData.scheduled_count) || 0,
       revenue: Number(editData.revenue) || 0,
     });
+    // Atualiza ou cria LeadDailyCount
+    const leadsNum = Number(editData.leads) || 0;
+    if (leadsNum > 0) {
+      if (editData.leads_record_id) {
+        await base44.entities.LeadDailyCount.update(editData.leads_record_id, { lead_count: leadsNum });
+      } else {
+        await base44.entities.LeadDailyCount.create({
+          seller_name: rec.seller_name,
+          date: rec.date,
+          lead_count: leadsNum,
+        });
+      }
+    } else if (editData.leads_record_id) {
+      await base44.entities.LeadDailyCount.delete(editData.leads_record_id);
+    }
     queryClient.invalidateQueries({ queryKey: ["skale_records"] });
     queryClient.invalidateQueries({ queryKey: ["skale_records_manage"] });
+    queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
     setEditing(null);
     setEditData({});
   };
@@ -103,6 +139,17 @@ export default function ManageSkaleModal({ onClose }) {
                       min={0}
                       value={editData.revenue}
                       onChange={(e) => setEditData({ ...editData, revenue: e.target.value })}
+                      className="h-8 text-xs bg-card border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Leads Recebidos</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={editData.leads}
+                      onChange={(e) => setEditData({ ...editData, leads: e.target.value })}
                       className="h-8 text-xs bg-card border-border"
                     />
                   </div>
