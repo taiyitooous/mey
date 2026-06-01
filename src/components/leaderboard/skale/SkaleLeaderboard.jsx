@@ -54,7 +54,9 @@ export default function SkaleLeaderboard({ allSellers }) {
   // Inline lead editing state
   const [editingLeadSeller, setEditingLeadSeller] = useState(null); // seller name
   const [editingLeadValue, setEditingLeadValue] = useState("");
+  const [savingLead, setSavingLead] = useState(false);
   const inputRef = useRef(null);
+  const editingLeadValueRef = useRef("");
 
   const { start, end } = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -144,18 +146,21 @@ export default function SkaleLeaderboard({ allSellers }) {
 
   // Inline lead edit handlers
   const startLeadEdit = (row) => {
+    const val = row.leads > 0 ? String(row.leads) : "";
+    editingLeadValueRef.current = val;
+    setEditingLeadValue(val);
     setEditingLeadSeller(row.name);
-    setEditingLeadValue(row.leads > 0 ? String(row.leads) : "");
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const cancelLeadEdit = () => {
     setEditingLeadSeller(null);
     setEditingLeadValue("");
+    editingLeadValueRef.current = "";
   };
 
   const saveLeadEdit = async (sellerName) => {
-    const leadsNum = Number(editingLeadValue) || 0;
+    const leadsNum = Number(editingLeadValueRef.current) || 0;
     const sellerKey = sellerName.trim().toLowerCase();
 
     // Acha todos os registros do vendedor que se sobrepõem ao período
@@ -169,6 +174,8 @@ export default function SkaleLeaderboard({ allSellers }) {
       if (endStr && lc.date > endStr) return false;
       return true;
     });
+
+    setSavingLead(true);
 
     // Remove todos os registros existentes no período
     for (const lc of existingInPeriod) {
@@ -184,9 +191,11 @@ export default function SkaleLeaderboard({ allSellers }) {
       });
     }
 
-    queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
+    await queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
     setEditingLeadSeller(null);
     setEditingLeadValue("");
+    editingLeadValueRef.current = "";
+    setSavingLead(false);
   };
 
   return (
@@ -370,14 +379,17 @@ export default function SkaleLeaderboard({ allSellers }) {
                                 type="number"
                                 min={0}
                                 value={editingLeadValue}
-                                onChange={(e) => setEditingLeadValue(e.target.value)}
+                                onChange={(e) => {
+                                  editingLeadValueRef.current = e.target.value;
+                                  setEditingLeadValue(e.target.value);
+                                }}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") saveLeadEdit(row.name);
                                   if (e.key === "Escape") cancelLeadEdit();
                                 }}
                                 className="h-7 w-20 text-xs bg-card border-border text-right"
                               />
-                              <button onClick={() => saveLeadEdit(row.name)} className="text-primary hover:opacity-80">
+                              <button onClick={() => saveLeadEdit(row.name)} disabled={savingLead} className="text-primary hover:opacity-80 disabled:opacity-50">
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                               <button onClick={cancelLeadEdit} className="text-muted-foreground hover:text-destructive">
