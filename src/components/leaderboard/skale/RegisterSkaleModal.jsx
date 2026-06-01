@@ -10,14 +10,14 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(0, 7); // "yyyy-MM"
 
   const [rows, setRows] = useState([
-    { seller_name: sellers[0] || "", month: today, scheduled_count: "", revenue: "" },
+    { seller_name: sellers[0] || "", month: today, scheduled_count: "", revenue: "", leads: "" },
   ]);
   const [saving, setSaving] = useState(false);
 
   const addRow = () =>
     setRows((prev) => [
       ...prev,
-      { seller_name: sellers[0] || "", month: today, scheduled_count: "", revenue: "" },
+      { seller_name: sellers[0] || "", month: today, scheduled_count: "", revenue: "", leads: "" },
     ]);
 
   const updateRow = (i, field, value) =>
@@ -29,15 +29,33 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
     setSaving(true);
     for (const row of rows) {
       if (!row.seller_name || !row.month) continue;
-      // Usa o primeiro dia do mês como date
+      const dateStr = row.month + "-01";
       await base44.entities.SkaleRecord.create({
         seller_name: row.seller_name,
-        date: row.month + "-01",
+        date: dateStr,
         scheduled_count: Number(row.scheduled_count) || 0,
         revenue: Number(row.revenue) || 0,
       });
+      // Salva leads do mês no LeadDailyCount usando o primeiro dia como referência
+      const leadsNum = Number(row.leads) || 0;
+      if (leadsNum > 0) {
+        // Remove registros anteriores do mesmo vendedor/mês para evitar duplicatas
+        const existing = await base44.entities.LeadDailyCount.filter({
+          seller_name: row.seller_name,
+          date: dateStr,
+        });
+        for (const e of existing) {
+          await base44.entities.LeadDailyCount.delete(e.id);
+        }
+        await base44.entities.LeadDailyCount.create({
+          seller_name: row.seller_name,
+          date: dateStr,
+          lead_count: leadsNum,
+        });
+      }
     }
     queryClient.invalidateQueries({ queryKey: ["skale_records"] });
+    queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
     setSaving(false);
     onClose();
   };
@@ -45,7 +63,7 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
-        className="w-full max-w-xl rounded-2xl border border-border overflow-hidden"
+        className="w-full max-w-2xl rounded-2xl border border-border overflow-hidden"
         style={{ background: "linear-gradient(160deg, hsl(150 14% 9%), hsl(150 17% 7%))" }}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -58,16 +76,17 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
         <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
           {/* Labels */}
           <div className="grid grid-cols-12 gap-2 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-0.5">
-            <div className="col-span-4">Vendedor</div>
-            <div className="col-span-3">Mês</div>
-            <div className="col-span-2">Qtd. Agend.</div>
+            <div className="col-span-3">Vendedor</div>
+            <div className="col-span-2">Mês</div>
+            <div className="col-span-2">Agend.</div>
             <div className="col-span-2">Faturamento R$</div>
+            <div className="col-span-2">Leads</div>
             <div className="col-span-1" />
           </div>
 
           {rows.map((row, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-4">
+              <div className="col-span-3">
                 <select
                   value={row.seller_name}
                   onChange={(e) => updateRow(i, "seller_name", e.target.value)}
@@ -76,7 +95,7 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
                   {sellers.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="col-span-3">
+              <div className="col-span-2">
                 <Input
                   type="month"
                   value={row.month}
@@ -101,6 +120,16 @@ export default function RegisterSkaleModal({ sellers, onClose }) {
                   placeholder="0,00"
                   value={row.revenue}
                   onChange={(e) => updateRow(i, "revenue", e.target.value)}
+                  className="h-9 text-xs bg-card border-border"
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={row.leads}
+                  onChange={(e) => updateRow(i, "leads", e.target.value)}
                   className="h-9 text-xs bg-card border-border"
                 />
               </div>
