@@ -222,7 +222,7 @@ export default function SkaleLeaderboard({ allSellers }) {
       });
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["lead_daily_counts"] });
+    await queryClient.refetchQueries({ queryKey: ["lead_daily_counts"] });
     setEditingLeadSeller(null);
     setEditingLeadValue("");
     editingLeadValueRef.current = "";
