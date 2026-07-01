@@ -14,6 +14,7 @@ const getTodayBRDateString = () => {
 import ProjectionCalculator from "@/components/dashboard/ProjectionCalculator";
 import SkaleSalesPanel from "@/components/dashboard/SkaleSalesPanel";
 import ConversaoPanel from "@/components/dashboard/ConversaoPanel";
+import SellerMonthSummary from "@/components/dashboard/SellerMonthSummary";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -254,6 +255,9 @@ export default function Dashboard() {
         />
         </div>
       </div>
+
+      {/* Resumo por Vendedor - Junho */}
+      <SellerMonthSummary />
 
       {/* Conversão de Pedidos */}
       <ConversaoPanel />
